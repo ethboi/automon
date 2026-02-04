@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Orbitron } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/context/WalletContext";
 import Header from "@/components/Header";
@@ -15,6 +16,12 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  variable: "--font-orbitron",
+  weight: ["400", "700", "900"],
+});
+
 export const metadata: Metadata = {
   title: "AutoMon - Monster Battling on Monad",
   description: "Collect monster cards, battle for MON wagers, let AI play for you",
@@ -28,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} antialiased bg-gray-950 text-white min-h-screen`}
       >
         <WalletProvider>
           <Header />

@@ -5,13 +5,11 @@ import { useWallet } from '@/context/WalletContext';
 import { Battle, Card as CardType, BattleMove } from '@/lib/types';
 import Card from '@/components/Card';
 import BattleArena from '@/components/BattleArena';
-import { useRouter } from 'next/navigation';
 
 type View = 'list' | 'create' | 'select-cards' | 'battle';
 
 export default function BattlePage() {
-  const { address, isAuthenticated, refreshBalance } = useWallet();
-  const router = useRouter();
+  const { address, refreshBalance } = useWallet();
   const [view, setView] = useState<View>('list');
   const [battles, setBattles] = useState<Battle[]>([]);
   const [myCards, setMyCards] = useState<CardType[]>([]);
@@ -22,12 +20,8 @@ export default function BattlePage() {
   const [wagerAmount, setWagerAmount] = useState('0.01');
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/');
-      return;
-    }
     fetchData();
-  }, [isAuthenticated, router]);
+  }, []);
 
   useEffect(() => {
     if (currentBattle && currentBattle.status === 'active') {

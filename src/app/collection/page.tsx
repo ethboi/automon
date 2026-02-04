@@ -1,14 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useWallet } from '@/context/WalletContext';
 import { Card as CardType, Element, Rarity } from '@/lib/types';
 import Card from '@/components/Card';
-import { useRouter } from 'next/navigation';
 
 export default function CollectionPage() {
-  const { isAuthenticated } = useWallet();
-  const router = useRouter();
   const [cards, setCards] = useState<CardType[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<{
@@ -18,12 +14,8 @@ export default function CollectionPage() {
   const [sortBy, setSortBy] = useState<'name' | 'rarity' | 'attack' | 'defense'>('rarity');
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/');
-      return;
-    }
     fetchCards();
-  }, [isAuthenticated, router]);
+  }, []);
 
   const fetchCards = async () => {
     try {

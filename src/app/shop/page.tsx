@@ -4,14 +4,12 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@/context/WalletContext';
 import { Card as CardType, Pack } from '@/lib/types';
 import PackOpening from '@/components/PackOpening';
-import { useRouter } from 'next/navigation';
 import { ethers } from 'ethers';
 
 const PACK_PRICE = process.env.NEXT_PUBLIC_PACK_PRICE || '100000000000000000'; // 0.1 MON
 
 export default function ShopPage() {
-  const { isAuthenticated, refreshBalance } = useWallet();
-  const router = useRouter();
+  const { refreshBalance } = useWallet();
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
@@ -19,12 +17,8 @@ export default function ShopPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/');
-      return;
-    }
     fetchPacks();
-  }, [isAuthenticated, router]);
+  }, []);
 
   const fetchPacks = async () => {
     try {
