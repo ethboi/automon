@@ -65,7 +65,6 @@ export default function BattlePage() {
   const createBattle = async () => {
     setError(null);
     try {
-      // For demo: skip blockchain transaction
       const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 
       const res = await fetch('/api/battle/create', {
@@ -204,10 +203,10 @@ export default function BattlePage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center">
-          <div className="animate-spin text-4xl mb-4">⏳</div>
-          <p className="text-gray-400">Loading battles...</p>
+      <div className="page-container">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="spinner mb-4" />
+          <p className="text-gray-400 animate-pulse">Loading battles...</p>
         </div>
       </div>
     );
@@ -216,16 +215,19 @@ export default function BattlePage() {
   // Battle view
   if (view === 'battle' && currentBattle) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page-container page-transition">
         <button
           onClick={() => {
             setCurrentBattle(null);
             setView('list');
             fetchData();
           }}
-          className="mb-6 text-gray-400 hover:text-white transition"
+          className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
         >
-          &larr; Back to battles
+          <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span>Back to battles</span>
         </button>
 
         <BattleArena
@@ -240,38 +242,95 @@ export default function BattlePage() {
   // Card selection view
   if (view === 'select-cards') {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">Select Your Team</h1>
-        <p className="text-gray-400 mb-8">Choose 3 cards for battle</p>
+      <div className="page-container page-transition">
+        <div className="mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+            Select Your Team
+          </h1>
+          <p className="text-gray-400">Choose 3 cards for battle</p>
+        </div>
 
         {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 mb-6">
-            <p className="text-red-400">{error}</p>
+          <div className="glass border border-red-500/30 rounded-2xl p-4 mb-6 animate-scale-in">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-xl">⚠️</span>
+              </div>
+              <p className="text-red-400">{error}</p>
+            </div>
           </div>
         )}
 
+        {/* Selected cards preview */}
+        <div className="section-card mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Your Team</h3>
+            <span className={`text-sm font-medium ${selectedCards.length === 3 ? 'text-emerald-400' : 'text-gray-400'}`}>
+              {selectedCards.length}/3 selected
+            </span>
+          </div>
+          <div className="flex gap-4 min-h-[80px] items-center">
+            {[0, 1, 2].map((slot) => {
+              const cardId = selectedCards[slot];
+              const card = cardId ? myCards.find(c => (c._id?.toString() || c.id) === cardId) : null;
+              return (
+                <div
+                  key={slot}
+                  className={`w-16 h-20 rounded-xl border-2 border-dashed flex items-center justify-center transition-all ${
+                    card ? 'border-purple-500 bg-purple-500/20' : 'border-gray-600 bg-white/5'
+                  }`}
+                >
+                  {card ? (
+                    <span className="text-2xl">{card.element === 'fire' ? '🔥' : card.element === 'water' ? '💧' : card.element === 'earth' ? '🌍' : card.element === 'air' ? '💨' : card.element === 'dark' ? '🌑' : '✨'}</span>
+                  ) : (
+                    <span className="text-gray-500 text-2xl">+</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Cards grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
-          {myCards.map(card => (
-            <Card
+          {myCards.map((card, index) => (
+            <div
               key={card._id?.toString() || card.id}
-              card={card}
-              selected={selectedCards.includes(card._id?.toString() || card.id || '')}
-              onClick={() => toggleCardSelection(card._id?.toString() || card.id || '')}
-              size="md"
-            />
+              className="animate-fade-in-up opacity-0"
+              style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}
+            >
+              <Card
+                card={card}
+                selected={selectedCards.includes(card._id?.toString() || card.id || '')}
+                onClick={() => toggleCardSelection(card._id?.toString() || card.id || '')}
+                size="md"
+              />
+            </div>
           ))}
         </div>
 
-        <div className="flex items-center justify-between bg-gray-800 rounded-xl p-4">
-          <span className="text-gray-400">
-            Selected: {selectedCards.length}/3 cards
-          </span>
+        {/* Action bar */}
+        <div className="section-card flex items-center justify-between sticky bottom-4">
+          <button
+            onClick={() => {
+              setSelectedCards([]);
+              setView('list');
+            }}
+            className="btn-secondary"
+          >
+            Cancel
+          </button>
           <button
             onClick={selectCards}
             disabled={selectedCards.length !== 3}
-            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-6 py-2 rounded-lg font-medium transition"
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirm Selection
+            <span className="flex items-center gap-2">
+              <span>Confirm Selection</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </span>
           </button>
         </div>
       </div>
@@ -281,46 +340,90 @@ export default function BattlePage() {
   // Create battle view
   if (view === 'create') {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page-container page-transition">
         <button
           onClick={() => setView('list')}
-          className="mb-6 text-gray-400 hover:text-white transition"
+          className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
         >
-          &larr; Back
+          <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span>Back</span>
         </button>
 
-        <h1 className="text-3xl font-bold mb-8">Create Battle</h1>
+        <div className="mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+            Create Battle
+          </h1>
+          <p className="text-gray-400">Set your wager and challenge other players</p>
+        </div>
 
         {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 mb-6">
-            <p className="text-red-400">{error}</p>
+          <div className="glass border border-red-500/30 rounded-2xl p-4 mb-6 animate-scale-in">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-xl">⚠️</span>
+              </div>
+              <p className="text-red-400">{error}</p>
+            </div>
           </div>
         )}
 
-        <div className="max-w-md bg-gray-800 rounded-xl p-6">
-          <div className="mb-6">
-            <label className="block text-sm text-gray-400 mb-2">Wager Amount (MON)</label>
-            <input
-              type="number"
-              value={wagerAmount}
-              onChange={e => setWagerAmount(e.target.value)}
-              min="0.001"
-              step="0.001"
-              className="w-full bg-gray-700 rounded-lg px-4 py-3 text-lg"
-            />
+        <div className="max-w-lg">
+          <div className="section-card">
+            <div className="mb-6">
+              <label className="block text-sm text-gray-400 mb-2 font-medium">Wager Amount (MON)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={wagerAmount}
+                  onChange={e => setWagerAmount(e.target.value)}
+                  min="0.001"
+                  step="0.001"
+                  className="input-field text-2xl font-bold pr-16"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400 font-medium">MON</span>
+              </div>
+            </div>
+
+            {/* Prize breakdown */}
+            <div className="glass-light rounded-xl p-4 mb-6">
+              <h4 className="text-sm font-medium text-gray-400 mb-3">Prize Breakdown</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Total Pool</span>
+                  <span className="text-white font-medium">{(parseFloat(wagerAmount) * 2).toFixed(4)} MON</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Platform Fee (5%)</span>
+                  <span className="text-red-400">-{(parseFloat(wagerAmount) * 2 * 0.05).toFixed(4)} MON</span>
+                </div>
+                <div className="border-t border-white/10 my-2" />
+                <div className="flex justify-between">
+                  <span className="text-white font-medium">Winner Takes</span>
+                  <span className="text-emerald-400 font-bold">{(parseFloat(wagerAmount) * 2 * 0.95).toFixed(4)} MON</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={createBattle}
+              disabled={myCards.length < 3}
+              className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {myCards.length < 3 ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span>⚠️</span>
+                  <span>Need at least 3 cards</span>
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <span>⚔️</span>
+                  <span>Create Battle</span>
+                </span>
+              )}
+            </button>
           </div>
-
-          <p className="text-sm text-gray-400 mb-6">
-            Winner takes {(parseFloat(wagerAmount) * 2 * 0.95).toFixed(4)} MON (5% fee)
-          </p>
-
-          <button
-            onClick={createBattle}
-            disabled={myCards.length < 3}
-            className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed py-3 rounded-lg font-bold transition"
-          >
-            {myCards.length < 3 ? 'Need at least 3 cards' : 'Create Battle'}
-          </button>
         </div>
       </div>
     );
@@ -328,49 +431,79 @@ export default function BattlePage() {
 
   // Battle list view
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Battle Arena</h1>
+    <div className="page-container page-transition">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+            Battle Arena
+          </h1>
+          <p className="text-gray-400">Challenge players and win rewards</p>
+        </div>
         <button
           onClick={() => setView('create')}
-          className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg font-medium transition"
+          className="btn-primary"
         >
-          Create Battle
+          <span className="flex items-center gap-2">
+            <span>⚔️</span>
+            <span>Create Battle</span>
+          </span>
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 mb-6">
-          <p className="text-red-400">{error}</p>
+        <div className="glass border border-red-500/30 rounded-2xl p-4 mb-6 animate-scale-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-xl">⚠️</span>
+            </div>
+            <p className="text-red-400">{error}</p>
+          </div>
         </div>
       )}
 
       {/* Open battles */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Open Battles</h2>
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-xl font-bold text-white">Open Battles</h2>
+          {openBattles.length > 0 && (
+            <div className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-sm font-medium animate-pulse">
+              {openBattles.length} available
+            </div>
+          )}
+        </div>
+
         {openBattles.length === 0 ? (
-          <div className="bg-gray-800 rounded-xl p-8 text-center">
-            <p className="text-gray-400">No open battles. Create one or wait for others!</p>
+          <div className="section-card text-center py-12">
+            <div className="text-5xl mb-4 opacity-50">🏟️</div>
+            <h3 className="text-lg font-semibold text-white mb-2">No open battles</h3>
+            <p className="text-gray-400">Create one or wait for other players!</p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {openBattles.map(battle => (
+            {openBattles.map((battle, index) => (
               <div
                 key={battle.battleId}
-                className="bg-gray-800 rounded-xl p-4 flex items-center justify-between"
+                className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in-up opacity-0"
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div>
-                  <p className="font-medium">
-                    {battle.player1.address.slice(0, 6)}...{battle.player1.address.slice(-4)}
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    Wager: {battle.wager} MON
-                  </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-xl">
+                    👤
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">
+                      {battle.player1.address.slice(0, 6)}...{battle.player1.address.slice(-4)}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-yellow-400">💰</span>
+                      <span className="text-sm text-gray-400">Wager: <span className="text-white font-medium">{battle.wager} MON</span></span>
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={() => joinBattle(battle.battleId)}
                   disabled={myCards.length < 3}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-6 py-2 rounded-lg font-medium transition"
+                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                 >
                   {myCards.length < 3 ? 'Need 3 cards' : 'Join Battle'}
                 </button>
@@ -382,52 +515,63 @@ export default function BattlePage() {
 
       {/* My battles */}
       <div>
-        <h2 className="text-xl font-bold mb-4">My Battles</h2>
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-xl font-bold text-white">My Battles</h2>
+          {myBattles.length > 0 && (
+            <div className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-sm font-medium">
+              {myBattles.length}
+            </div>
+          )}
+        </div>
+
         {myBattles.length === 0 ? (
-          <div className="bg-gray-800 rounded-xl p-8 text-center">
-            <p className="text-gray-400">You have not participated in any battles yet.</p>
+          <div className="section-card text-center py-12">
+            <div className="text-5xl mb-4 opacity-50">⚔️</div>
+            <h3 className="text-lg font-semibold text-white mb-2">No battles yet</h3>
+            <p className="text-gray-400">Create or join a battle to get started!</p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {myBattles.map(battle => {
+            {myBattles.map((battle, index) => {
               const isMyBattle = battle.player1.address.toLowerCase() === address?.toLowerCase();
               const opponent = isMyBattle ? battle.player2 : battle.player1;
               const isWinner = battle.winner?.toLowerCase() === address?.toLowerCase();
 
+              const statusConfig = {
+                complete: isWinner
+                  ? { bg: 'bg-emerald-500/20', text: 'text-emerald-400', label: 'Victory' }
+                  : { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Defeat' },
+                active: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'In Progress' },
+                pending: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Waiting' },
+                selecting: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'Selecting' },
+              };
+
+              const status = statusConfig[battle.status as keyof typeof statusConfig] || statusConfig.pending;
+
               return (
                 <div
                   key={battle.battleId}
-                  className="bg-gray-800 rounded-xl p-4 flex items-center justify-between"
+                  className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in-up opacity-0"
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs ${
-                          battle.status === 'complete'
-                            ? isWinner
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
-                            : battle.status === 'active'
-                            ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-gray-500/20 text-gray-400'
-                        }`}
-                      >
-                        {battle.status === 'complete'
-                          ? isWinner
-                            ? 'Won'
-                            : 'Lost'
-                          : battle.status}
-                      </span>
-                      <span className="text-sm text-gray-400">
-                        vs{' '}
-                        {opponent
-                          ? `${opponent.address.slice(0, 6)}...${opponent.address.slice(-4)}`
-                          : 'Waiting...'}
-                      </span>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${status.bg}`}>
+                      {battle.status === 'complete' ? (isWinner ? '🏆' : '💀') : battle.status === 'active' ? '⚔️' : '⏳'}
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Wager: {battle.wager} MON
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className={`${status.bg} ${status.text} px-2 py-0.5 rounded text-xs font-medium`}>
+                          {status.label}
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          vs {opponent ? `${opponent.address.slice(0, 6)}...${opponent.address.slice(-4)}` : 'Waiting...'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-yellow-400">💰</span>
+                        <span className="text-sm text-gray-400">Wager: <span className="text-white font-medium">{battle.wager} MON</span></span>
+                      </div>
+                    </div>
                   </div>
 
                   {battle.status === 'active' && (
@@ -436,9 +580,9 @@ export default function BattlePage() {
                         setCurrentBattle(battle);
                         setView('battle');
                       }}
-                      className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg font-medium transition"
+                      className="btn-primary w-full sm:w-auto"
                     >
-                      Continue
+                      Continue Battle
                     </button>
                   )}
 
@@ -448,7 +592,7 @@ export default function BattlePage() {
                         setCurrentBattle(battle);
                         setView('select-cards');
                       }}
-                      className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg font-medium transition"
+                      className="btn-primary w-full sm:w-auto"
                     >
                       Select Cards
                     </button>

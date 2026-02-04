@@ -4,6 +4,7 @@ import { Orbitron } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/context/WalletContext";
 import Header from "@/components/Header";
+import ChatBox from "@/components/ChatBox";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -40,6 +41,7 @@ export default function RootLayout({
         <WalletProvider>
           <Header />
           <main>{children}</main>
+          <ChatBox />
         </WalletProvider>
       </body>
     </html>
