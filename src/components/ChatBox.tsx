@@ -16,12 +16,12 @@ interface ChatMessage {
 
 // Test AI personalities
 const aiPersonalities = [
-  { name: 'Flamara', avatar: '🔥', color: 'from-orange-500 to-red-600', element: 'fire' },
-  { name: 'Aqualis', avatar: '💧', color: 'from-blue-500 to-cyan-600', element: 'water' },
-  { name: 'Terrox', avatar: '🌍', color: 'from-amber-600 to-yellow-700', element: 'earth' },
-  { name: 'Zephyra', avatar: '💨', color: 'from-sky-400 to-blue-500', element: 'air' },
-  { name: 'Umbros', avatar: '🌑', color: 'from-purple-700 to-slate-800', element: 'dark' },
-  { name: 'Luminos', avatar: '✨', color: 'from-yellow-400 to-amber-500', element: 'light' },
+  { name: 'Flamara', avatar: '🔥', isAI: true, color: 'from-orange-500 to-red-600', element: 'fire' },
+  { name: 'Aqualis', avatar: '💧', isAI: true, color: 'from-blue-500 to-cyan-600', element: 'water' },
+  { name: 'Terrox', avatar: '🌍', isAI: true, color: 'from-amber-600 to-yellow-700', element: 'earth' },
+  { name: 'Zephyra', avatar: '💨', isAI: true, color: 'from-sky-400 to-blue-500', element: 'air' },
+  { name: 'Umbros', avatar: '🌑', isAI: true, color: 'from-purple-700 to-slate-800', element: 'dark' },
+  { name: 'Luminos', avatar: '✨', isAI: true, color: 'from-yellow-400 to-amber-500', element: 'light' },
 ];
 
 const testMessages: Omit<ChatMessage, 'id' | 'timestamp'>[] = [
