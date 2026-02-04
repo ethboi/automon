@@ -15,19 +15,19 @@ import { Bank } from './buildings/Bank';
 // Building positions and interaction data
 const BUILDINGS = {
   arena: {
-    position: [0, 0, -8] as [number, number, number],
+    position: [0, 0, -14] as [number, number, number],
     radius: 5.5,
     label: 'Battle Arena',
     route: '/battle',
   },
   home: {
-    position: [-8, 0, 4] as [number, number, number],
+    position: [-14, 0, 10] as [number, number, number],
     radius: 3,
     label: 'Collection',
     route: '/collection',
   },
   bank: {
-    position: [8, 0, 4] as [number, number, number],
+    position: [14, 0, 10] as [number, number, number],
     radius: 3.5,
     label: 'Shop',
     route: '/shop',
@@ -41,7 +41,7 @@ function CameraSetup() {
   const { camera } = useThree();
 
   useEffect(() => {
-    camera.position.set(40, 40, 40);
+    camera.position.set(50, 50, 50);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [camera]);
@@ -90,7 +90,7 @@ function Scene({
       <directionalLight position={[-10, 10, -10]} intensity={0.3} />
 
       {/* Ground */}
-      <Ground size={40} onClick={onGroundClick} />
+      <Ground size={50} onClick={onGroundClick} />
 
       {/* Buildings */}
       <BattleArena
@@ -168,7 +168,7 @@ export function GameWorld() {
       <Canvas
         camera={{
           fov: 45,
-          position: [40, 40, 40],
+          position: [50, 50, 50],
           near: 0.1,
           far: 1000,
         }}
