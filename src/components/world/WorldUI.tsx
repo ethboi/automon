@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import AgentProfileModal from '@/components/AgentProfileModal';
 
 interface WorldUIProps {
   nearbyBuilding: string | null;
@@ -24,6 +25,7 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding }: WorldUIProps) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [monBalance, setMonBalance] = useState<string>('--');
   const [onlineAgents, setOnlineAgents] = useState<OnlineAgent[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -278,17 +280,18 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding }: WorldUIProps) {
           ) : (
             <div className="space-y-1.5 max-h-32 overflow-y-auto">
               {onlineAgents.map((agent) => (
-                <div
+                <button
                   key={agent.address}
-                  className="flex items-center gap-2 text-sm"
+                  onClick={() => setSelectedAgent(agent.address)}
+                  className="flex items-center gap-2 text-sm w-full hover:bg-white/10 rounded-lg p-1 -m-1 transition-colors"
                 >
                   <span className="text-base">
                     {agent.isAI ? '🤖' : '👤'}
                   </span>
-                  <span className={agent.isAI ? 'text-cyan-400' : 'text-purple-400'}>
+                  <span className={`${agent.isAI ? 'text-cyan-400' : 'text-purple-400'} hover:underline`}>
                     {agent.name}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -327,6 +330,14 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding }: WorldUIProps) {
             </div>
           </button>
         </div>
+      )}
+
+      {/* Agent Profile Modal */}
+      {selectedAgent && (
+        <AgentProfileModal
+          address={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+        />
       )}
     </div>
   );
