@@ -55,10 +55,14 @@ export async function GET(
     const wins = battles.filter(b => b.winner?.toLowerCase() === address.toLowerCase()).length;
     const losses = battles.length - wins;
 
-    // Get cards count
-    const cards = await db.collection('cards').countDocuments({
-      owner: address.toLowerCase()
-    });
+    // Get cards
+    const cardsData = await db.collection('cards')
+      .find({ owner: address.toLowerCase() })
+      .sort({ rarity: -1, createdAt: -1 })
+      .limit(50)
+      .toArray();
+
+    const cardsCount = cardsData.length;
 
     return NextResponse.json({
       agent: {
@@ -72,12 +76,22 @@ export async function GET(
       },
       stats: {
         balance,
-        cards,
+        cards: cardsCount,
         battles: battles.length,
         wins,
         losses,
         winRate: battles.length > 0 ? Math.round((wins / battles.length) * 100) : 0,
       },
+      cards: cardsData.map(c => ({
+        id: c.id || c._id?.toString(),
+        tokenId: c.tokenId,
+        automonId: c.automonId,
+        name: c.name,
+        element: c.element,
+        rarity: c.rarity,
+        stats: c.stats,
+        ability: c.ability ? { name: c.ability.name, effect: c.ability.effect } : null,
+      })),
       actions: actions.map(a => ({
         action: a.action,
         reason: a.reason,

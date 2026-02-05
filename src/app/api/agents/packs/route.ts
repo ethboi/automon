@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { v4 as uuidv4 } from 'uuid';
-import { generatePack } from '@/lib/cards';
 
 // GET - List packs for an agent
 export async function GET(request: NextRequest) {

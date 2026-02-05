@@ -114,22 +114,18 @@ async function checkAndBuyPacks(): Promise<void> {
     log(`DECISION: Buy pack (${decision.confidence}% confidence)`);
     log(`REASONING: ${decision.reasoning}`);
 
-    // In a real implementation, this would create a blockchain transaction
-    // For demo, we simulate the purchase
-    log('Simulating pack purchase transaction...');
+    // Buy pack from NFT contract
+    const result = await actions.buyPackNFT();
 
-    // Simulate tx hash
-    const mockTxHash = `0x${Math.random().toString(16).slice(2)}${Math.random().toString(16).slice(2)}`;
-    const pack = await actions.buyPack(mockTxHash);
-
-    if (pack) {
-      log(`Pack purchased! ID: ${pack.packId}`);
+    if (result) {
+      log(`Pack purchased! TX: ${result.txHash.slice(0, 10)}...`);
+      log(`Minted token IDs: ${result.tokenIds.join(', ')}`);
       stats.packsBought++;
 
-      // Open the pack
-      const newCards = await actions.openPack(pack.packId);
+      // Sync the NFT cards to the database
+      const newCards = await actions.syncNFTCards(result.tokenIds);
       if (newCards) {
-        log(`Opened pack! Received ${newCards.length} cards:`);
+        log(`Synced ${newCards.length} cards to database:`);
         for (const card of newCards) {
           console.log(`  - ${card.name} (${card.element}, ${card.rarity})`);
         }

@@ -1,19 +1,6 @@
 import { Card, Element, Rarity, Ability, CardStats } from './types';
+import { AUTOMONS, RARITY_MULTIPLIERS, AutoMonType } from './automons';
 import { v4 as uuidv4 } from 'uuid';
-
-const PREFIXES: Record<Element, string[]> = {
-  fire: ['Flame', 'Blaze', 'Ember', 'Inferno', 'Pyro', 'Scorch', 'Magma', 'Char'],
-  water: ['Aqua', 'Hydro', 'Tide', 'Wave', 'Splash', 'Torrent', 'Reef', 'Coral'],
-  earth: ['Terra', 'Rock', 'Stone', 'Geo', 'Boulder', 'Granite', 'Clay', 'Quake'],
-  air: ['Zephyr', 'Gust', 'Breeze', 'Storm', 'Aero', 'Cyclone', 'Wisp', 'Gale'],
-  dark: ['Shadow', 'Void', 'Umbra', 'Nox', 'Shade', 'Dusk', 'Obsidian', 'Phantom'],
-  light: ['Lux', 'Radiant', 'Solar', 'Gleam', 'Prism', 'Aurora', 'Dawn', 'Halo'],
-};
-
-const SUFFIXES = [
-  'claw', 'fang', 'wing', 'tail', 'heart', 'horn', 'scale', 'maw',
-  'spine', 'paw', 'fin', 'talon', 'snout', 'shell', 'fury', 'spirit',
-];
 
 const RARITY_WEIGHTS: { rarity: Rarity; weight: number }[] = [
   { rarity: 'common', weight: 60 },
@@ -23,55 +10,24 @@ const RARITY_WEIGHTS: { rarity: Rarity; weight: number }[] = [
   { rarity: 'legendary', weight: 1 },
 ];
 
-const STAT_RANGES: Record<Rarity, { min: number; max: number }> = {
-  common: { min: 10, max: 20 },
-  uncommon: { min: 18, max: 30 },
-  rare: { min: 28, max: 42 },
-  epic: { min: 40, max: 55 },
-  legendary: { min: 52, max: 70 },
-};
-
-const HP_MULTIPLIER: Record<Rarity, number> = {
-  common: 5,
-  uncommon: 6,
-  rare: 7,
-  epic: 8,
-  legendary: 10,
-};
-
-const ABILITIES: Record<Element, Ability[]> = {
-  fire: [
-    { name: 'Inferno', effect: 'damage', power: 40, cooldown: 3, description: 'Deals heavy fire damage' },
-    { name: 'Burn', effect: 'dot', power: 10, cooldown: 4, description: 'Burns target for 3 turns' },
-  ],
-  water: [
-    { name: 'Tsunami', effect: 'damage', power: 35, cooldown: 3, description: 'Crashes a wave of water' },
-    { name: 'Heal', effect: 'heal', power: 30, cooldown: 4, description: 'Restores HP' },
-  ],
-  earth: [
-    { name: 'Earthquake', effect: 'damage', power: 38, cooldown: 3, description: 'Shakes the ground violently' },
-    { name: 'Fortify', effect: 'buff', power: 20, cooldown: 4, description: 'Increases defense' },
-  ],
-  air: [
-    { name: 'Cyclone', effect: 'damage', power: 32, cooldown: 2, description: 'Summons a devastating cyclone' },
-    { name: 'Haste', effect: 'buff', power: 15, cooldown: 3, description: 'Increases speed' },
-  ],
-  dark: [
-    { name: 'Void Strike', effect: 'damage', power: 45, cooldown: 4, description: 'Strikes from the void' },
-    { name: 'Curse', effect: 'debuff', power: 15, cooldown: 4, description: 'Curses target, reducing stats' },
-  ],
-  light: [
-    { name: 'Radiance', effect: 'damage', power: 36, cooldown: 3, description: 'Blasts with pure light' },
-    { name: 'Purify', effect: 'heal', power: 20, cooldown: 3, description: 'Removes debuffs and heals' },
-  ],
+// Ability definitions by name
+const ABILITY_DEFINITIONS: Record<string, Omit<Ability, 'currentCooldown'>> = {
+  Inferno: { name: 'Inferno', effect: 'damage', power: 40, cooldown: 3, description: 'Deals heavy fire damage' },
+  Burn: { name: 'Burn', effect: 'dot', power: 10, cooldown: 4, description: 'Burns target for 3 turns' },
+  Tsunami: { name: 'Tsunami', effect: 'damage', power: 35, cooldown: 3, description: 'Crashes a wave of water' },
+  Heal: { name: 'Heal', effect: 'heal', power: 30, cooldown: 4, description: 'Restores HP' },
+  Earthquake: { name: 'Earthquake', effect: 'damage', power: 38, cooldown: 3, description: 'Shakes the ground violently' },
+  Fortify: { name: 'Fortify', effect: 'buff', power: 20, cooldown: 4, description: 'Increases defense' },
+  Cyclone: { name: 'Cyclone', effect: 'damage', power: 32, cooldown: 2, description: 'Summons a devastating cyclone' },
+  Haste: { name: 'Haste', effect: 'buff', power: 15, cooldown: 3, description: 'Increases speed' },
+  'Void Strike': { name: 'Void Strike', effect: 'damage', power: 45, cooldown: 4, description: 'Strikes from the void' },
+  Curse: { name: 'Curse', effect: 'debuff', power: 15, cooldown: 4, description: 'Curses target, reducing stats' },
+  Radiance: { name: 'Radiance', effect: 'damage', power: 36, cooldown: 3, description: 'Blasts with pure light' },
+  Purify: { name: 'Purify', effect: 'heal', power: 20, cooldown: 3, description: 'Removes debuffs and heals' },
 };
 
 function randomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randomInRange(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function rollRarity(): Rarity {
@@ -88,58 +44,69 @@ function rollRarity(): Rarity {
   return 'common';
 }
 
-function generateName(element: Element): string {
-  const prefix = randomElement(PREFIXES[element]);
-  const suffix = randomElement(SUFFIXES);
-  return `${prefix}${suffix}`;
+function getAbilityForAutoMon(automon: AutoMonType, rarity: Rarity): Ability {
+  const baseAbility = ABILITY_DEFINITIONS[automon.ability];
+  if (!baseAbility) {
+    // Fallback to generic damage ability
+    return {
+      name: automon.ability,
+      effect: 'damage',
+      power: 30,
+      cooldown: 3,
+      description: `${automon.name}'s special ability`,
+      currentCooldown: 0,
+    };
+  }
+
+  const multiplier = RARITY_MULTIPLIERS[rarity];
+  return {
+    ...baseAbility,
+    power: Math.floor(baseAbility.power * multiplier),
+    currentCooldown: 0,
+  };
 }
 
-function generateStats(rarity: Rarity): CardStats {
-  const range = STAT_RANGES[rarity];
-  const hpMultiplier = HP_MULTIPLIER[rarity];
+function generateStatsFromAutoMon(automon: AutoMonType, rarity: Rarity): CardStats {
+  const multiplier = RARITY_MULTIPLIERS[rarity];
 
-  const baseHp = randomInRange(range.min, range.max) * hpMultiplier;
+  const hp = Math.floor(automon.baseHp * multiplier);
 
   return {
-    attack: randomInRange(range.min, range.max),
-    defense: randomInRange(range.min, range.max),
-    speed: randomInRange(range.min, range.max),
-    hp: baseHp,
-    maxHp: baseHp,
+    attack: Math.floor(automon.baseAttack * multiplier),
+    defense: Math.floor(automon.baseDefense * multiplier),
+    speed: Math.floor(automon.baseSpeed * multiplier),
+    hp,
+    maxHp: hp,
   };
 }
 
-function generateAbility(element: Element, rarity: Rarity): Ability {
-  const elementAbilities = ABILITIES[element];
-  const ability = { ...randomElement(elementAbilities) };
+/**
+ * Generate a card from an AutoMon type with a random rarity
+ */
+export function generateCardFromAutoMon(
+  owner: string,
+  packId: string,
+  automonId?: number,
+  tokenId?: number,
+  rarity?: Rarity
+): Card {
+  // Pick a random AutoMon if not specified
+  const automon = automonId
+    ? AUTOMONS.find(a => a.id === automonId) || randomElement(AUTOMONS)
+    : randomElement(AUTOMONS);
 
-  // Scale ability power with rarity
-  const rarityMultipliers: Record<Rarity, number> = {
-    common: 1,
-    uncommon: 1.15,
-    rare: 1.3,
-    epic: 1.5,
-    legendary: 1.8,
-  };
-
-  ability.power = Math.floor(ability.power * rarityMultipliers[rarity]);
-  ability.currentCooldown = 0;
-
-  return ability;
-}
-
-export function generateCard(owner: string, packId: string): Card {
-  const element = randomElement<Element>(['fire', 'water', 'earth', 'air', 'dark', 'light']);
-  const rarity = rollRarity();
+  const cardRarity = rarity || rollRarity();
 
   return {
     id: uuidv4(),
+    tokenId,
+    automonId: automon.id,
     owner,
-    name: generateName(element),
-    element,
-    rarity,
-    stats: generateStats(rarity),
-    ability: generateAbility(element, rarity),
+    name: automon.name,
+    element: automon.element,
+    rarity: cardRarity,
+    stats: generateStatsFromAutoMon(automon, cardRarity),
+    ability: getAbilityForAutoMon(automon, cardRarity),
     level: 1,
     xp: 0,
     packId,
@@ -147,8 +114,19 @@ export function generateCard(owner: string, packId: string): Card {
   };
 }
 
+/**
+ * Generate a card using the old random name system (for backwards compatibility)
+ * @deprecated Use generateCardFromAutoMon instead
+ */
+export function generateCard(owner: string, packId: string): Card {
+  return generateCardFromAutoMon(owner, packId);
+}
+
+/**
+ * Generate a pack of 3 cards (to match NFT contract)
+ */
 export function generatePack(owner: string, packId: string): Card[] {
-  return Array.from({ length: 5 }, () => generateCard(owner, packId));
+  return Array.from({ length: 3 }, () => generateCardFromAutoMon(owner, packId));
 }
 
 export function getElementAdvantage(attacker: Element, defender: Element): number {
@@ -194,4 +172,19 @@ export function getElementColor(element: Element): string {
     light: 'from-yellow-300 to-white',
   };
   return colors[element];
+}
+
+/**
+ * Convert on-chain rarity index to Rarity type
+ */
+export function rarityFromIndex(index: number): Rarity {
+  const rarities: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+  return rarities[index] || 'common';
+}
+
+/**
+ * Get image URL for an AutoMon
+ */
+export function getAutoMonImageUrl(automonId: number): string {
+  return `/images/automons/${automonId}.svg`;
 }

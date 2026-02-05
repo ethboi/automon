@@ -23,6 +23,8 @@ export interface Ability {
 export interface Card {
   _id?: ObjectId;
   id?: string;
+  tokenId?: number; // NFT token ID on-chain
+  automonId?: number; // 1-20 AutoMon type
   owner: string;
   name: string;
   element: Element;
