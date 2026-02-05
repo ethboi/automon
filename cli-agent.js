@@ -93,6 +93,20 @@ async function getBalance() {
   }
 }
 
+async function fetchExistingAgent() {
+  if (!walletAddress) return null;
+  try {
+    const res = await fetch(`${APP_URL}/api/agents/${walletAddress}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.agent;
+    }
+  } catch (error) {
+    // Agent doesn't exist yet
+  }
+  return null;
+}
+
 async function registerAgent() {
   if (!walletAddress) return false;
   try {
@@ -347,12 +361,19 @@ async function main() {
     process.exit(1);
   }
 
-  // Auto-choose name if using default
-  if (walletAddress && agentName === 'Wanderer') {
-    console.log('\x1b[33m🤔 Choosing my name...\x1b[0m');
-    const newName = await chooseName();
-    if (newName) {
-      console.log(`\x1b[32m✨ I am ${newName}!\x1b[0m\n`);
+  // Check if agent already exists with a name
+  if (walletAddress) {
+    const existingAgent = await fetchExistingAgent();
+    if (existingAgent && existingAgent.name && existingAgent.name !== 'Wanderer') {
+      agentName = existingAgent.name;
+      console.log(`\x1b[32m✨ I am ${agentName}!\x1b[0m\n`);
+    } else if (agentName === 'Wanderer') {
+      // Only choose a new name if no existing name found
+      console.log('\x1b[33m🤔 Choosing my name...\x1b[0m');
+      const newName = await chooseName();
+      if (newName) {
+        console.log(`\x1b[32m✨ I am ${newName}!\x1b[0m\n`);
+      }
     }
   }
 
