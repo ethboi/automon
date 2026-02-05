@@ -7,10 +7,19 @@ import * as THREE from 'three';
 
 import { Ground } from './Ground';
 import { Character } from './Character';
+import { AICharacter } from './AICharacter';
 import { WorldUI } from './WorldUI';
 import { BattleArena } from './buildings/BattleArena';
 import { Home } from './buildings/Home';
 import { Bank } from './buildings/Bank';
+
+interface OnlineAgent {
+  address: string;
+  name: string;
+  personality: string;
+  isAI: boolean;
+  position: { x: number; y: number; z: number };
+}
 
 // Building positions and interaction data
 const BUILDINGS = {
@@ -54,11 +63,13 @@ function Scene({
   onGroundClick,
   targetPosition,
   onCharacterMove,
+  onlineAgents,
 }: {
   onBuildingClick: (route: string) => void;
   onGroundClick: (point: THREE.Vector3) => void;
   targetPosition: THREE.Vector3 | null;
   onCharacterMove: (position: THREE.Vector3) => void;
+  onlineAgents: OnlineAgent[];
 }) {
   const buildingsArray = Object.values(BUILDINGS).map((b) => ({
     position: b.position,
@@ -106,6 +117,16 @@ function Scene({
         onClick={() => onBuildingClick(BUILDINGS.bank.route)}
       />
 
+      {/* AI Agents */}
+      {onlineAgents.map((agent) => (
+        <AICharacter
+          key={agent.address}
+          address={agent.address}
+          name={agent.name}
+          targetPosition={agent.position}
+        />
+      ))}
+
       {/* Character */}
       <Character
         initialPosition={[0, 0, 8]}
@@ -122,6 +143,26 @@ export function GameWorld() {
   const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
   const [nearbyBuilding, setNearbyBuilding] = useState<string | null>(null);
   const [nearbyRoute, setNearbyRoute] = useState<string | null>(null);
+  const [onlineAgents, setOnlineAgents] = useState<OnlineAgent[]>([]);
+
+  // Fetch online agents periodically
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const res = await fetch('/api/agents/online');
+        const data = await res.json();
+        if (data.agents) {
+          setOnlineAgents(data.agents);
+        }
+      } catch (error) {
+        console.error('Failed to fetch agents:', error);
+      }
+    };
+
+    fetchAgents();
+    const interval = setInterval(fetchAgents, 1000); // Poll every second
+    return () => clearInterval(interval);
+  }, []);
 
   const handleBuildingClick = useCallback(
     (route: string) => {
@@ -180,6 +221,7 @@ export function GameWorld() {
             onGroundClick={handleGroundClick}
             targetPosition={targetPosition}
             onCharacterMove={handleCharacterMove}
+            onlineAgents={onlineAgents}
           />
         </Suspense>
       </Canvas>
