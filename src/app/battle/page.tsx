@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useWallet } from '@/context/WalletContext';
-import { Battle, Card as CardType, BattleMove } from '@/lib/types';
+import { Battle, Card as CardType, BattleMove, BattleLog } from '@/lib/types';
 import Card from '@/components/Card';
 import BattleArena from '@/components/BattleArena';
+import BattleReplay from '@/components/BattleReplay';
 
-type View = 'list' | 'create' | 'select-cards' | 'battle';
+type View = 'list' | 'create' | 'select-cards' | 'battle' | 'replay';
 
 export default function BattlePage() {
   const { address, refreshBalance } = useWallet();
@@ -18,6 +19,7 @@ export default function BattlePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wagerAmount, setWagerAmount] = useState('0.01');
+  const [battleLog, setBattleLog] = useState<BattleLog | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -132,14 +134,34 @@ export default function BattlePage() {
         throw new Error(data.error || 'Failed to select cards');
       }
 
-      const { battle } = await res.json();
-      setCurrentBattle(battle);
+      const data = await res.json();
+      setCurrentBattle(data.battle);
 
-      if (battle.status === 'active') {
+      // If simulation completed, show the replay
+      if (data.simulationComplete && data.battleLog) {
+        setBattleLog(data.battleLog);
+        setView('replay');
+      } else if (data.battle.status === 'active') {
         setView('battle');
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
+    }
+  };
+
+  const watchReplay = async (battleId: string) => {
+    try {
+      const res = await fetch(`/api/battle/simulate?battleId=${battleId}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch battle log');
+      }
+      const data = await res.json();
+      if (data.battleLog) {
+        setBattleLog(data.battleLog);
+        setView('replay');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load replay');
     }
   };
 
@@ -209,6 +231,20 @@ export default function BattlePage() {
           <p className="text-gray-400 animate-pulse">Loading battles...</p>
         </div>
       </div>
+    );
+  }
+
+  // Replay view
+  if (view === 'replay' && battleLog) {
+    return (
+      <BattleReplay
+        battleLog={battleLog}
+        onClose={() => {
+          setBattleLog(null);
+          setView('list');
+          fetchData();
+        }}
+      />
     );
   }
 
@@ -573,6 +609,18 @@ export default function BattlePage() {
                       </div>
                     </div>
                   </div>
+
+                  {battle.status === 'complete' && (
+                    <button
+                      onClick={() => watchReplay(battle.battleId)}
+                      className="btn-secondary w-full sm:w-auto"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>📺</span>
+                        <span>Watch Replay</span>
+                      </span>
+                    </button>
+                  )}
 
                   {battle.status === 'active' && (
                     <button

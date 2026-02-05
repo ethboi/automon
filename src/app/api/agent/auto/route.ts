@@ -54,9 +54,9 @@ export async function POST(request: NextRequest) {
 
       const validation = validateMove(battle, session.address, decision);
       if (!validation.valid) {
-        // Fallback to basic attack if decision is invalid
-        decision.action = 'attack';
-        decision.reason = 'Fallback due to invalid move';
+        // Fallback to basic strike if decision is invalid
+        decision.action = 'strike';
+        decision.reasoning = 'Fallback due to invalid move';
       }
 
       // Get or create current round

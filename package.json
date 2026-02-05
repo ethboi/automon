@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "agent": "tsx agent/index.ts",
+    "agent:verbose": "VERBOSE_LOGGING=true tsx agent/index.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.1",
@@ -32,6 +34,7 @@
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }

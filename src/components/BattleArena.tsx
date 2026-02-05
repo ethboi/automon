@@ -156,24 +156,27 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
           <h3 className="text-lg font-medium mb-4">Choose Your Action</h3>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            {/* STRIKE - beats SKILL */}
             <button
-              onClick={() => setSelectedMove({ action: 'attack' })}
+              onClick={() => setSelectedMove({ action: 'strike' })}
               className={`p-4 rounded-lg border-2 transition ${
-                selectedMove?.action === 'attack'
-                  ? 'border-purple-500 bg-purple-500/20'
+                selectedMove?.action === 'strike'
+                  ? 'border-red-500 bg-red-500/20'
                   : 'border-gray-600 hover:border-gray-500'
               }`}
             >
               <span className="text-2xl mb-2 block">⚔️</span>
-              <span className="font-medium">Attack</span>
-              <span className="text-xs text-gray-400 block">Basic damage</span>
+              <span className="font-medium">Strike</span>
+              <span className="text-xs text-gray-400 block">Beats SKILL</span>
+              <span className="text-xs text-red-400 block">Loses to GUARD</span>
             </button>
 
+            {/* SKILL - beats GUARD */}
             <button
-              onClick={() => setSelectedMove({ action: 'ability' })}
+              onClick={() => setSelectedMove({ action: 'skill' })}
               disabled={myActiveCard.ability.currentCooldown !== undefined && myActiveCard.ability.currentCooldown > 0}
               className={`p-4 rounded-lg border-2 transition ${
-                selectedMove?.action === 'ability'
+                selectedMove?.action === 'skill'
                   ? 'border-purple-500 bg-purple-500/20'
                   : 'border-gray-600 hover:border-gray-500'
               } ${myActiveCard.ability.currentCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -183,10 +186,27 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
               <span className="text-xs text-gray-400 block">
                 {myActiveCard.ability.currentCooldown
                   ? `Cooldown: ${myActiveCard.ability.currentCooldown}`
-                  : myActiveCard.ability.description}
+                  : 'Beats GUARD'}
               </span>
+              <span className="text-xs text-red-400 block">Loses to STRIKE</span>
             </button>
 
+            {/* GUARD - beats STRIKE */}
+            <button
+              onClick={() => setSelectedMove({ action: 'guard' })}
+              className={`p-4 rounded-lg border-2 transition ${
+                selectedMove?.action === 'guard'
+                  ? 'border-blue-500 bg-blue-500/20'
+                  : 'border-gray-600 hover:border-gray-500'
+              }`}
+            >
+              <span className="text-2xl mb-2 block">🛡️</span>
+              <span className="font-medium">Guard</span>
+              <span className="text-xs text-gray-400 block">Beats STRIKE</span>
+              <span className="text-xs text-red-400 block">Loses to SKILL</span>
+            </button>
+
+            {/* SWITCH */}
             <button
               onClick={() => {
                 const nextAlive = myState.cards.findIndex(
@@ -199,13 +219,13 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
               disabled={!myState.cards.some((c, i) => i !== myState.activeCardIndex && c.currentHp > 0)}
               className={`p-4 rounded-lg border-2 transition ${
                 selectedMove?.action === 'switch'
-                  ? 'border-purple-500 bg-purple-500/20'
+                  ? 'border-yellow-500 bg-yellow-500/20'
                   : 'border-gray-600 hover:border-gray-500'
               }`}
             >
               <span className="text-2xl mb-2 block">🔄</span>
               <span className="font-medium">Switch</span>
-              <span className="text-xs text-gray-400 block">Click bench card</span>
+              <span className="text-xs text-gray-400 block">Always first</span>
             </button>
 
             {onAIDecide && (

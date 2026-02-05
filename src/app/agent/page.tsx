@@ -336,9 +336,9 @@ export default function AgentPage() {
                     </span>
                   </div>
                   <p>{log.message}</p>
-                  {log.decision?.reason && (
+                  {log.decision?.reasoning && (
                     <p className="text-xs text-gray-400 mt-1 italic">
-                      Reason: {log.decision.reason}
+                      Reasoning: {log.decision.reasoning}
                     </p>
                   )}
                 </div>
