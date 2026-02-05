@@ -5,11 +5,11 @@ export async function GET() {
   try {
     const db = await getDb();
 
-    // Get agents seen in last 30 seconds
-    const thirtySecondsAgo = new Date(Date.now() - 30000);
+    // Get agents seen in last 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 300000);
 
     const agents = await db.collection('agents')
-      .find({ lastSeen: { $gte: thirtySecondsAgo } })
+      .find({ lastSeen: { $gte: fiveMinutesAgo } })
       .toArray();
 
     return NextResponse.json({
