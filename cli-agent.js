@@ -279,12 +279,12 @@ async function executeCommand(cmd) {
   }
 }
 
-function parseAndExecuteCommands(text) {
+async function parseAndExecuteCommands(text) {
   const cmdRegex = /\[CMD:([^\]]+)\]/g;
   let match;
 
   while ((match = cmdRegex.exec(text)) !== null) {
-    executeCommand(match[1]);
+    await executeCommand(match[1]);
   }
 
   // Return text without command tags for display
@@ -314,7 +314,7 @@ async function chat(userMessage) {
     });
 
     // Parse and execute any commands in the response
-    const displayMessage = parseAndExecuteCommands(assistantMessage);
+    const displayMessage = await parseAndExecuteCommands(assistantMessage);
 
     return displayMessage;
   } catch (error) {
