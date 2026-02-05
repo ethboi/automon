@@ -3,7 +3,7 @@ import { getDb } from '@/lib/mongodb';
 
 export async function POST(request: NextRequest) {
   try {
-    const { address, position } = await request.json();
+    const { address, position, name } = await request.json();
 
     if (!address || !position) {
       return NextResponse.json({ error: 'Address and position required' }, { status: 400 });
@@ -11,14 +11,19 @@ export async function POST(request: NextRequest) {
 
     const db = await getDb();
 
+    const updateFields: Record<string, unknown> = {
+      position,
+      lastSeen: new Date(),
+    };
+
+    // Also update name if provided
+    if (name) {
+      updateFields.name = name;
+    }
+
     await db.collection('agents').updateOne(
       { address: address.toLowerCase() },
-      {
-        $set: {
-          position,
-          lastSeen: new Date(),
-        }
-      }
+      { $set: updateFields }
     );
 
     return NextResponse.json({ success: true, position });

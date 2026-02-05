@@ -146,6 +146,7 @@ async function updatePosition(pos) {
       body: JSON.stringify({
         address: walletAddress,
         position: pos,
+        name: agentName, // Also send name to keep it synced
       }),
     });
   } catch (error) {
