@@ -28,6 +28,7 @@ export default function AgentPage() {
       return;
     }
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, router]);
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function AgentPage() {
       const interval = setInterval(() => runAgentTurn(), 5000);
       return () => clearInterval(interval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoMode, activeBattle]);
 
   const addLog = (type: AgentLog['type'], message: string, decision?: AgentDecision) => {

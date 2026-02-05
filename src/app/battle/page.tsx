@@ -30,6 +30,7 @@ export default function BattlePage() {
       const interval = setInterval(() => refreshBattle(), 3000);
       return () => clearInterval(interval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBattle]);
 
   const fetchData = async () => {
