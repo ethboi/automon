@@ -54,6 +54,9 @@ YOU HAVE THESE COMMANDS (you can use them by including them in your response):
 - [CMD:GOTO shop] - Walk to the Shop
 - [CMD:WANDER] - Start wandering randomly
 - [CMD:STOP] - Stop wandering
+- [CMD:BUY] - Buy a card pack
+- [CMD:OPEN] - Open your oldest unopened pack
+- [CMD:CARDS] - List your cards
 
 When you want to execute a command, include it in your response like: "I think I'll head to the arena [CMD:GOTO arena]"
 
@@ -91,6 +94,91 @@ async function getBalance() {
   } catch (error) {
     return `Error: ${error.message}`;
   }
+}
+
+async function buyPack() {
+  if (!walletAddress) return null;
+  try {
+    const res = await fetch(`${APP_URL}/api/agents/packs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: walletAddress }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.pack;
+    }
+    const error = await res.json();
+    console.error('Buy pack failed:', error.error);
+    return null;
+  } catch (error) {
+    console.error('Buy pack error:', error.message);
+    return null;
+  }
+}
+
+async function openPack(packId = null) {
+  if (!walletAddress) return null;
+  try {
+    const res = await fetch(`${APP_URL}/api/agents/packs/open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: walletAddress, packId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+    const error = await res.json();
+    console.error('Open pack failed:', error.error);
+    return null;
+  } catch (error) {
+    console.error('Open pack error:', error.message);
+    return null;
+  }
+}
+
+async function listPacks() {
+  if (!walletAddress) return [];
+  try {
+    const res = await fetch(`${APP_URL}/api/agents/packs?address=${walletAddress}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.packs || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('List packs error:', error.message);
+    return [];
+  }
+}
+
+async function listCards() {
+  if (!walletAddress) return [];
+  try {
+    const res = await fetch(`${APP_URL}/api/agents/cards?address=${walletAddress}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.cards || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('List cards error:', error.message);
+    return [];
+  }
+}
+
+function formatCard(card) {
+  const rarityColors = {
+    common: '\x1b[37m',      // white
+    uncommon: '\x1b[32m',    // green
+    rare: '\x1b[34m',        // blue
+    epic: '\x1b[35m',        // purple
+    legendary: '\x1b[33m',   // yellow
+  };
+  const color = rarityColors[card.rarity] || '\x1b[37m';
+  const reset = '\x1b[0m';
+  return `${color}[${card.rarity.toUpperCase()}]${reset} ${card.name} (${card.element}) - ATK:${card.stats.attack} DEF:${card.stats.defense} SPD:${card.stats.speed} HP:${card.stats.hp}`;
 }
 
 async function fetchExistingAgent() {
@@ -276,6 +364,36 @@ async function executeCommand(cmd) {
       await updatePosition(target);
       await logAction(`Walked to ${destination}`, 'Decided to visit this location', destination);
     }
+  } else if (cmdUpper === 'BUY') {
+    console.log('\x1b[33m🛒 Buying a card pack...\x1b[0m');
+    const pack = await buyPack();
+    if (pack) {
+      console.log(`\x1b[32m✨ Pack purchased! ID: ${pack.packId}\x1b[0m`);
+      await logAction('Bought a card pack', 'Expanding my collection', getNearbyBuilding() || 'Open area');
+    }
+  } else if (cmdUpper === 'OPEN') {
+    console.log('\x1b[33m📦 Opening a card pack...\x1b[0m');
+    const result = await openPack();
+    if (result && result.cards) {
+      console.log(`\x1b[32m✨ Opened pack! Got ${result.cards.length} cards:\x1b[0m`);
+      result.cards.forEach(card => {
+        console.log('  ' + formatCard(card));
+      });
+      await logAction(`Opened a pack and got ${result.cards.length} cards`, 'Revealing new cards', getNearbyBuilding() || 'Open area');
+    } else {
+      console.log('\x1b[31mNo unopened packs to open.\x1b[0m');
+    }
+  } else if (cmdUpper === 'CARDS') {
+    const cards = await listCards();
+    console.log(`\x1b[33m🎴 I have ${cards.length} cards:\x1b[0m`);
+    if (cards.length > 0) {
+      cards.slice(0, 10).forEach(card => {
+        console.log('  ' + formatCard(card));
+      });
+      if (cards.length > 10) {
+        console.log(`  ... and ${cards.length - 10} more`);
+      }
+    }
   }
 }
 
@@ -371,6 +489,10 @@ async function main() {
   console.log('  /stop     - Stop wandering');
   console.log('  /pos      - Show current position');
   console.log('  /goto <place> - Go to arena, home, or shop');
+  console.log('  /buy      - Buy a card pack');
+  console.log('  /open     - Open a card pack');
+  console.log('  /packs    - List your packs');
+  console.log('  /cards    - List your cards');
   console.log('  /balance  - Check wallet balance');
   console.log('  /address  - Show wallet address');
   console.log('  exit      - Quit\n');
@@ -443,6 +565,60 @@ async function main() {
       if (target) {
         await updatePosition(target);
       }
+      continue;
+    }
+
+    if (cmd === '/buy') {
+      console.log('\x1b[33m🛒 Buying a card pack...\x1b[0m');
+      const pack = await buyPack();
+      if (pack) {
+        console.log(`\x1b[32m✨ Pack purchased! ID: ${pack.packId}\x1b[0m`);
+        await logAction('Bought a card pack', 'Expanding my collection', getNearbyBuilding() || 'Open area');
+      } else {
+        console.log('\x1b[31mFailed to buy pack.\x1b[0m');
+      }
+      console.log();
+      continue;
+    }
+
+    if (cmd === '/open') {
+      console.log('\x1b[33m📦 Opening a card pack...\x1b[0m');
+      const result = await openPack();
+      if (result && result.cards) {
+        console.log(`\x1b[32m✨ Opened pack! Got ${result.cards.length} cards:\x1b[0m`);
+        result.cards.forEach(card => {
+          console.log('  ' + formatCard(card));
+        });
+        await logAction(`Opened a pack and got ${result.cards.length} cards`, 'Revealing new cards', getNearbyBuilding() || 'Open area');
+      } else {
+        console.log('\x1b[31mNo unopened packs found. Buy one with /buy first.\x1b[0m');
+      }
+      console.log();
+      continue;
+    }
+
+    if (cmd === '/packs') {
+      const packs = await listPacks();
+      const unopened = packs.filter(p => !p.opened);
+      const opened = packs.filter(p => p.opened);
+      console.log(`\x1b[33m📦 Packs:\x1b[0m ${packs.length} total (${unopened.length} unopened, ${opened.length} opened)`);
+      if (unopened.length > 0) {
+        console.log('  Unopened:');
+        unopened.forEach(p => console.log(`    - ${p.packId}`));
+      }
+      console.log();
+      continue;
+    }
+
+    if (cmd === '/cards') {
+      const cards = await listCards();
+      console.log(`\x1b[33m🎴 Cards:\x1b[0m ${cards.length} total`);
+      if (cards.length > 0) {
+        cards.forEach(card => {
+          console.log('  ' + formatCard(card));
+        });
+      }
+      console.log();
       continue;
     }
 
