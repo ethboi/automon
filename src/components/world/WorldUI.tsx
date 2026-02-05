@@ -14,13 +14,39 @@ interface Stats {
   losses: number;
 }
 
+interface OnlineAgent {
+  address: string;
+  name: string;
+  isAI: boolean;
+}
+
 export function WorldUI({ nearbyBuilding, onEnterBuilding }: WorldUIProps) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [monBalance, setMonBalance] = useState<string>('--');
+  const [onlineAgents, setOnlineAgents] = useState<OnlineAgent[]>([]);
 
   useEffect(() => {
     fetchStats();
     fetchBalance();
+  }, []);
+
+  // Fetch online agents periodically
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const res = await fetch('/api/agents/online');
+        if (res.ok) {
+          const data = await res.json();
+          setOnlineAgents(data.agents || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch agents:', error);
+      }
+    };
+
+    fetchAgents();
+    const interval = setInterval(fetchAgents, 2000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchStats = async () => {
@@ -232,6 +258,40 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding }: WorldUIProps) {
               Shop
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Online Agents Panel */}
+      <div className="absolute bottom-4 right-4 pointer-events-auto">
+        <div className="glass rounded-2xl p-3 shadow-lg shadow-black/30 min-w-[160px]">
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-xs font-semibold text-gray-300 uppercase tracking-wide">
+              Online ({onlineAgents.length})
+            </span>
+          </div>
+
+          {onlineAgents.length === 0 ? (
+            <div className="text-xs text-gray-500 italic py-2">
+              No agents online
+            </div>
+          ) : (
+            <div className="space-y-1.5 max-h-32 overflow-y-auto">
+              {onlineAgents.map((agent) => (
+                <div
+                  key={agent.address}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <span className="text-base">
+                    {agent.isAI ? '🤖' : '👤'}
+                  </span>
+                  <span className={agent.isAI ? 'text-cyan-400' : 'text-purple-400'}>
+                    {agent.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
