@@ -328,12 +328,31 @@ async function main() {
   console.log('\n🤖 AutoMon AI Agent');
   console.log('═══════════════════════════════════════');
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('Error: ANTHROPIC_API_KEY not found in .env.local');
+    process.exit(1);
+  }
+
   if (walletAddress) {
     console.log(`🔑 Wallet: ${walletAddress}`);
     const balance = await getBalance();
     console.log(`💰 Balance: ${balance}`);
 
-    // Register with the game world
+    // First, check if agent already exists with a name
+    const existingAgent = await fetchExistingAgent();
+    if (existingAgent && existingAgent.name && existingAgent.name !== 'Wanderer') {
+      agentName = existingAgent.name;
+      console.log(`\x1b[32m✨ I am ${agentName}!\x1b[0m`);
+    } else if (agentName === 'Wanderer') {
+      // Only choose a new name if no existing name found
+      console.log('\x1b[33m🤔 Choosing my name...\x1b[0m');
+      const newName = await chooseName();
+      if (newName) {
+        console.log(`\x1b[32m✨ I am ${newName}!\x1b[0m`);
+      }
+    }
+
+    // Now register with the correct name
     const registered = await registerAgent();
     if (registered) {
       console.log(`🌍 Connected to world at ${APP_URL}`);
@@ -355,27 +374,6 @@ async function main() {
   console.log('  /balance  - Check wallet balance');
   console.log('  /address  - Show wallet address');
   console.log('  exit      - Quit\n');
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('Error: ANTHROPIC_API_KEY not found in .env.local');
-    process.exit(1);
-  }
-
-  // Check if agent already exists with a name
-  if (walletAddress) {
-    const existingAgent = await fetchExistingAgent();
-    if (existingAgent && existingAgent.name && existingAgent.name !== 'Wanderer') {
-      agentName = existingAgent.name;
-      console.log(`\x1b[32m✨ I am ${agentName}!\x1b[0m\n`);
-    } else if (agentName === 'Wanderer') {
-      // Only choose a new name if no existing name found
-      console.log('\x1b[33m🤔 Choosing my name...\x1b[0m');
-      const newName = await chooseName();
-      if (newName) {
-        console.log(`\x1b[32m✨ I am ${newName}!\x1b[0m\n`);
-      }
-    }
-  }
 
   // Start wandering by default
   if (walletAddress) {
