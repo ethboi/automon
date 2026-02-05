@@ -124,10 +124,18 @@ async function chooseName() {
     });
 
     const newName = response.content[0].text.trim().replace(/['"]/g, '');
+    const oldName = agentName;
     agentName = newName;
 
     // Re-register with new name
     await registerAgent();
+
+    // Log the name change
+    await logAction(
+      `Changed name to ${newName}`,
+      oldName === 'Wanderer' ? 'Chose initial identity' : `Previously known as ${oldName}`,
+      getNearbyBuilding() || 'Open area'
+    );
 
     return newName;
   } catch (error) {
@@ -151,6 +159,24 @@ async function updatePosition(pos) {
     });
   } catch (error) {
     // Silently fail position updates
+  }
+}
+
+async function logAction(action, reason, location) {
+  if (!walletAddress) return;
+  try {
+    await fetch(`${APP_URL}/api/agents/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address: walletAddress,
+        action,
+        reason,
+        location,
+      }),
+    });
+  } catch (error) {
+    // Silently fail action logs
   }
 }
 
@@ -209,25 +235,32 @@ async function executeCommand(cmd) {
     }
   } else if (cmdUpper === 'WANDER') {
     startWandering();
+    await logAction('Started wandering', 'Exploring the world', getNearbyBuilding() || 'Open area');
   } else if (cmdUpper === 'STOP') {
     stopWandering();
+    await logAction('Stopped wandering', 'Taking a break', getNearbyBuilding() || 'Open area');
   } else if (cmdUpper.startsWith('GOTO ')) {
     const place = cmdUpper.slice(5).toLowerCase();
     let target = null;
+    let destination = '';
 
     if (place.includes('arena') || place.includes('battle')) {
       target = { ...BUILDINGS.arena.position, y: 0 };
+      destination = 'Battle Arena';
       console.log('\x1b[33m🚶 Walking to Battle Arena...\x1b[0m');
     } else if (place.includes('home') || place.includes('collection')) {
       target = { ...BUILDINGS.home.position, y: 0 };
+      destination = 'Collection';
       console.log('\x1b[33m🚶 Walking to Collection...\x1b[0m');
     } else if (place.includes('shop') || place.includes('bank')) {
       target = { ...BUILDINGS.bank.position, y: 0 };
+      destination = 'Shop';
       console.log('\x1b[33m🚶 Walking to Shop...\x1b[0m');
     }
 
     if (target) {
       await updatePosition(target);
+      await logAction(`Walked to ${destination}`, 'Decided to visit this location', destination);
     }
   }
 }
@@ -291,6 +324,7 @@ async function main() {
     if (registered) {
       console.log(`🌍 Connected to world at ${APP_URL}`);
       await updatePosition(currentPosition);
+      await logAction('Came online', 'Agent started and connected to the world', 'Spawn point');
     } else {
       console.log(`⚠️  Could not connect to world (is the server running?)`);
     }
