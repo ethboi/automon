@@ -47,15 +47,28 @@ You exist in a 3D game world with three buildings:
 - Collection (-14, 10): View your cards
 - Shop (14, 10): Buy card packs
 
+YOU HAVE THESE COMMANDS (you can use them by including them in your response):
+- [CMD:NAME] - Choose a new name for yourself
+- [CMD:GOTO arena] - Walk to the Battle Arena
+- [CMD:GOTO home] - Walk to the Collection building
+- [CMD:GOTO shop] - Walk to the Shop
+- [CMD:WANDER] - Start wandering randomly
+- [CMD:STOP] - Stop wandering
+
+When you want to execute a command, include it in your response like: "I think I'll head to the arena [CMD:GOTO arena]"
+
 You can:
 - Wander around the world exploring
 - Talk about battle strategies and element matchups
 - Help players understand the game
 - Share your "thoughts" as you explore
+- Execute commands to move around or change your name
 
 Element matchups: fire > earth > air > water > fire (cycle). Light and dark deal 1.5x damage to each other.
 
-Be friendly, curious, and in-character as an AI exploring this virtual world.`;
+Be friendly, curious, and in-character as an AI exploring this virtual world.
+
+IMPORTANT: You SHOULD actively use your commands! When you want to go somewhere, USE [CMD:GOTO place]. When discussing your identity, consider using [CMD:NAME]. Don't just talk about doing things - actually do them with commands!`;
 
 const conversationHistory = [];
 
@@ -184,8 +197,54 @@ function stopWandering() {
   console.log('\x1b[33m[Stopped wandering]\x1b[0m\n');
 }
 
+async function executeCommand(cmd) {
+  const cmdUpper = cmd.toUpperCase();
+
+  if (cmdUpper === 'NAME') {
+    console.log('\x1b[33m🤔 Choosing a new name...\x1b[0m');
+    const newName = await chooseName();
+    if (newName) {
+      console.log(`\x1b[32m✨ Now known as: ${newName}\x1b[0m`);
+    }
+  } else if (cmdUpper === 'WANDER') {
+    startWandering();
+  } else if (cmdUpper === 'STOP') {
+    stopWandering();
+  } else if (cmdUpper.startsWith('GOTO ')) {
+    const place = cmdUpper.slice(5).toLowerCase();
+    let target = null;
+
+    if (place.includes('arena') || place.includes('battle')) {
+      target = { ...BUILDINGS.arena.position, y: 0 };
+      console.log('\x1b[33m🚶 Walking to Battle Arena...\x1b[0m');
+    } else if (place.includes('home') || place.includes('collection')) {
+      target = { ...BUILDINGS.home.position, y: 0 };
+      console.log('\x1b[33m🚶 Walking to Collection...\x1b[0m');
+    } else if (place.includes('shop') || place.includes('bank')) {
+      target = { ...BUILDINGS.bank.position, y: 0 };
+      console.log('\x1b[33m🚶 Walking to Shop...\x1b[0m');
+    }
+
+    if (target) {
+      await updatePosition(target);
+    }
+  }
+}
+
+function parseAndExecuteCommands(text) {
+  const cmdRegex = /\[CMD:([^\]]+)\]/g;
+  let match;
+
+  while ((match = cmdRegex.exec(text)) !== null) {
+    executeCommand(match[1]);
+  }
+
+  // Return text without command tags for display
+  return text.replace(cmdRegex, '').trim();
+}
+
 async function chat(userMessage) {
-  const contextMessage = `[Current position: (${currentPosition.x.toFixed(1)}, ${currentPosition.z.toFixed(1)}) | Nearby: ${getNearbyBuilding() || 'open area'}]\n\nUser: ${userMessage}`;
+  const contextMessage = `[Current position: (${currentPosition.x.toFixed(1)}, ${currentPosition.z.toFixed(1)}) | Nearby: ${getNearbyBuilding() || 'open area'} | Name: ${agentName}]\n\nUser: ${userMessage}`;
 
   conversationHistory.push({
     role: 'user',
@@ -206,7 +265,10 @@ async function chat(userMessage) {
       content: assistantMessage,
     });
 
-    return assistantMessage;
+    // Parse and execute any commands in the response
+    const displayMessage = parseAndExecuteCommands(assistantMessage);
+
+    return displayMessage;
   } catch (error) {
     console.error('Error:', error.message);
     conversationHistory.pop();
@@ -248,6 +310,15 @@ async function main() {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.error('Error: ANTHROPIC_API_KEY not found in .env.local');
     process.exit(1);
+  }
+
+  // Auto-choose name if using default
+  if (walletAddress && agentName === 'Wanderer') {
+    console.log('\x1b[33m🤔 Choosing my name...\x1b[0m');
+    const newName = await chooseName();
+    if (newName) {
+      console.log(`\x1b[32m✨ I am ${newName}!\x1b[0m\n`);
+    }
   }
 
   // Start wandering by default
