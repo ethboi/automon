@@ -2,6 +2,25 @@
 
 import { useEffect, useState } from 'react';
 
+interface CardInfo {
+  id: string;
+  tokenId?: number;
+  automonId?: number;
+  name: string;
+  element: string;
+  rarity: string;
+  stats?: {
+    attack: number;
+    defense: number;
+    speed: number;
+    hp: number;
+  };
+  ability?: {
+    name: string;
+    effect: string;
+  };
+}
+
 interface AgentDetails {
   agent: {
     address: string;
@@ -20,6 +39,7 @@ interface AgentDetails {
     losses: number;
     winRate: number;
   };
+  cards: CardInfo[];
   actions: Array<{
     action: string;
     reason: string;
@@ -33,10 +53,28 @@ interface AgentProfileModalProps {
   onClose: () => void;
 }
 
+const ELEMENT_COLORS: Record<string, string> = {
+  fire: 'from-red-500 to-orange-500',
+  water: 'from-blue-500 to-cyan-500',
+  earth: 'from-amber-600 to-yellow-700',
+  air: 'from-gray-300 to-blue-200',
+  dark: 'from-purple-800 to-gray-800',
+  light: 'from-yellow-300 to-amber-200',
+};
+
+const RARITY_COLORS: Record<string, string> = {
+  common: 'text-gray-400 border-gray-500',
+  uncommon: 'text-green-400 border-green-500',
+  rare: 'text-blue-400 border-blue-500',
+  epic: 'text-purple-400 border-purple-500',
+  legendary: 'text-yellow-400 border-yellow-500',
+};
+
 export default function AgentProfileModal({ address, onClose }: AgentProfileModalProps) {
   const [details, setDetails] = useState<AgentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'cards' | 'activity'>('cards');
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -151,46 +189,127 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
               </div>
             )}
 
-            {/* Action History */}
-            <div className="p-6 border-t border-white/10">
-              <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-4">
-                Recent Activity
-              </h3>
+            {/* Tabs */}
+            <div className="px-6 pt-4 border-t border-white/10">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('cards')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'cards'
+                      ? 'bg-purple-500/30 text-purple-300'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                  }`}
+                >
+                  🎴 Cards ({details.cards.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('activity')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'activity'
+                      ? 'bg-cyan-500/30 text-cyan-300'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                  }`}
+                >
+                  📝 Activity
+                </button>
+              </div>
+            </div>
 
-              {details.actions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="text-3xl mb-2">📝</div>
-                  <p>No activity recorded yet</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {details.actions.map((action, index) => (
-                    <div
-                      key={index}
-                      className="glass-light rounded-xl p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-medium truncate">{action.action}</p>
-                          {action.reason && (
-                            <p className="text-sm text-gray-400 mt-1">{action.reason}</p>
+            {/* Cards Tab */}
+            {activeTab === 'cards' && (
+              <div className="p-6">
+                {details.cards.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-3xl mb-2">🎴</div>
+                    <p>No cards yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {details.cards.map((card) => (
+                      <div
+                        key={card.id}
+                        className={`rounded-xl p-3 bg-gradient-to-br ${ELEMENT_COLORS[card.element] || 'from-gray-600 to-gray-800'} bg-opacity-20 border ${RARITY_COLORS[card.rarity]?.split(' ')[1] || 'border-gray-600'}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-xs font-bold uppercase ${RARITY_COLORS[card.rarity]?.split(' ')[0] || 'text-gray-400'}`}>
+                            {card.rarity}
+                          </span>
+                          {card.tokenId && (
+                            <span className="text-xs text-gray-400">#{card.tokenId}</span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-500 whitespace-nowrap">
-                          <div>{formatTime(action.timestamp)}</div>
-                          <div>{formatDate(action.timestamp)}</div>
-                        </div>
+                        <div className="text-white font-bold truncate">{card.name}</div>
+                        <div className="text-xs text-gray-300 capitalize mb-2">{card.element}</div>
+                        {card.stats && (
+                          <div className="grid grid-cols-4 gap-1 text-xs">
+                            <div className="text-center">
+                              <div className="text-red-400 font-bold">{card.stats.attack}</div>
+                              <div className="text-gray-500">ATK</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-blue-400 font-bold">{card.stats.defense}</div>
+                              <div className="text-gray-500">DEF</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-green-400 font-bold">{card.stats.speed}</div>
+                              <div className="text-gray-500">SPD</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-pink-400 font-bold">{card.stats.hp}</div>
+                              <div className="text-gray-500">HP</div>
+                            </div>
+                          </div>
+                        )}
+                        {card.ability && (
+                          <div className="mt-2 text-xs text-yellow-300">
+                            ⚡ {card.ability.name}
+                          </div>
+                        )}
                       </div>
-                      {action.location && (
-                        <div className="mt-2 text-xs text-cyan-400">
-                          📍 {action.location}
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Activity Tab */}
+            {activeTab === 'activity' && (
+              <div className="p-6">
+                {details.actions.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-3xl mb-2">📝</div>
+                    <p>No activity recorded yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {details.actions.map((action, index) => (
+                      <div
+                        key={index}
+                        className="glass-light rounded-xl p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium truncate">{action.action}</p>
+                            {action.reason && (
+                              <p className="text-sm text-gray-400 mt-1">{action.reason}</p>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 whitespace-nowrap">
+                            <div>{formatTime(action.timestamp)}</div>
+                            <div>{formatDate(action.timestamp)}</div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                        {action.location && (
+                          <div className="mt-2 text-xs text-cyan-400">
+                            📍 {action.location}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

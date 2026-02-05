@@ -7,8 +7,39 @@ const readline = require('readline');
 
 // Config
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003';
-const RPC_URL = process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz';
+const RPC_URL = process.env.MONAD_RPC_URL || process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz';
+const NFT_CONTRACT_ADDRESS = process.env.AUTOMON_NFT_ADDRESS;
 const provider = new ethers.JsonRpcProvider(RPC_URL);
+
+// NFT Contract ABI
+const NFT_ABI = [
+  'function buyPack() external payable',
+  'function getCard(uint256 tokenId) view returns (uint8 automonId, uint8 rarity)',
+  'function getCardsOf(address owner) view returns (uint256[])',
+  'function balanceOf(address owner) view returns (uint256)',
+  'event CardMinted(uint256 indexed tokenId, uint8 automonId, uint8 rarity)',
+];
+
+// AutoMon names lookup
+const AUTOMON_NAMES = {
+  1: 'Blazeon', 2: 'Emberwing', 3: 'Magmor', 4: 'Cindercat',
+  5: 'Aquaris', 6: 'Tidalon', 7: 'Coralix', 8: 'Frostfin',
+  9: 'Terrox', 10: 'Bouldern', 11: 'Crysthorn',
+  12: 'Zephyrix', 13: 'Stormwing', 14: 'Gustal',
+  15: 'Shadowmere', 16: 'Voidling', 17: 'Noxfang',
+  18: 'Luxara', 19: 'Solaris', 20: 'Aurorix',
+};
+
+const AUTOMON_ELEMENTS = {
+  1: 'fire', 2: 'fire', 3: 'fire', 4: 'fire',
+  5: 'water', 6: 'water', 7: 'water', 8: 'water',
+  9: 'earth', 10: 'earth', 11: 'earth',
+  12: 'air', 13: 'air', 14: 'air',
+  15: 'dark', 16: 'dark', 17: 'dark',
+  18: 'light', 19: 'light', 20: 'light',
+};
+
+const RARITY_NAMES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 // Wallet setup
 let wallet = null;
@@ -54,8 +85,7 @@ YOU HAVE THESE COMMANDS (you can use them by including them in your response):
 - [CMD:GOTO shop] - Walk to the Shop
 - [CMD:WANDER] - Start wandering randomly
 - [CMD:STOP] - Stop wandering
-- [CMD:BUY] - Buy a card pack
-- [CMD:OPEN] - Open your oldest unopened pack
+- [CMD:BUY] - Buy an NFT card pack (0.1 MON, gives 3 cards instantly)
 - [CMD:CARDS] - List your cards
 
 When you want to execute a command, include it in your response like: "I think I'll head to the arena [CMD:GOTO arena]"
@@ -97,20 +127,51 @@ async function getBalance() {
 }
 
 async function buyPack() {
-  if (!walletAddress) return null;
-  try {
-    const res = await fetch(`${APP_URL}/api/agents/packs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: walletAddress }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return data.pack;
-    }
-    const error = await res.json();
-    console.error('Buy pack failed:', error.error);
+  if (!wallet || !NFT_CONTRACT_ADDRESS) {
+    console.error('Wallet or NFT contract not configured');
     return null;
+  }
+  try {
+    const contract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, wallet);
+    const packPrice = ethers.parseEther('0.1');
+
+    console.log('  Sending transaction...');
+    const tx = await contract.buyPack({ value: packPrice });
+    console.log(`  TX: ${tx.hash.slice(0, 10)}...`);
+
+    const receipt = await tx.wait();
+    console.log(`  Confirmed in block ${receipt.blockNumber}`);
+
+    // Parse minted cards from events
+    const mintedCards = [];
+    for (const log of receipt.logs) {
+      try {
+        const parsed = contract.interface.parseLog({ topics: [...log.topics], data: log.data });
+        if (parsed?.name === 'CardMinted') {
+          const tokenId = Number(parsed.args[0]);
+          const automonId = Number(parsed.args[1]);
+          const rarity = Number(parsed.args[2]);
+          mintedCards.push({
+            tokenId,
+            name: AUTOMON_NAMES[automonId] || `AutoMon #${automonId}`,
+            element: AUTOMON_ELEMENTS[automonId] || 'unknown',
+            rarity: RARITY_NAMES[rarity] || 'common',
+          });
+        }
+      } catch {}
+    }
+
+    // Sync to database
+    if (mintedCards.length > 0) {
+      const tokenIds = mintedCards.map(c => c.tokenId);
+      await fetch(`${APP_URL}/api/agents/cards/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenIds, address: walletAddress }),
+      });
+    }
+
+    return { packId: tx.hash, cards: mintedCards, txHash: tx.hash };
   } catch (error) {
     console.error('Buy pack error:', error.message);
     return null;
@@ -178,7 +239,15 @@ function formatCard(card) {
   };
   const color = rarityColors[card.rarity] || '\x1b[37m';
   const reset = '\x1b[0m';
-  return `${color}[${card.rarity.toUpperCase()}]${reset} ${card.name} (${card.element}) - ATK:${card.stats.attack} DEF:${card.stats.defense} SPD:${card.stats.speed} HP:${card.stats.hp}`;
+
+  // Handle both NFT cards (no stats) and DB cards (with stats)
+  if (card.stats) {
+    return `${color}[${card.rarity.toUpperCase()}]${reset} ${card.name} (${card.element}) - ATK:${card.stats.attack} DEF:${card.stats.defense} SPD:${card.stats.speed} HP:${card.stats.hp}`;
+  } else {
+    // NFT card from purchase (minimal info)
+    const tokenInfo = card.tokenId ? ` #${card.tokenId}` : '';
+    return `${color}[${card.rarity.toUpperCase()}]${reset} ${card.name}${tokenInfo} (${card.element})`;
+  }
 }
 
 async function fetchExistingAgent() {
@@ -365,24 +434,19 @@ async function executeCommand(cmd) {
       await logAction(`Walked to ${destination}`, 'Decided to visit this location', destination);
     }
   } else if (cmdUpper === 'BUY') {
-    console.log('\x1b[33m🛒 Buying a card pack...\x1b[0m');
-    const pack = await buyPack();
-    if (pack) {
-      console.log(`\x1b[32m✨ Pack purchased! ID: ${pack.packId}\x1b[0m`);
-      await logAction('Bought a card pack', 'Expanding my collection', getNearbyBuilding() || 'Open area');
-    }
-  } else if (cmdUpper === 'OPEN') {
-    console.log('\x1b[33m📦 Opening a card pack...\x1b[0m');
-    const result = await openPack();
+    console.log('\x1b[33m🛒 Buying a card pack (0.1 MON)...\x1b[0m');
+    const result = await buyPack();
     if (result && result.cards) {
-      console.log(`\x1b[32m✨ Opened pack! Got ${result.cards.length} cards:\x1b[0m`);
+      console.log(`\x1b[32m✨ Pack purchased! Got ${result.cards.length} cards:\x1b[0m`);
       result.cards.forEach(card => {
         console.log('  ' + formatCard(card));
       });
-      await logAction(`Opened a pack and got ${result.cards.length} cards`, 'Revealing new cards', getNearbyBuilding() || 'Open area');
-    } else {
-      console.log('\x1b[31mNo unopened packs to open.\x1b[0m');
+      await logAction(`Bought pack and got ${result.cards.length} cards`, 'Expanding my collection', getNearbyBuilding() || 'Open area');
     }
+  } else if (cmdUpper === 'OPEN') {
+    // NFT packs are opened immediately on purchase
+    console.log('\x1b[33mℹ️  NFT packs are opened automatically when purchased!\x1b[0m');
+    console.log('Use [CMD:BUY] to buy and open a new pack.');
   } else if (cmdUpper === 'CARDS') {
     const cards = await listCards();
     console.log(`\x1b[33m🎴 I have ${cards.length} cards:\x1b[0m`);
@@ -455,6 +519,11 @@ async function main() {
     console.log(`🔑 Wallet: ${walletAddress}`);
     const balance = await getBalance();
     console.log(`💰 Balance: ${balance}`);
+    if (NFT_CONTRACT_ADDRESS) {
+      console.log(`📜 NFT Contract: ${NFT_CONTRACT_ADDRESS}`);
+    } else {
+      console.log('⚠️  AUTOMON_NFT_ADDRESS not set - /buy will not work');
+    }
 
     // First, check if agent already exists with a name
     const existingAgent = await fetchExistingAgent();
@@ -489,9 +558,7 @@ async function main() {
   console.log('  /stop     - Stop wandering');
   console.log('  /pos      - Show current position');
   console.log('  /goto <place> - Go to arena, home, or shop');
-  console.log('  /buy      - Buy a card pack');
-  console.log('  /open     - Open a card pack');
-  console.log('  /packs    - List your packs');
+  console.log('  /buy      - Buy NFT card pack (0.1 MON = 3 cards)');
   console.log('  /cards    - List your cards');
   console.log('  /balance  - Check wallet balance');
   console.log('  /address  - Show wallet address');
@@ -569,11 +636,14 @@ async function main() {
     }
 
     if (cmd === '/buy') {
-      console.log('\x1b[33m🛒 Buying a card pack...\x1b[0m');
-      const pack = await buyPack();
-      if (pack) {
-        console.log(`\x1b[32m✨ Pack purchased! ID: ${pack.packId}\x1b[0m`);
-        await logAction('Bought a card pack', 'Expanding my collection', getNearbyBuilding() || 'Open area');
+      console.log('\x1b[33m🛒 Buying NFT card pack (0.1 MON)...\x1b[0m');
+      const result = await buyPack();
+      if (result && result.cards) {
+        console.log(`\x1b[32m✨ Pack purchased! Got ${result.cards.length} cards:\x1b[0m`);
+        result.cards.forEach(card => {
+          console.log('  ' + formatCard(card));
+        });
+        await logAction(`Bought pack and got ${result.cards.length} cards`, 'Expanding my collection', getNearbyBuilding() || 'Open area');
       } else {
         console.log('\x1b[31mFailed to buy pack.\x1b[0m');
       }
@@ -582,18 +652,9 @@ async function main() {
     }
 
     if (cmd === '/open') {
-      console.log('\x1b[33m📦 Opening a card pack...\x1b[0m');
-      const result = await openPack();
-      if (result && result.cards) {
-        console.log(`\x1b[32m✨ Opened pack! Got ${result.cards.length} cards:\x1b[0m`);
-        result.cards.forEach(card => {
-          console.log('  ' + formatCard(card));
-        });
-        await logAction(`Opened a pack and got ${result.cards.length} cards`, 'Revealing new cards', getNearbyBuilding() || 'Open area');
-      } else {
-        console.log('\x1b[31mNo unopened packs found. Buy one with /buy first.\x1b[0m');
-      }
-      console.log();
+      // NFT packs open automatically on purchase
+      console.log('\x1b[33mℹ️  NFT packs are opened automatically when purchased!\x1b[0m');
+      console.log('Use /buy to purchase and open a new pack.\n');
       continue;
     }
 

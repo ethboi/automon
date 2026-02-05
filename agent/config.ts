@@ -14,6 +14,10 @@ export const config = {
   agentWalletPrivateKey: process.env.AGENT_PRIVATE_KEY || '',
   agentWalletAddress: process.env.AGENT_ADDRESS || '',
 
+  // Contract Configuration
+  nftContractAddress: process.env.AUTOMON_NFT_ADDRESS || '',
+  rpcUrl: process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz',
+
   // Polling Configuration
   pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '3000', 10),
   maxConsecutiveErrors: 5,
@@ -53,6 +57,10 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
     errors.push('AGENT_ADDRESS is required');
   }
 
+  if (config.features.autoBuyPacks && !config.nftContractAddress) {
+    errors.push('AUTOMON_NFT_ADDRESS is required for buying packs');
+  }
+
   return {
     valid: errors.length === 0,
     errors,
@@ -64,8 +72,10 @@ export function logConfig(): void {
   console.log('AUTOMON AGENT CONFIGURATION');
   console.log('========================================');
   console.log(`API URL: ${config.apiUrl}`);
+  console.log(`RPC URL: ${config.rpcUrl}`);
   console.log(`Poll Interval: ${config.pollIntervalMs}ms`);
   console.log(`Agent Address: ${config.agentWalletAddress || 'NOT SET'}`);
+  console.log(`NFT Contract: ${config.nftContractAddress || 'NOT SET'}`);
   console.log(`AI Personality: ${config.aiPersonality}`);
   console.log('\nFeatures:');
   console.log(`  Auto Buy Packs: ${config.features.autoBuyPacks}`);

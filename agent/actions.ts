@@ -6,6 +6,51 @@
  */
 
 import { config } from './config';
+import { ethers } from 'ethers';
+
+// AutoMonNFT contract ABI (minimal)
+const NFT_ABI = [
+  'function buyPack() external payable',
+  'function totalSupply() view returns (uint256)',
+  'function getCard(uint256 tokenId) view returns (uint8 automonId, uint8 rarity)',
+  'function getCardsOf(address owner) view returns (uint256[])',
+  'function balanceOf(address owner) view returns (uint256)',
+  'function ownerOf(uint256 tokenId) view returns (address)',
+  'event PackPurchased(address indexed buyer, uint256[] tokenIds)',
+  'event CardMinted(uint256 indexed tokenId, uint8 automonId, uint8 rarity)',
+];
+
+// Blockchain provider and wallet (lazy initialized)
+let provider: ethers.JsonRpcProvider | null = null;
+let wallet: ethers.Wallet | null = null;
+let nftContract: ethers.Contract | null = null;
+
+function getProvider(): ethers.JsonRpcProvider {
+  if (!provider) {
+    provider = new ethers.JsonRpcProvider(config.rpcUrl);
+  }
+  return provider;
+}
+
+function getWallet(): ethers.Wallet {
+  if (!wallet) {
+    if (!config.agentWalletPrivateKey) {
+      throw new Error('AGENT_PRIVATE_KEY not configured');
+    }
+    wallet = new ethers.Wallet(config.agentWalletPrivateKey, getProvider());
+  }
+  return wallet;
+}
+
+function getNftContract(): ethers.Contract {
+  if (!nftContract) {
+    if (!config.nftContractAddress) {
+      throw new Error('AUTOMON_NFT_ADDRESS not configured');
+    }
+    nftContract = new ethers.Contract(config.nftContractAddress, NFT_ABI, getWallet());
+  }
+  return nftContract;
+}
 
 interface Card {
   _id: string;
@@ -92,12 +137,17 @@ export async function getSession(): Promise<{ address: string } | null> {
 }
 
 /**
- * Get agent's MON balance (simulated for now)
+ * Get agent's MON balance from the blockchain
  */
 export async function getBalance(): Promise<string> {
-  // In a real implementation, this would query the blockchain
-  // For now, return a simulated balance
-  return '10.0';
+  try {
+    const wallet = getWallet();
+    const balance = await getProvider().getBalance(wallet.address);
+    return ethers.formatEther(balance);
+  } catch (error) {
+    console.error('Get balance error:', error);
+    return '0';
+  }
 }
 
 /**
@@ -134,7 +184,94 @@ export async function getPacks(): Promise<Pack[]> {
 }
 
 /**
- * Buy a card pack
+ * Buy a card pack from the NFT contract
+ */
+export async function buyPackNFT(): Promise<{ txHash: string; tokenIds: number[] } | null> {
+  try {
+    const contract = getNftContract();
+    const packPrice = ethers.parseEther(config.packPrice);
+
+    console.log(`Buying pack for ${config.packPrice} MON...`);
+    const tx = await contract.buyPack({ value: packPrice });
+    console.log(`TX sent: ${tx.hash}`);
+
+    const receipt = await tx.wait();
+    console.log(`TX confirmed in block ${receipt.blockNumber}`);
+
+    // Parse the PackPurchased event to get token IDs
+    const tokenIds: number[] = [];
+    for (const log of receipt.logs) {
+      try {
+        const parsed = contract.interface.parseLog({ topics: [...log.topics], data: log.data });
+        if (parsed?.name === 'CardMinted') {
+          tokenIds.push(Number(parsed.args[0]));
+        }
+      } catch {
+        // Not our event
+      }
+    }
+
+    return { txHash: tx.hash, tokenIds };
+  } catch (error) {
+    console.error('Buy pack NFT error:', error);
+    return null;
+  }
+}
+
+/**
+ * Sync NFT cards to the game server database
+ */
+export async function syncNFTCards(tokenIds: number[]): Promise<Card[] | null> {
+  try {
+    const response = await fetchApi('/api/agents/cards/sync', {
+      method: 'POST',
+      body: JSON.stringify({ tokenIds }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Sync NFT cards failed:', error);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.cards;
+  } catch (error) {
+    console.error('Sync NFT cards error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get NFT cards owned by the agent directly from the contract
+ */
+export async function getNFTCards(): Promise<{ tokenId: number; automonId: number; rarity: number }[]> {
+  try {
+    const contract = getNftContract();
+    const wallet = getWallet();
+
+    const tokenIds = await contract.getCardsOf(wallet.address);
+    const cards = [];
+
+    for (const tokenId of tokenIds) {
+      const [automonId, rarity] = await contract.getCard(tokenId);
+      cards.push({
+        tokenId: Number(tokenId),
+        automonId: Number(automonId),
+        rarity: Number(rarity),
+      });
+    }
+
+    return cards;
+  } catch (error) {
+    console.error('Get NFT cards error:', error);
+    return [];
+  }
+}
+
+/**
+ * Buy a card pack (legacy API method)
+ * @deprecated Use buyPackNFT instead
  */
 export async function buyPack(txHash: string): Promise<Pack | null> {
   try {
