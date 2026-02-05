@@ -5,6 +5,7 @@ import "./globals.css";
 import { WalletProvider } from "@/context/WalletContext";
 import Header from "@/components/Header";
 import ChatBox from "@/components/ChatBox";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -43,6 +44,7 @@ export default function RootLayout({
           <main>{children}</main>
           <ChatBox />
         </WalletProvider>
+        <Analytics />
       </body>
     </html>
   );
