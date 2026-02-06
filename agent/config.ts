@@ -1,31 +1,59 @@
 /**
  * AutoMon Agent Configuration
  *
- * This file contains all configuration settings for the autonomous agent.
- * Set environment variables or modify defaults as needed.
+ * All configuration settings for both manual (CLI) and autonomous modes.
+ * Loads .env.local here so env vars are available before any config reads.
  */
+
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+
+import { ethers } from 'ethers';
+
+// Derive wallet address from private key if not explicitly set
+function deriveAddress(privateKey: string, explicitAddress: string): string {
+  if (explicitAddress) return explicitAddress;
+  if (!privateKey) return '';
+  try {
+    return new ethers.Wallet(privateKey).address;
+  } catch {
+    return '';
+  }
+}
+
+// Normalize API URL: strip trailing slash
+function normalizeUrl(url: string): string {
+  return url.replace(/\/+$/, '');
+}
+
+const privateKey = process.env.AGENT_PRIVATE_KEY || '';
+const explicitAddress = process.env.AGENT_ADDRESS || '';
 
 export const config = {
   // API Configuration
-  apiUrl: process.env.AUTOMON_API_URL || 'http://localhost:3000',
+  apiUrl: normalizeUrl(process.env.AUTOMON_API_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
 
   // Wallet Configuration
-  agentWalletPrivateKey: process.env.AGENT_PRIVATE_KEY || '',
-  agentWalletAddress: process.env.AGENT_ADDRESS || '',
+  agentWalletPrivateKey: privateKey,
+  agentWalletAddress: deriveAddress(privateKey, explicitAddress),
+
+  // Agent identity
+  agentName: process.env.AGENT_NAME || 'Wanderer',
 
   // Contract Configuration
   nftContractAddress: process.env.AUTOMON_NFT_ADDRESS || '',
-  rpcUrl: process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz',
+  rpcUrl: process.env.MONAD_RPC_URL || process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz',
 
-  // Polling Configuration
+  // Polling / timing
   pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '3000', 10),
+  wanderIntervalMs: parseInt(process.env.WANDER_INTERVAL_MS || '3000', 10),
   maxConsecutiveErrors: 5,
 
   // Decision Thresholds
   minCardsForBattle: 3,
-  maxWagerPercentage: 0.25, // Max % of balance to wager
-  minBalanceReserve: 0.5, // Min MON to keep in reserve
+  maxWagerPercentage: 0.25,
+  minBalanceReserve: 0.5,
 
   // Feature Flags
   features: {
@@ -35,7 +63,7 @@ export const config = {
     verboseLogging: process.env.VERBOSE_LOGGING === 'true',
   },
 
-  // AI Personality (affects battle decisions)
+  // AI Personality
   aiPersonality: process.env.AI_PERSONALITY || 'balanced',
 
   // Pack price in MON
@@ -54,7 +82,7 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
   }
 
   if (!config.agentWalletAddress) {
-    errors.push('AGENT_ADDRESS is required');
+    errors.push('AGENT_ADDRESS is required (or derive from AGENT_PRIVATE_KEY)');
   }
 
   if (config.features.autoBuyPacks && !config.nftContractAddress) {
@@ -73,10 +101,12 @@ export function logConfig(): void {
   console.log('========================================');
   console.log(`API URL: ${config.apiUrl}`);
   console.log(`RPC URL: ${config.rpcUrl}`);
-  console.log(`Poll Interval: ${config.pollIntervalMs}ms`);
+  console.log(`Agent Name: ${config.agentName}`);
   console.log(`Agent Address: ${config.agentWalletAddress || 'NOT SET'}`);
   console.log(`NFT Contract: ${config.nftContractAddress || 'NOT SET'}`);
   console.log(`AI Personality: ${config.aiPersonality}`);
+  console.log(`Poll Interval: ${config.pollIntervalMs}ms`);
+  console.log(`Wander Interval: ${config.wanderIntervalMs}ms`);
   console.log('\nFeatures:');
   console.log(`  Auto Buy Packs: ${config.features.autoBuyPacks}`);
   console.log(`  Auto Join Battles: ${config.features.autoJoinBattles}`);

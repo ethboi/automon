@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "agent": "tsx agent/index.ts",
-    "agent:verbose": "VERBOSE_LOGGING=true tsx agent/index.ts",
+    "agent:auto": "tsx agent/index.ts --mode auto",
+    "agent:verbose": "VERBOSE_LOGGING=true tsx agent/index.ts --mode auto",
     "compile": "hardhat compile",
     "deploy:monad": "hardhat run scripts/deploy.js --network monad"
   },
