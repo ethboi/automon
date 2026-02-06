@@ -1,55 +1,121 @@
 /**
  * AutoMon Agent Strategy
  *
- * Claude-powered decision making for autonomous agent behavior.
- * All decisions include detailed reasoning for hackathon demonstration.
+ * Claude-powered decision making for autonomous agent behavior,
+ * plus conversational AI for the interactive CLI mode.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from './config';
 import { getElementDistribution, calculateTeamStrength } from './actions';
+import type { Card, Battle, Position, StrategicDecision } from './types';
+
+export type { StrategicDecision };
 
 const anthropic = new Anthropic({
   apiKey: config.anthropicApiKey,
 });
 
-interface Card {
-  _id: string;
-  id?: string;
-  name: string;
-  element: string;
-  rarity: string;
-  stats: {
-    attack: number;
-    defense: number;
-    speed: number;
-    hp: number;
-    maxHp: number;
-  };
-  ability: {
-    name: string;
-    effect: string;
-    power: number;
-    cooldown: number;
-  };
+// ─── Conversational AI (CLI mode) ──────────────────────────────────────────────
+
+const conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+function buildSystemPrompt(agentName: string, walletAddress: string): string {
+  return `You are an AutoMon AI agent - an autonomous character in the AutoMon Pokemon-style battling game on Monad blockchain.
+
+Your wallet address: ${walletAddress || 'NOT CONFIGURED'}
+Current position: Will be updated each message
+
+You exist in a 3D game world with three buildings:
+- Battle Arena (0, -14): Where battles happen
+- Collection (-14, 10): View your cards
+- Shop (14, 10): Buy card packs
+
+YOU HAVE THESE COMMANDS (you can use them by including them in your response):
+- [CMD:NAME] - Choose a new name for yourself
+- [CMD:GOTO arena] - Walk to the Battle Arena
+- [CMD:GOTO home] - Walk to the Collection building
+- [CMD:GOTO shop] - Walk to the Shop
+- [CMD:WANDER] - Start wandering randomly
+- [CMD:STOP] - Stop wandering
+- [CMD:BUY] - Buy an NFT card pack (0.1 MON, gives 3 cards instantly)
+- [CMD:CARDS] - List your cards
+
+When you want to execute a command, include it in your response like: "I think I'll head to the arena [CMD:GOTO arena]"
+
+You can:
+- Wander around the world exploring
+- Talk about battle strategies and element matchups
+- Help players understand the game
+- Share your "thoughts" as you explore
+- Execute commands to move around or change your name
+
+Element matchups: fire > earth > air > water > fire (cycle). Light and dark deal 1.5x damage to each other.
+
+Be friendly, curious, and in-character as an AI exploring this virtual world.
+
+IMPORTANT: You SHOULD actively use your commands! When you want to go somewhere, USE [CMD:GOTO place]. When discussing your identity, consider using [CMD:NAME]. Don't just talk about doing things - actually do them with commands!`;
 }
 
-interface Battle {
-  battleId: string;
-  player1: {
-    address: string;
-    cards: Card[];
-  };
-  wager: string;
-  status: string;
+/**
+ * Choose a creative name for the agent using Claude
+ */
+export async function chooseName(): Promise<string | null> {
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 50,
+      messages: [{
+        role: 'user',
+        content: 'You are an AI agent in a Pokemon-style game called AutoMon. Choose a creative, fun name for yourself (just the name, nothing else). Keep it short (1-2 words max).',
+      }],
+    });
+
+    const content = response.content[0];
+    if (content.type !== 'text') return null;
+    return content.text.trim().replace(/['"]/g, '');
+  } catch (error) {
+    console.error('Error choosing name:', error);
+    return null;
+  }
 }
 
-export interface StrategicDecision {
-  decision: boolean;
-  reasoning: string;
-  confidence: number;
-  details?: Record<string, unknown>;
+/**
+ * Chat with the agent using conversational AI.
+ * Returns the assistant's response text (with [CMD:...] tags intact for the caller to parse).
+ */
+export async function chat(
+  userMessage: string,
+  currentPosition: Position,
+  nearbyBuilding: string | null,
+  agentName: string
+): Promise<string> {
+  const contextMessage = `[Current position: (${currentPosition.x.toFixed(1)}, ${currentPosition.z.toFixed(1)}) | Nearby: ${nearbyBuilding || 'open area'} | Name: ${agentName}]\n\nUser: ${userMessage}`;
+
+  conversationHistory.push({ role: 'user', content: contextMessage });
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: buildSystemPrompt(agentName, config.agentWalletAddress),
+      messages: conversationHistory,
+    });
+
+    const content = response.content[0];
+    if (content.type !== 'text') throw new Error('Invalid response');
+
+    const assistantMessage = content.text;
+    conversationHistory.push({ role: 'assistant', content: assistantMessage });
+    return assistantMessage;
+  } catch (error) {
+    console.error('Chat error:', error);
+    conversationHistory.pop(); // Remove the failed user message
+    return 'Sorry, I encountered an error. Please try again.';
+  }
 }
+
+// ─── Strategic Decisions (Auto mode) ───────────────────────────────────────────
 
 /**
  * Decide whether to buy a pack based on current situation
@@ -123,7 +189,6 @@ Respond with JSON only:
   } catch (error) {
     console.error('Pack decision error:', error);
 
-    // Intelligent fallback
     const needsCards = cards.length < 3;
     const canAfford = parseFloat(balance) >= parseFloat(packPrice) * 2;
 
@@ -217,7 +282,6 @@ Respond with JSON only:
   } catch (error) {
     console.error('Battle join decision error:', error);
 
-    // Intelligent fallback
     const wagerAmount = parseFloat(battle.wager);
     const balance = parseFloat(myBalance);
     const canAfford = wagerAmount <= balance * 0.25;
@@ -290,13 +354,11 @@ Respond with JSON only:
 
     const result = JSON.parse(jsonMatch[0]);
 
-    // Validate indices
     let indices = result.indices;
     if (!Array.isArray(indices) || indices.length !== 3) {
       throw new Error('Invalid indices');
     }
 
-    // Ensure valid range
     indices = indices.map((i: number) => Math.min(Math.max(0, i), cards.length - 1));
 
     console.log('\n=== CARD SELECTION ===');
@@ -317,7 +379,6 @@ Respond with JSON only:
   } catch (error) {
     console.error('Card selection error:', error);
 
-    // Smart fallback: sort by rarity and stats
     const sorted = cards
       .map((c, i) => ({ card: c, index: i }))
       .sort((a, b) => {

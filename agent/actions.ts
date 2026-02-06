@@ -2,11 +2,15 @@
  * AutoMon Agent Actions
  *
  * API wrapper functions for interacting with the AutoMon game server.
- * These provide a clean interface for the agent's autonomous decision-making.
+ * Covers both blockchain operations and agent-specific REST endpoints.
  */
 
 import { config } from './config';
 import { ethers } from 'ethers';
+import type { Card, Battle, Pack, Position, Agent, MintedCard, NFTCard } from './types';
+
+// Re-export types for convenience
+export type { Card, Battle, Pack, Position, Agent, MintedCard, NFTCard };
 
 // AutoMonNFT contract ABI (minimal)
 const NFT_ABI = [
@@ -19,6 +23,27 @@ const NFT_ABI = [
   'event PackPurchased(address indexed buyer, uint256[] tokenIds)',
   'event CardMinted(uint256 indexed tokenId, uint8 automonId, uint8 rarity)',
 ];
+
+// AutoMon names lookup
+const AUTOMON_NAMES: Record<number, string> = {
+  1: 'Blazeon', 2: 'Emberwing', 3: 'Magmor', 4: 'Cindercat',
+  5: 'Aquaris', 6: 'Tidalon', 7: 'Coralix', 8: 'Frostfin',
+  9: 'Terrox', 10: 'Bouldern', 11: 'Crysthorn',
+  12: 'Zephyrix', 13: 'Stormwing', 14: 'Gustal',
+  15: 'Shadowmere', 16: 'Voidling', 17: 'Noxfang',
+  18: 'Luxara', 19: 'Solaris', 20: 'Aurorix',
+};
+
+const AUTOMON_ELEMENTS: Record<number, string> = {
+  1: 'fire', 2: 'fire', 3: 'fire', 4: 'fire',
+  5: 'water', 6: 'water', 7: 'water', 8: 'water',
+  9: 'earth', 10: 'earth', 11: 'earth',
+  12: 'air', 13: 'air', 14: 'air',
+  15: 'dark', 16: 'dark', 17: 'dark',
+  18: 'light', 19: 'light', 20: 'light',
+};
+
+const RARITY_NAMES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 // Blockchain provider and wallet (lazy initialized)
 let provider: ethers.JsonRpcProvider | null = null;
@@ -52,50 +77,6 @@ function getNftContract(): ethers.Contract {
   return nftContract;
 }
 
-interface Card {
-  _id: string;
-  id?: string;
-  name: string;
-  element: string;
-  rarity: string;
-  stats: {
-    attack: number;
-    defense: number;
-    speed: number;
-    hp: number;
-    maxHp: number;
-  };
-  ability: {
-    name: string;
-    effect: string;
-    power: number;
-    cooldown: number;
-  };
-}
-
-interface Battle {
-  battleId: string;
-  player1: {
-    address: string;
-    cards: Card[];
-    ready: boolean;
-  };
-  player2?: {
-    address: string;
-    cards: Card[];
-    ready: boolean;
-  };
-  wager: string;
-  status: string;
-  winner?: string;
-}
-
-interface Pack {
-  packId: string;
-  opened: boolean;
-  cards: string[];
-}
-
 // Authentication token storage
 let authToken: string | null = null;
 
@@ -113,13 +94,146 @@ async function fetchApi(
     headers['Cookie'] = `auth_token=${authToken}`;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  return response;
+  return fetch(url, { ...options, headers });
 }
+
+// ─── Agent-specific API functions ──────────────────────────────────────────────
+
+/**
+ * Register the agent with the game server
+ */
+export async function registerAgent(name: string): Promise<boolean> {
+  try {
+    const res = await fetchApi('/api/agents/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        address: config.agentWalletAddress,
+        name,
+        personality: config.aiPersonality,
+      }),
+    });
+    return res.ok;
+  } catch (error) {
+    console.error('Failed to register:', error);
+    return false;
+  }
+}
+
+/**
+ * Fetch existing agent data from the server
+ */
+export async function fetchAgent(): Promise<Agent | null> {
+  if (!config.agentWalletAddress) return null;
+  try {
+    const res = await fetchApi(`/api/agents/${config.agentWalletAddress}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.agent;
+    }
+  } catch {
+    // Agent doesn't exist yet
+  }
+  return null;
+}
+
+/**
+ * Update agent position in the game world
+ */
+export async function updatePosition(pos: Position, name: string): Promise<void> {
+  if (!config.agentWalletAddress) return;
+  try {
+    await fetchApi('/api/agents/move', {
+      method: 'POST',
+      body: JSON.stringify({
+        address: config.agentWalletAddress,
+        position: pos,
+        name,
+      }),
+    });
+  } catch {
+    // Silently fail position updates
+  }
+}
+
+/**
+ * Log an agent action to the server
+ */
+export async function logAction(action: string, reason: string, location: string): Promise<void> {
+  if (!config.agentWalletAddress) return;
+  try {
+    await fetchApi('/api/agents/action', {
+      method: 'POST',
+      body: JSON.stringify({
+        address: config.agentWalletAddress,
+        action,
+        reason,
+        location,
+      }),
+    });
+  } catch {
+    // Silently fail action logs
+  }
+}
+
+/**
+ * Get cards for this agent via agent-specific endpoint
+ */
+export async function getAgentCards(): Promise<Card[]> {
+  if (!config.agentWalletAddress) return [];
+  try {
+    const res = await fetchApi(`/api/agents/cards?address=${config.agentWalletAddress}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.cards || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('Get agent cards error:', error);
+    return [];
+  }
+}
+
+/**
+ * Get packs for this agent via agent-specific endpoint
+ */
+export async function getAgentPacks(): Promise<Pack[]> {
+  if (!config.agentWalletAddress) return [];
+  try {
+    const res = await fetchApi(`/api/agents/packs?address=${config.agentWalletAddress}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.packs || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('Get agent packs error:', error);
+    return [];
+  }
+}
+
+/**
+ * Open a pack via agent-specific endpoint
+ */
+export async function openAgentPack(packId?: string): Promise<{ cards?: Card[] } | null> {
+  if (!config.agentWalletAddress) return null;
+  try {
+    const res = await fetchApi('/api/agents/packs/open', {
+      method: 'POST',
+      body: JSON.stringify({ address: config.agentWalletAddress, packId }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const error = await res.json();
+    console.error('Open pack failed:', error.error);
+    return null;
+  } catch (error) {
+    console.error('Open pack error:', error);
+    return null;
+  }
+}
+
+// ─── Blockchain operations ─────────────────────────────────────────────────────
 
 /**
  * Get current session info
@@ -141,8 +255,8 @@ export async function getSession(): Promise<{ address: string } | null> {
  */
 export async function getBalance(): Promise<string> {
   try {
-    const wallet = getWallet();
-    const balance = await getProvider().getBalance(wallet.address);
+    const w = getWallet();
+    const balance = await getProvider().getBalance(w.address);
     return ethers.formatEther(balance);
   } catch (error) {
     console.error('Get balance error:', error);
@@ -151,7 +265,7 @@ export async function getBalance(): Promise<string> {
 }
 
 /**
- * Get all cards owned by the agent
+ * Get all cards owned by the agent (auth-session endpoint)
  */
 export async function getCards(): Promise<Card[]> {
   try {
@@ -169,7 +283,7 @@ export async function getCards(): Promise<Card[]> {
 }
 
 /**
- * Get all packs owned by the agent
+ * Get all packs owned by the agent (auth-session endpoint)
  */
 export async function getPacks(): Promise<Pack[]> {
   try {
@@ -186,7 +300,7 @@ export async function getPacks(): Promise<Pack[]> {
 /**
  * Buy a card pack from the NFT contract
  */
-export async function buyPackNFT(): Promise<{ txHash: string; tokenIds: number[] } | null> {
+export async function buyPackNFT(): Promise<{ txHash: string; tokenIds: number[]; mintedCards: MintedCard[] } | null> {
   try {
     const contract = getNftContract();
     const packPrice = ethers.parseEther(config.packPrice);
@@ -198,20 +312,30 @@ export async function buyPackNFT(): Promise<{ txHash: string; tokenIds: number[]
     const receipt = await tx.wait();
     console.log(`TX confirmed in block ${receipt.blockNumber}`);
 
-    // Parse the PackPurchased event to get token IDs
+    // Parse the CardMinted events to get token IDs and card info
     const tokenIds: number[] = [];
+    const mintedCards: MintedCard[] = [];
     for (const log of receipt.logs) {
       try {
         const parsed = contract.interface.parseLog({ topics: [...log.topics], data: log.data });
         if (parsed?.name === 'CardMinted') {
-          tokenIds.push(Number(parsed.args[0]));
+          const tokenId = Number(parsed.args[0]);
+          const automonId = Number(parsed.args[1]);
+          const rarity = Number(parsed.args[2]);
+          tokenIds.push(tokenId);
+          mintedCards.push({
+            tokenId,
+            name: AUTOMON_NAMES[automonId] || `AutoMon #${automonId}`,
+            element: AUTOMON_ELEMENTS[automonId] || 'unknown',
+            rarity: RARITY_NAMES[rarity] || 'common',
+          });
         }
       } catch {
         // Not our event
       }
     }
 
-    return { txHash: tx.hash, tokenIds };
+    return { txHash: tx.hash, tokenIds, mintedCards };
   } catch (error) {
     console.error('Buy pack NFT error:', error);
     return null;
@@ -225,7 +349,7 @@ export async function syncNFTCards(tokenIds: number[]): Promise<Card[] | null> {
   try {
     const response = await fetchApi('/api/agents/cards/sync', {
       method: 'POST',
-      body: JSON.stringify({ tokenIds }),
+      body: JSON.stringify({ tokenIds, address: config.agentWalletAddress }),
     });
 
     if (!response.ok) {
@@ -245,13 +369,13 @@ export async function syncNFTCards(tokenIds: number[]): Promise<Card[] | null> {
 /**
  * Get NFT cards owned by the agent directly from the contract
  */
-export async function getNFTCards(): Promise<{ tokenId: number; automonId: number; rarity: number }[]> {
+export async function getNFTCards(): Promise<NFTCard[]> {
   try {
     const contract = getNftContract();
-    const wallet = getWallet();
+    const w = getWallet();
 
-    const tokenIds = await contract.getCardsOf(wallet.address);
-    const cards = [];
+    const tokenIds = await contract.getCardsOf(w.address);
+    const cards: NFTCard[] = [];
 
     for (const tokenId of tokenIds) {
       const [automonId, rarity] = await contract.getCard(tokenId);
@@ -269,54 +393,7 @@ export async function getNFTCards(): Promise<{ tokenId: number; automonId: numbe
   }
 }
 
-/**
- * Buy a card pack (legacy API method)
- * @deprecated Use buyPackNFT instead
- */
-export async function buyPack(txHash: string): Promise<Pack | null> {
-  try {
-    const response = await fetchApi('/api/packs/buy', {
-      method: 'POST',
-      body: JSON.stringify({ txHash }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Buy pack failed:', error);
-      return null;
-    }
-
-    const data = await response.json();
-    return data.pack;
-  } catch (error) {
-    console.error('Buy pack error:', error);
-    return null;
-  }
-}
-
-/**
- * Open a pack to reveal cards
- */
-export async function openPack(packId: string): Promise<Card[] | null> {
-  try {
-    const response = await fetchApi('/api/packs/open', {
-      method: 'POST',
-      body: JSON.stringify({ packId }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Open pack failed:', error);
-      return null;
-    }
-
-    const data = await response.json();
-    return data.cards;
-  } catch (error) {
-    console.error('Open pack error:', error);
-    return null;
-  }
-}
+// ─── Battle operations ─────────────────────────────────────────────────────────
 
 /**
  * Get list of pending battles available to join
@@ -455,6 +532,8 @@ export async function getBattleLog(battleId: string): Promise<unknown | null> {
   }
 }
 
+// ─── Tournament operations ─────────────────────────────────────────────────────
+
 /**
  * Get list of upcoming tournaments
  */
@@ -496,6 +575,8 @@ export async function enterTournament(
   }
 }
 
+// ─── Utility functions ─────────────────────────────────────────────────────────
+
 /**
  * Set authentication token
  */
@@ -536,4 +617,26 @@ export function calculateTeamStrength(cards: Card[]): number {
   }
 
   return totalScore / cards.length;
+}
+
+/**
+ * Format a card for console display with color
+ */
+export function formatCard(card: Card | MintedCard): string {
+  const rarityColors: Record<string, string> = {
+    common: '\x1b[37m',
+    uncommon: '\x1b[32m',
+    rare: '\x1b[34m',
+    epic: '\x1b[35m',
+    legendary: '\x1b[33m',
+  };
+  const color = rarityColors[card.rarity] || '\x1b[37m';
+  const reset = '\x1b[0m';
+
+  if ('stats' in card && card.stats) {
+    return `${color}[${card.rarity.toUpperCase()}]${reset} ${card.name} (${card.element}) - ATK:${card.stats.attack} DEF:${card.stats.defense} SPD:${card.stats.speed} HP:${card.stats.hp}`;
+  }
+  // Minimal card info (e.g. from NFT mint)
+  const tokenInfo = 'tokenId' in card && card.tokenId ? ` #${card.tokenId}` : '';
+  return `${color}[${card.rarity.toUpperCase()}]${reset} ${card.name}${tokenInfo} (${card.element})`;
 }
