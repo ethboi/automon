@@ -47,7 +47,7 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding }: WorldUIProps) {
     };
 
     fetchAgents();
-    const interval = setInterval(fetchAgents, 2000);
+    const interval = setInterval(fetchAgents, 10000);
     return () => clearInterval(interval);
   }, []);
 

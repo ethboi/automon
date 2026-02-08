@@ -1,4 +1,5 @@
 import { MongoClient, Db } from 'mongodb';
+import { ensureIndexes } from './db-indexes';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -31,7 +32,9 @@ if (process.env.NODE_ENV === 'development') {
 
 export async function getDb(): Promise<Db> {
   const client = await clientPromise;
-  return client.db('automon');
+  const db = client.db('automon');
+  await ensureIndexes(db);
+  return db;
 }
 
 export default clientPromise;

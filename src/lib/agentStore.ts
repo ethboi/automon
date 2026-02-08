@@ -11,15 +11,21 @@ interface AgentData {
 
 const agents = new Map<string, AgentData>();
 
-// Clean up agents not seen in 30 seconds
-setInterval(() => {
-  const now = Date.now();
-  agents.forEach((agent, address) => {
-    if (now - agent.lastSeen.getTime() > 30000) {
-      agents.delete(address);
-    }
-  });
-}, 10000);
+declare global {
+  // eslint-disable-next-line no-var
+  var __agentStoreCleanupInterval: ReturnType<typeof setInterval> | undefined;
+}
+
+if (typeof globalThis !== 'undefined' && !globalThis.__agentStoreCleanupInterval) {
+  globalThis.__agentStoreCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    agents.forEach((agent, address) => {
+      if (now - agent.lastSeen.getTime() > 30000) {
+        agents.delete(address);
+      }
+    });
+  }, 10000);
+}
 
 export function registerAgent(
   address: string,

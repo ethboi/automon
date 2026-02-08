@@ -1,11 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 /**
  * @title AutoMonEscrow
  * @dev Escrow contract for AutoMon battle wagers on Monad
  */
-contract AutoMonEscrow {
+contract AutoMonEscrow is ReentrancyGuard {
+    error OnlyAdmin();
+    error MustWagerSomething();
+    error BattleAlreadyExists();
+    error BattleNotFound();
+    error BattleFull();
+    error WrongWagerAmount();
+    error CannotJoinOwnBattle();
+    error AlreadySettled();
+    error BattleNotStarted();
+    error InvalidWinner();
+    error TransferFailed();
+    error OnlyCreator();
+    error AlreadyJoined();
+    error NoBalance();
+    error InvalidAddress();
+    error FeeTooHigh();
+
     address public admin;
     uint256 public feePercent = 5; // 5% fee
 
@@ -24,7 +43,9 @@ contract AutoMonEscrow {
     event BattleCancelled(bytes32 indexed battleId, address player1);
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin");
+        if (msg.sender != admin) {
+            revert OnlyAdmin();
+        }
         _;
     }
 
@@ -37,8 +58,12 @@ contract AutoMonEscrow {
      * @param battleId Unique identifier for the battle
      */
     function createBattle(bytes32 battleId) external payable {
-        require(msg.value > 0, "Must wager something");
-        require(battles[battleId].player1 == address(0), "Battle exists");
+        if (msg.value == 0) {
+            revert MustWagerSomething();
+        }
+        if (battles[battleId].player1 != address(0)) {
+            revert BattleAlreadyExists();
+        }
 
         battles[battleId] = Battle({
             player1: msg.sender,
@@ -54,12 +79,20 @@ contract AutoMonEscrow {
      * @dev Join an existing battle by matching the wager
      * @param battleId The battle to join
      */
-    function joinBattle(bytes32 battleId) external payable {
+    function joinBattle(bytes32 battleId) external payable nonReentrant {
         Battle storage battle = battles[battleId];
-        require(battle.player1 != address(0), "Battle not found");
-        require(battle.player2 == address(0), "Battle full");
-        require(msg.value == battle.wager, "Wrong wager amount");
-        require(msg.sender != battle.player1, "Cannot join own battle");
+        if (battle.player1 == address(0)) {
+            revert BattleNotFound();
+        }
+        if (battle.player2 != address(0)) {
+            revert BattleFull();
+        }
+        if (msg.value != battle.wager) {
+            revert WrongWagerAmount();
+        }
+        if (msg.sender == battle.player1) {
+            revert CannotJoinOwnBattle();
+        }
 
         battle.player2 = msg.sender;
         emit BattleJoined(battleId, msg.sender);
@@ -70,14 +103,17 @@ contract AutoMonEscrow {
      * @param battleId The battle to settle
      * @param winner Address of the winner
      */
-    function settleBattle(bytes32 battleId, address winner) external onlyAdmin {
+    function settleBattle(bytes32 battleId, address winner) external onlyAdmin nonReentrant {
         Battle storage battle = battles[battleId];
-        require(!battle.settled, "Already settled");
-        require(battle.player2 != address(0), "Battle not started");
-        require(
-            winner == battle.player1 || winner == battle.player2,
-            "Invalid winner"
-        );
+        if (battle.settled) {
+            revert AlreadySettled();
+        }
+        if (battle.player2 == address(0)) {
+            revert BattleNotStarted();
+        }
+        if (winner != battle.player1 && winner != battle.player2) {
+            revert InvalidWinner();
+        }
 
         battle.settled = true;
         uint256 pot = battle.wager * 2;
@@ -85,7 +121,9 @@ contract AutoMonEscrow {
         uint256 payout = pot - fee;
 
         (bool success, ) = payable(winner).call{value: payout}("");
-        require(success, "Transfer failed");
+        if (!success) {
+            revert TransferFailed();
+        }
 
         emit BattleSettled(battleId, winner, payout);
     }
@@ -94,16 +132,24 @@ contract AutoMonEscrow {
      * @dev Cancel a battle that hasn't been joined yet
      * @param battleId The battle to cancel
      */
-    function cancelBattle(bytes32 battleId) external {
+    function cancelBattle(bytes32 battleId) external nonReentrant {
         Battle storage battle = battles[battleId];
-        require(msg.sender == battle.player1, "Only creator");
-        require(battle.player2 == address(0), "Already joined");
-        require(!battle.settled, "Already settled");
+        if (msg.sender != battle.player1) {
+            revert OnlyCreator();
+        }
+        if (battle.player2 != address(0)) {
+            revert AlreadyJoined();
+        }
+        if (battle.settled) {
+            revert AlreadySettled();
+        }
 
         battle.settled = true;
 
         (bool success, ) = payable(battle.player1).call{value: battle.wager}("");
-        require(success, "Transfer failed");
+        if (!success) {
+            revert TransferFailed();
+        }
 
         emit BattleCancelled(battleId, battle.player1);
     }
@@ -113,10 +159,14 @@ contract AutoMonEscrow {
      */
     function withdraw() external onlyAdmin {
         uint256 balance = address(this).balance;
-        require(balance > 0, "No balance");
+        if (balance == 0) {
+            revert NoBalance();
+        }
 
         (bool success, ) = payable(admin).call{value: balance}("");
-        require(success, "Transfer failed");
+        if (!success) {
+            revert TransferFailed();
+        }
     }
 
     /**
@@ -124,7 +174,9 @@ contract AutoMonEscrow {
      * @param newAdmin Address of the new admin
      */
     function transferAdmin(address newAdmin) external onlyAdmin {
-        require(newAdmin != address(0), "Invalid address");
+        if (newAdmin == address(0)) {
+            revert InvalidAddress();
+        }
         admin = newAdmin;
     }
 
@@ -133,7 +185,9 @@ contract AutoMonEscrow {
      * @param newFeePercent New fee percentage (0-20)
      */
     function setFeePercent(uint256 newFeePercent) external onlyAdmin {
-        require(newFeePercent <= 20, "Fee too high");
+        if (newFeePercent > 20) {
+            revert FeeTooHigh();
+        }
         feePercent = newFeePercent;
     }
 
