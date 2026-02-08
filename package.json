@@ -1,24 +1,54 @@
 {
   "name": "automon",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
-  "description": "AutoMon autonomous monster trainer simulation",
   "scripts": {
-    "start": "node --import tsx src/server/index.ts",
-    "dev": "node --watch --import tsx src/server/index.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "agent": "tsx agent/index.ts",
+    "agent:auto": "tsx agent/index.ts --mode auto",
+    "agent:verbose": "VERBOSE_LOGGING=true tsx agent/index.ts --mode auto",
+    "compile": "hardhat compile",
+    "deploy:monad": "hardhat run scripts/deploy.js --network monad",
+    "sim": "tsx src/server/index.ts",
+    "sim:dev": "node --watch --import tsx src/server/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.1",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "@types/three": "^0.182.0",
+    "@vercel/analytics": "^1.6.1",
     "dotenv": "^17.2.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "ethers": "^6.16.0",
+    "jose": "^6.1.3",
+    "mongodb": "^7.0.0",
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18",
+    "siwe": "^3.0.0",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.0",
+    "three": "^0.182.0",
+    "uuid": "^13.0.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/node": "^20.19.13",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
-  },
-  "type": "module"
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "hardhat": "^2.28.4",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
 }

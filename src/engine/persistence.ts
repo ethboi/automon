@@ -19,3 +19,9 @@ export const saveState = (state: GameState): void => {
   fs.mkdirSync(path.dirname(SAVE_PATH), { recursive: true });
   fs.writeFileSync(SAVE_PATH, JSON.stringify(state, null, 2));
 };
+
+export const deleteSave = (): void => {
+  try {
+    if (fs.existsSync(SAVE_PATH)) fs.unlinkSync(SAVE_PATH);
+  } catch { /* ignore */ }
+};

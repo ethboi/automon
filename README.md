@@ -1,53 +1,189 @@
-# AutoMon - Autonomous Monster Trainer Sim
+# AutoMon
 
-Persistent multi-agent monster-taming world built with TypeScript/Node.js.
+A Pokemon-style monster battling game built for the Moltiverse Hackathon on Monad blockchain. Players collect monster cards by buying packs, battle each other for MON wagers, and an AI agent (Claude) can play autonomously.
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 (App Router), Tailwind CSS
+- **Database**: MongoDB Atlas (off-chain state)
+- **Blockchain**: Monad (EVM) for wager escrow
+- **AI**: Anthropic Claude API for autonomous agent
+- **Auth**: SIWE (Sign-In With Ethereum)
+- **Web3**: ethers.js v6
 
 ## Features
 
-- Tick-based world simulation (`TICK_MS`, default `10000` ms; `24` ticks/day)
-- Multiple autonomous trainers sharing one world
-- OpenAI-driven decisions (`gpt-4o-mini`) per trainer per tick
-- Survival systems: health, energy, hunger, gold, inventory
-- AutoMon systems: hunger, loyalty, levels, XP, abilities, evolution, status
-- Element combat advantages including shadow/light mutual bonus
-- Connected world graph with danger, travel time, and action constraints
-- Activities: survival, economy, farming, crafting, exploration, catching, PvE/PvP
-- Arena ELO leaderboard and dynamic market prices
-- JSON persistence (`save/game-state.json`)
-- Real-time dashboard (React via browser runtime + WebSocket)
+### Cards & Packs
+- Buy packs for MON (0.1 MON per pack)
+- Each pack contains 5 randomly generated cards
+- 6 elements: Fire, Water, Earth, Air, Dark, Light
+- 5 rarities: Common (60%), Uncommon (25%), Rare (10%), Epic (4%), Legendary (1%)
+- Stats scale with rarity (attack, defense, speed, HP)
+- Unique abilities per element
 
-## Project Structure
+### Battle System
+- Create battles with MON wager
+- Both players deposit to on-chain escrow
+- Select 3 cards for battle
+- Turn-based combat (speed determines order)
+- Element matchups: fire > earth > air > water > fire, light/dark deal 1.5x to each other
+- Actions: Attack, Ability (with cooldowns), Switch
+- Winner takes pot (5% fee)
 
-- `src/engine` - tick loop, mechanics, battle, persistence
-- `src/agent` - OpenAI prompt + response parsing + fallback policy
-- `src/data` - species, locations, items, abilities, constants, seed
-- `src/server` - HTTP + WebSocket server
-- `src/dashboard` - React dashboard static assets
-- `src/types` - shared TypeScript interfaces
+### AI Agent
+- Claude-powered battle AI
+- Analyzes battle state and picks optimal moves
+- Auto-play mode for hands-off battles
+- Strategic decision making for pack purchases
 
-## Run
+### Tournaments
+- Entry fee in MON
+- 8 or 16 player brackets
+- Single elimination
+- Prize pool to winner
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- MongoDB Atlas account
+- Monad testnet wallet with MON
+- Anthropic API key
+
+### Installation
 
 ```bash
+npm install
+```
+
+### Environment Variables
+
+Copy `.env.example` to `.env.local` and fill in:
+
+```env
+MONGODB_URI=mongodb+srv://...
+NEXT_PUBLIC_MONAD_RPC=https://testnet.rpc.monad.xyz
+NEXT_PUBLIC_CHAIN_ID=10143
+ESCROW_CONTRACT_ADDRESS=<deployed contract address>
+ADMIN_PRIVATE_KEY=<for settling battles>
+ANTHROPIC_API_KEY=<your key>
+NEXT_PUBLIC_PACK_PRICE=100000000000000000
+JWT_SECRET=<random secret>
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### Development
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+### Build
+
+```bash
+npm run build
 npm start
 ```
 
-Open:
+## Smart Contract
 
-- `http://localhost:3000/dashboard`
+The escrow contract (`contracts/AutoMonEscrow.sol`) handles:
+- Battle creation with wager deposit
+- Battle joining with matched wager
+- Settlement by admin (pays winner minus fee)
+- Cancellation (refund if no opponent)
 
-## Environment
-
-- `OPENAI_API_KEY` - optional. If missing, fallback heuristics control trainers.
-- `TICK_MS` - optional tick duration in milliseconds.
-- `PORT` - optional server port (default `3000`).
-
-Example:
-
+Deploy to Monad testnet:
 ```bash
-OPENAI_API_KEY=sk-... TICK_MS=3000 npm start
+# Using Hardhat or Foundry
+# Set ESCROW_CONTRACT_ADDRESS after deployment
 ```
 
-## Notes
+## API Routes
 
-- If OpenAI is unavailable, trainers still act using local fallback logic.
-- World state persists every tick to `save/game-state.json`.
+### Auth
+- `POST /api/auth/nonce` - Get nonce for SIWE
+- `POST /api/auth/verify` - Verify signature, get JWT
+- `GET /api/auth/session` - Check session
+- `POST /api/auth/logout` - Clear session
+
+### Cards & Packs
+- `GET /api/cards` - Get player's cards
+- `GET /api/packs` - Get player's packs
+- `POST /api/packs/buy` - Record pack purchase
+- `POST /api/packs/open` - Open pack, generate cards
+
+### Battle
+- `GET /api/battle/list` - List open/my battles
+- `POST /api/battle/create` - Create battle with wager
+- `POST /api/battle/join` - Join battle
+- `POST /api/battle/select-cards` - Select 3 cards
+- `POST /api/battle/move` - Submit turn action
+- `GET /api/battle/[id]` - Get battle state
+- `POST /api/battle/cancel` - Cancel pending battle
+
+### Tournament
+- `GET /api/tournament/list` - List tournaments
+- `POST /api/tournament/enter` - Enter tournament
+
+### AI Agent
+- `POST /api/agent/decide` - Get AI move decision
+- `POST /api/agent/auto` - AI plays full battle
+
+## Project Structure
+
+```
+src/
+  app/                    # Next.js App Router pages
+    api/                  # API routes
+    battle/               # Battle page
+    collection/           # Card collection page
+    shop/                 # Pack shop page
+    tournament/           # Tournament page
+    agent/                # AI agent page
+  components/             # React components
+    Header.tsx
+    Card.tsx
+    PackOpening.tsx
+    BattleArena.tsx
+  context/
+    WalletContext.tsx     # Wallet state management
+  lib/
+    mongodb.ts            # Database connection
+    auth.ts               # SIWE + JWT auth
+    cards.ts              # Card generation logic
+    battle.ts             # Battle engine
+    blockchain.ts         # Contract interaction
+    wallet.ts             # Client-side wallet
+    agent.ts              # Claude AI integration
+    types.ts              # TypeScript types
+contracts/
+  AutoMonEscrow.sol       # Escrow smart contract
+```
+
+## Game Mechanics
+
+### Element Matchups
+- Fire > Earth > Air > Water > Fire (cycle)
+- Light and Dark deal 1.5x damage to each other
+
+### Abilities by Element
+- **Fire**: Inferno (damage), Burn (DoT)
+- **Water**: Tsunami (damage), Heal (restore HP)
+- **Earth**: Earthquake (damage), Fortify (buff defense)
+- **Air**: Cyclone (damage), Haste (buff speed)
+- **Dark**: Void Strike (damage), Curse (debuff)
+- **Light**: Radiance (damage), Purify (remove debuffs)
+
+### Battle Flow
+1. Player creates battle with wager
+2. Opponent joins, matching wager
+3. Both players select 3 cards
+4. Turn-based combat until one side has no cards left
+5. Winner receives pot minus 5% fee
+
+## License
+
+MIT

@@ -5,7 +5,7 @@ import { ITEM_BY_ID, ITEMS } from "../data/items";
 import { LOCATION_BY_ID, LOCATIONS } from "../data/locations";
 import { SPECIES_BY_ID, SPECIES } from "../data/species";
 import { healAutoMon, resolveBattle, applyPotion } from "./battle";
-import { loadState, saveState } from "./persistence";
+import { loadState, saveState, deleteSave } from "./persistence";
 import { AgentContext, AgentDecision, AutoMon, GameConfig, GameState, LocationDef, Trainer } from "../types/game";
 import { clamp, randInt, sample, weightedChoice } from "../utils/random";
 
@@ -124,6 +124,32 @@ export class GameEngine extends EventEmitter {
     if (this.interval) clearInterval(this.interval);
     this.interval = null;
     this.addEvent("system", "Engine stopped.");
+    this.flush();
+  }
+
+  setSpeed(multiplier: number): void {
+    const wasRunning = !!this.interval;
+    if (wasRunning) {
+      if (this.interval) clearInterval(this.interval);
+      this.interval = null;
+    }
+    this.config.tickMs = Math.max(200, Math.round(10_000 / multiplier));
+    if (wasRunning) {
+      this.interval = setInterval(() => {
+        this.tick().catch((error) => {
+          this.addEvent("system", `Tick failed: ${(error as Error).message}`);
+          this.flush();
+        });
+      }, this.config.tickMs);
+    }
+    this.addEvent("system", `Speed set to ${multiplier}x (${this.config.tickMs}ms/tick).`);
+    this.flush();
+  }
+
+  reset(): void {
+    deleteSave();
+    this.state = loadState(); // creates fresh initial state
+    this.addEvent("system", "World reset.");
     this.flush();
   }
 
