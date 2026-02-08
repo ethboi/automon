@@ -160,7 +160,7 @@ export function GameWorld() {
     };
 
     fetchAgents();
-    const interval = setInterval(fetchAgents, 1000); // Poll every second
+    const interval = setInterval(fetchAgents, 5000);
     return () => clearInterval(interval);
   }, []);
 

@@ -4,7 +4,13 @@ import { cookies } from 'next/headers';
 import { getDb } from './mongodb';
 import { v4 as uuidv4 } from 'uuid';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-change-me');
+function getJwtSecret(): Uint8Array {
+  const jwtSecretValue = process.env.JWT_SECRET;
+  if (!jwtSecretValue && process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be configured');
+  }
+  return new TextEncoder().encode(jwtSecretValue || 'fallback-secret-change-me');
+}
 
 export async function generateNonce(address: string): Promise<string> {
   const db = await getDb();
@@ -66,14 +72,14 @@ export async function createToken(address: string): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 
   return token;
 }
 
 export async function verifyToken(token: string): Promise<{ address: string } | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return { address: payload.address as string };
   } catch {
     return null;

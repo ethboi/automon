@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto';
 import {
   Battle,
   BattleCard,
@@ -227,7 +228,7 @@ export function calculateDamage(
   }
 
   // Random variance (90-110%)
-  const variance = 0.9 + Math.random() * 0.2;
+  const variance = 0.9 + (randomInt(0, 1000) / 5000);
   damage *= variance;
 
   return {

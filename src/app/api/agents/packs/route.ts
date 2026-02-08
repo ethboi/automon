@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+import { getSession } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET - List packs for an agent
@@ -27,6 +28,11 @@ export async function GET(request: NextRequest) {
 // POST - Buy a pack for an agent
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { address } = await request.json();
 
     if (!address) {

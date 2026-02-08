@@ -8,13 +8,19 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 /**
  * @title AutoMonNFT
  * @dev ERC-721 NFT contract for AutoMon cards on Monad
- * Pack purchasing: 0.1 MON = 3 random cards from 20 AutoMon types
+ * Pack purchasing: 0.1 MON = 5 random cards from 20 AutoMon types
  */
 contract AutoMonNFT is ERC721, Ownable {
     using Strings for uint256;
 
+    error InsufficientPayment();
+    error RefundFailed();
+    error TokenDoesNotExist();
+    error NoBalanceToWithdraw();
+    error WithdrawalFailed();
+
     uint256 public constant PACK_PRICE = 0.1 ether; // 0.1 MON
-    uint256 public constant CARDS_PER_PACK = 3;
+    uint256 public constant CARDS_PER_PACK = 5;
     uint256 public constant TOTAL_AUTOMONS = 20;
 
     // Rarity levels: 0=Common, 1=Uncommon, 2=Rare, 3=Epic, 4=Legendary
@@ -41,10 +47,12 @@ contract AutoMonNFT is ERC721, Ownable {
     }
 
     /**
-     * @dev Buy a pack of 3 random AutoMon cards
+     * @dev Buy a pack of 5 random AutoMon cards
      */
     function buyPack() external payable {
-        require(msg.value >= PACK_PRICE, "Insufficient payment");
+        if (msg.value < PACK_PRICE) {
+            revert InsufficientPayment();
+        }
 
         uint256[] memory tokenIds = new uint256[](CARDS_PER_PACK);
 
@@ -65,7 +73,9 @@ contract AutoMonNFT is ERC721, Ownable {
         // Refund excess payment
         if (msg.value > PACK_PRICE) {
             (bool success, ) = payable(msg.sender).call{value: msg.value - PACK_PRICE}("");
-            require(success, "Refund failed");
+            if (!success) {
+                revert RefundFailed();
+            }
         }
     }
 
@@ -109,7 +119,9 @@ contract AutoMonNFT is ERC721, Ownable {
      * @dev Get card details
      */
     function getCard(uint256 tokenId) external view returns (uint8 automonId, uint8 rarity) {
-        require(tokenId > 0 && tokenId <= totalSupply, "Token does not exist");
+        if (tokenId == 0 || tokenId > totalSupply) {
+            revert TokenDoesNotExist();
+        }
         Card memory card = cards[tokenId];
         return (card.automonId, card.rarity);
     }
@@ -135,7 +147,9 @@ contract AutoMonNFT is ERC721, Ownable {
      * @dev Returns the token URI for metadata
      */
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(tokenId > 0 && tokenId <= totalSupply, "Token does not exist");
+        if (tokenId == 0 || tokenId > totalSupply) {
+            revert TokenDoesNotExist();
+        }
         return string(abi.encodePacked(baseURI, tokenId.toString()));
     }
 
@@ -151,10 +165,14 @@ contract AutoMonNFT is ERC721, Ownable {
      */
     function withdraw() external onlyOwner {
         uint256 balance = address(this).balance;
-        require(balance > 0, "No balance to withdraw");
+        if (balance == 0) {
+            revert NoBalanceToWithdraw();
+        }
 
         (bool success, ) = payable(owner()).call{value: balance}("");
-        require(success, "Withdrawal failed");
+        if (!success) {
+            revert WithdrawalFailed();
+        }
     }
 
     /**

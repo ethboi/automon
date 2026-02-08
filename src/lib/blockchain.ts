@@ -12,8 +12,7 @@ const ESCROW_ABI = [
 ];
 
 export function getProvider() {
-  // Monad Mainnet RPC
-  const rpcUrl = process.env.NEXT_PUBLIC_MONAD_RPC || 'https://rpc.monad.xyz';
+  const rpcUrl = process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz';
   return new ethers.JsonRpcProvider(rpcUrl);
 }
 
@@ -62,16 +61,21 @@ export function parseMON(mon: string): bigint {
   return ethers.parseEther(mon);
 }
 
-// Client-side helpers - Monad Mainnet Configuration
+export async function getBalance(address: string): Promise<string> {
+  const provider = getProvider();
+  const balanceWei = await provider.getBalance(address);
+  return ethers.formatEther(balanceWei);
+}
+
 export const CHAIN_CONFIG = {
-  chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '143'),
-  chainIdHex: `0x${(parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '143')).toString(16)}`,
+  chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '10143'),
+  chainIdHex: `0x${(parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '10143')).toString(16)}`,
   chainName: 'Monad',
   nativeCurrency: {
     name: 'MON',
     symbol: 'MON',
     decimals: 18,
   },
-  rpcUrls: [process.env.NEXT_PUBLIC_MONAD_RPC || 'https://rpc.monad.xyz'],
+  rpcUrls: [process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz'],
   blockExplorerUrls: ['https://monadscan.com'],
 };

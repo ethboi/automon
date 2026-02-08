@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+import { getSession } from '@/lib/auth';
 import { ethers } from 'ethers';
 import { AUTOMONS, RARITY_MULTIPLIERS } from '@/lib/automons';
 import { Rarity, Card } from '@/lib/types';
@@ -29,6 +30,11 @@ const ABILITY_DEFINITIONS: Record<string, { effect: 'damage' | 'heal' | 'buff' |
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { tokenIds, address: _address } = await request.json();
 
     if (!tokenIds || !Array.isArray(tokenIds) || tokenIds.length === 0) {
