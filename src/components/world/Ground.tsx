@@ -40,7 +40,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
       ].map(([x, z, r], i) => (
         <mesh key={`g-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.005, z]}>
           <circleGeometry args={[r, 16]} />
-          <meshStandardMaterial color="#1a2e1f" transparent opacity={0.5} />
+          <meshStandardMaterial color="#264032" transparent opacity={0.5} />
         </mesh>
       ))}
 
@@ -76,7 +76,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
             </mesh>
             <mesh position={[0, h, 0]} castShadow>
               <coneGeometry args={[0.8 + (i % 3) * 0.3, h * 0.9, 6]} />
-              <meshStandardMaterial color={['#15371a', '#1a4220', '#1e4d26'][i % 3]} />
+              <meshStandardMaterial color={['#1e4d26', '#24582e', '#2a6335'][i % 3]} />
             </mesh>
           </group>
         );
@@ -97,7 +97,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
       {/* Soft edge fade */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
         <ringGeometry args={[size / 2 - 4, size / 2, 64]} />
-        <meshStandardMaterial color="#080c18" transparent opacity={0.8} />
+        <meshStandardMaterial color="#0f1525" transparent opacity={0.7} />
       </mesh>
     </group>
   );

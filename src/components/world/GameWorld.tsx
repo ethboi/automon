@@ -81,16 +81,16 @@ function Scene({
 
   return (
     <>
-      <color attach="background" args={['#080c18']} />
+      <color attach="background" args={['#0f1525']} />
       <CameraSetup />
 
       {/* Fog for depth */}
-      <fog attach="fog" args={['#080c18', 60, 120]} />
+      <fog attach="fog" args={['#0f1525', 70, 140]} />
 
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={0.7} />
       <directionalLight
         position={[15, 25, 15]}
-        intensity={1.2}
+        intensity={1.5}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -100,11 +100,11 @@ function Scene({
         shadow-camera-top={35}
         shadow-camera-bottom={-35}
       />
-      <directionalLight position={[-10, 15, -10]} intensity={0.15} color="#6366f1" />
+      <directionalLight position={[-10, 15, -10]} intensity={0.3} color="#6366f1" />
       {/* Rim light for atmosphere */}
-      <pointLight position={[0, 8, -20]} intensity={0.8} color="#ef4444" distance={30} />
-      <pointLight position={[-18, 5, 0]} intensity={0.5} color="#84cc16" distance={25} />
-      <pointLight position={[20, 5, 16]} intensity={0.5} color="#a78bfa" distance={25} />
+      <pointLight position={[0, 8, -20]} intensity={1.2} color="#ef4444" distance={35} />
+      <pointLight position={[-18, 5, 0]} intensity={0.8} color="#84cc16" distance={30} />
+      <pointLight position={[20, 5, 16]} intensity={0.8} color="#a78bfa" distance={30} />
 
       <Ground size={80} onClick={onGroundClick} />
 
@@ -244,7 +244,7 @@ export function GameWorld() {
       <Canvas
         camera={{ fov: 45, position: [0, 50, 55], near: 0.1, far: 1000 }}
         shadows
-        style={{ background: '#080c18' }}
+        style={{ background: '#0f1525' }}
         gl={{ antialias: true, alpha: false }}
       >
         <Suspense fallback={null}>
