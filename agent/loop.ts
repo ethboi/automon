@@ -108,6 +108,48 @@ async function checkAndBuyPacks(): Promise<void> {
   }
 }
 
+async function checkAndCreateBattle(): Promise<void> {
+  if (!config.features.autoJoinBattles) {
+    verbose('Battle creation disabled');
+    return;
+  }
+
+  const cards = await actions.getAgentCards();
+  if (cards.length < config.minCardsForBattle) {
+    verbose('Not enough cards to create a battle');
+    return;
+  }
+
+  const balance = await actions.getBalance();
+  const numericBalance = parseFloat(balance);
+
+  // Pick a wager: small random amount between 0.01 and 0.05 MON
+  const wagerOptions = ['0.01', '0.02', '0.03', '0.05'];
+  const wager = wagerOptions[Math.floor(Math.random() * wagerOptions.length)];
+  const numericWager = parseFloat(wager);
+
+  if (!Number.isFinite(numericBalance) || numericBalance - numericWager < config.minBalanceReserve) {
+    verbose('Not enough balance to create a battle');
+    return;
+  }
+
+  log(`⚔️ Creating battle with ${wager} MON wager...`);
+  const battle = await actions.createBattle(wager);
+
+  if (battle) {
+    log(`Battle created! ID: ${battle.battleId.slice(0, 8)}... waiting for opponent`);
+
+    // Select cards for our side
+    const cardSelection = await strategy.selectBattleCards(cards);
+    const cardIds = cardSelection.indices.map(i => cards[i]._id);
+    log(`Pre-selected cards: ${cardSelection.indices.map(i => cards[i]?.name).join(', ')}`);
+
+    await actions.selectBattleCards(battle.battleId, cardIds);
+  } else {
+    log('Failed to create battle');
+  }
+}
+
 async function checkAndJoinBattles(): Promise<void> {
   if (!config.features.autoJoinBattles) {
     verbose('Battle joining disabled');
@@ -252,6 +294,10 @@ async function runIteration(): Promise<void> {
     await checkAndJoinBattles();
     // If no battle was joined this cycle, continue with secondary actions.
     if (stats.battlesJoined === battlesJoinedBefore) {
+      // Create a battle sometimes (20% chance when at Town Arena with good health)
+      if (currentHealth >= 50 && Math.random() < 0.2) {
+        await checkAndCreateBattle();
+      }
       await checkAndBuyPacks();
       await checkTournaments();
     }

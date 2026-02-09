@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { getSession } from '@/lib/auth';
+import { getAgentAuth } from '@/lib/agentAuth';
 import { v4 as uuidv4 } from 'uuid';
 import { logTransaction } from '@/lib/transactions';
 import { Battle } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
+    // Support both SIWE session and agent secret auth
     const session = await getSession();
+    const agentAuth = !session ? await getAgentAuth(request) : null;
 
-    if (!session) {
+    if (!session && !agentAuth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { wager, txHash } = await request.json();
+    const { wager, txHash, address: bodyAddress } = await request.json();
 
     if (!wager) {
       return NextResponse.json({ error: 'Wager amount required' }, { status: 400 });
@@ -25,7 +28,7 @@ export async function POST(request: NextRequest) {
     const battle: Battle = {
       battleId,
       player1: {
-        address: session.address.toLowerCase(),
+        address: (session?.address || bodyAddress || '').toLowerCase(),
         cards: [],
         activeCardIndex: 0,
         ready: false,
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest) {
       await logTransaction({
         txHash,
         type: 'escrow_deposit',
-        from: session.address,
+        from: session?.address || bodyAddress || '',
         description: `Battle created with ${wager || '0'} MON wager`,
         metadata: { battleId: battle.battleId, wager },
       });

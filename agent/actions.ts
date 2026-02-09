@@ -563,12 +563,12 @@ export async function selectBattleCards(
  */
 export async function createBattle(
   wager: string,
-  txHash: string
+  txHash?: string
 ): Promise<Battle | null> {
   try {
     const response = await fetchApi('/api/battle/create', {
       method: 'POST',
-      body: JSON.stringify({ wager, txHash }),
+      body: JSON.stringify({ wager, txHash: txHash || null, address: config.agentWalletAddress }),
     });
 
     if (!response.ok) {
