@@ -282,10 +282,74 @@ export async function runAutoLoop(): Promise<void> {
   setupShutdownHandlers();
 
   log('Agent starting in AUTONOMOUS mode...');
+
+  // Authenticate via SIWE
+  const authed = await actions.authenticate();
+  if (!authed) {
+    log('⚠ Authentication failed — some features may not work');
+    log('  Agent will still register and wander, but battles/packs need auth');
+  }
+
+  // Register agent
+  const agentName = config.agentName;
+  const registered = await actions.registerAgent(agentName);
+  log(`Agent registered: ${registered ? '✅' : '❌'} as "${agentName}"`);
+
   log(`Polling every ${config.pollIntervalMs}ms`);
   log('Press Ctrl+C to stop\n');
 
+  // Wander state
+  let wanderX = 0;
+  let wanderZ = 8;
+  const LOCATIONS = [
+    { name: 'Starter Town', x: 0, z: 0 },
+    { name: 'Town Arena', x: 0, z: -20 },
+    { name: 'Town Market', x: 18, z: 0 },
+    { name: 'Community Farm', x: -18, z: 0 },
+    { name: 'Green Meadows', x: -14, z: -18 },
+    { name: 'Old Pond', x: -22, z: -18 },
+    { name: 'Dark Forest', x: -24, z: 14 },
+    { name: 'River Delta', x: 22, z: -16 },
+    { name: 'Crystal Caves', x: 20, z: 16 },
+  ];
+  let targetLoc = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+
   while (isRunning) {
+    // Move toward target location
+    const dx = targetLoc.x - wanderX;
+    const dz = targetLoc.z - wanderZ;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist > 2) {
+      const speed = 2;
+      wanderX += (dx / dist) * speed;
+      wanderZ += (dz / dist) * speed;
+    } else {
+      // Arrived — log action, pick new target
+      const actionTypes = ['exploring', 'training', 'battling', 'catching', 'resting', 'trading'];
+      const reasons = [
+        'Searching for wild AutoMon', 'Grinding XP', 'Arena match!',
+        'Found a rare spawn!', 'Taking a breather', 'Checking trades',
+      ];
+      const action = actionTypes[Math.floor(Math.random() * actionTypes.length)];
+      const reason = reasons[Math.floor(Math.random() * reasons.length)];
+
+      log(`📍 ${targetLoc.name}: ${action} — "${reason}"`);
+      await actions.logAction(action, reason, targetLoc.name);
+
+      // Pick new destination
+      let next;
+      do {
+        next = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+      } while (next.name === targetLoc.name);
+      targetLoc = next;
+      log(`   → heading to ${targetLoc.name}`);
+    }
+
+    // Update position on server
+    await actions.updatePosition({ x: wanderX, y: 0, z: wanderZ }, agentName);
+
+    // Also run game actions (buy packs, join battles, etc.)
     await runIteration();
     await sleep(config.pollIntervalMs);
   }

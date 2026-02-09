@@ -79,6 +79,79 @@ function getNftContract(): ethers.Contract {
 
 // Authentication token storage
 let authToken: string | null = null;
+let authCookie: string | null = null;
+
+/**
+ * Authenticate the agent via SIWE (Sign-In with Ethereum)
+ * Gets a nonce, signs it, verifies, and stores the auth cookie.
+ */
+export async function authenticate(): Promise<boolean> {
+  try {
+    const w = getWallet();
+    const address = w.address;
+    console.log(`[AUTH] Authenticating ${address}...`);
+
+    // 1. Get nonce
+    const nonceRes = await fetch(`${config.apiUrl}/api/auth/nonce`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address }),
+    });
+    if (!nonceRes.ok) {
+      console.error('[AUTH] Failed to get nonce:', nonceRes.status);
+      return false;
+    }
+    const { nonce } = await nonceRes.json();
+
+    // 2. Create and sign SIWE message
+    const domain = new URL(config.apiUrl).host;
+    const origin = config.apiUrl;
+    const siweMessage = new (await import('siwe')).SiweMessage({
+      domain,
+      address,
+      statement: 'Sign in to AutoMon',
+      uri: origin,
+      version: '1',
+      chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '10143'),
+      nonce,
+    });
+    const message = siweMessage.prepareMessage();
+    const signature = await w.signMessage(message);
+
+    // 3. Verify with server
+    const verifyRes = await fetch(`${config.apiUrl}/api/auth/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, signature }),
+    });
+    if (!verifyRes.ok) {
+      console.error('[AUTH] Verification failed:', verifyRes.status);
+      return false;
+    }
+    const verifyData = await verifyRes.json();
+
+    // 4. Extract auth cookie from Set-Cookie header
+    const setCookie = verifyRes.headers.get('set-cookie');
+    if (setCookie) {
+      const match = setCookie.match(/auth_token=([^;]+)/);
+      if (match) {
+        authCookie = match[1];
+        authToken = match[1];
+      }
+    }
+    // Also use token from body if available
+    if (verifyData.token) {
+      authToken = verifyData.token;
+      authCookie = verifyData.token;
+    }
+
+    console.log(`[AUTH] ✅ Authenticated as ${address}`);
+    return true;
+  } catch (error) {
+    console.error('[AUTH] Authentication error:', error);
+    return false;
+  }
+}
 
 async function fetchApi(
   endpoint: string,
@@ -90,7 +163,9 @@ async function fetchApi(
     ...options.headers as Record<string, string>,
   };
 
-  if (authToken) {
+  if (authCookie) {
+    headers['Cookie'] = `auth_token=${authCookie}`;
+  } else if (authToken) {
     headers['Cookie'] = `auth_token=${authToken}`;
   }
 
