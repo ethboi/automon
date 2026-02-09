@@ -474,3 +474,115 @@ Respond with JSON only:
     };
   }
 }
+
+// ─── World Navigation & Action Decisions ───────────────────────────────────────
+
+interface LocationDecision {
+  location: string;
+  action: string;
+  reasoning: string;
+  wager?: string;
+}
+
+const LOCATION_INFO: Record<string, string> = {
+  'Starter Town': 'Home base. Safe area for resting and planning.',
+  'Town Arena': 'Battle arena. Create or join battles here.',
+  'Town Market': 'Trading post. Buy/sell items and check prices.',
+  'Community Farm': 'Grow crops. Farming here restores health (+17 HP).',
+  'Green Meadows': 'Peaceful grasslands. Foraging restores health (+13 HP).',
+  'Old Pond': 'Fishing spot. Catching fish restores the most health (+20 HP).',
+  'Dark Forest': 'Dangerous territory. Rare spawns but risky.',
+  'River Delta': 'Waterway crossing. Explore for water-type encounters.',
+  'Crystal Caves': 'Underground caverns. Find rare crystal-type resources.',
+};
+
+/**
+ * Use Claude to decide what to do next: where to go, what action to take, and why.
+ */
+export async function decideNextAction(
+  currentLocation: string,
+  health: number,
+  maxHealth: number,
+  balance: string,
+  cards: Card[],
+  recentActions: string[],
+  pendingBattles: number,
+): Promise<LocationDecision> {
+  const locationList = Object.entries(LOCATION_INFO)
+    .map(([name, desc]) => `- ${name}: ${desc}`)
+    .join('\n');
+
+  const cardSummary = cards.length > 0
+    ? `${cards.length} cards (${[...new Set(cards.map(c => c.element))].join(', ')}), best: ${cards.slice(0, 3).map(c => `${c.name}(${c.rarity})`).join(', ')}`
+    : 'No cards yet';
+
+  const prompt = `You are an autonomous AI agent in AutoMon, a Pokemon-style game world. Decide your next move.
+
+## CURRENT STATE
+- Location: ${currentLocation}
+- Health: ${health}/${maxHealth} HP
+- Balance: ${balance} MON
+- Cards: ${cardSummary}
+- Pending battles available: ${pendingBattles}
+- Recent actions: ${recentActions.slice(-5).join(' → ') || 'just started'}
+
+## LOCATIONS
+${locationList}
+
+## HEALTH RULES
+- Actions drain HP: battling(-8), training(-5), catching(-4), exploring(-3), trading(-2)
+- Healing: fishing at Old Pond(+20), farming at Community Farm(+17), foraging at Green Meadows(+13)
+- Resting anywhere: +2 HP
+- If health drops to 0, agent faints!
+
+## AVAILABLE ACTIONS
+exploring, training, battling, catching, trading, resting, fishing, farming, foraging
+
+## DECISION GUIDELINES
+- Below 30 HP: prioritize healing (go to a healing location)
+- If no cards: go to Town Market or buy packs
+- If battles are pending and health is good: consider the Arena
+- Vary your behavior — don't repeat the same action endlessly
+- Sometimes create battles at the Arena (pick a wager 0.01-0.05 MON based on confidence)
+- Show personality — be curious, strategic, sometimes bold
+
+Respond with JSON only:
+{
+  "location": "<where to go next (exact location name)>",
+  "action": "<what to do there>",
+  "reasoning": "<1-2 sentences explaining your thinking, written in first person as the agent>",
+  "wager": "<optional: MON amount if creating a battle, e.g. '0.03'>"
+}`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const content = response.content[0];
+    if (content.type !== 'text') throw new Error('Invalid response');
+
+    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found');
+
+    return JSON.parse(jsonMatch[0]) as LocationDecision;
+  } catch (error) {
+    console.error('Next action decision error:', error);
+
+    // Fallback: heal if low, otherwise explore
+    if (health < 30) {
+      return {
+        location: 'Old Pond',
+        action: 'fishing',
+        reasoning: 'Health is critical, need to recover by fishing.',
+      };
+    }
+    return {
+      location: 'Green Meadows',
+      action: 'exploring',
+      reasoning: 'Exploring the meadows to see what we find.',
+    };
+  }
+}

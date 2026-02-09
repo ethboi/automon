@@ -29,7 +29,10 @@ interface EventData {
   agent: string;
   action: string;
   reason: string;
+  reasoning?: string;
   location: string | null;
+  healthDelta?: number;
+  healthAfter?: number;
   timestamp: string;
 }
 
@@ -216,8 +219,15 @@ export function WorldUI({
                           <span className="text-cyan-500 font-medium">{agentName}</span>
                           <span className="text-gray-500"> {e.action}</span>
                           {e.location && <span className="text-gray-700"> @ {e.location}</span>}
-                          {e.reason && (
-                            <div className="text-gray-600 italic pl-2 sm:pl-3 truncate" title={e.reason}>💭 {e.reason}</div>
+                          {(e.reasoning || e.reason) && (
+                            <div className="text-gray-600 italic pl-2 sm:pl-3 truncate" title={e.reasoning || e.reason}>
+                              💭 {e.reasoning || e.reason}
+                              {e.healthDelta != null && e.healthDelta !== 0 && (
+                                <span className={`ml-1 font-mono text-[10px] ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  ({e.healthDelta > 0 ? '+' : ''}{e.healthDelta} HP)
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       );

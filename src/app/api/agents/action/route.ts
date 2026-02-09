@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { address, action, reason, location } = await request.json();
+    const { address, action, reason, location, reasoning } = await request.json();
 
     if (!address || !action) {
       return NextResponse.json({ error: 'Address and action required' }, { status: 400 });
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       address: address.toLowerCase(),
       action,
       reason: reason || '',
+      reasoning: reasoning || reason || '',
       location: location || null,
       healthDelta,
       healthAfter: newHealth,
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
           health: newHealth,
           currentAction: action,
           currentReason: reason || '',
+          currentReasoning: reasoning || reason || '',
           currentLocation: location || null,
           lastActionAt: new Date(),
           lastSeen: new Date(),

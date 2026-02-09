@@ -241,7 +241,7 @@ export async function updatePosition(pos: Position, name: string): Promise<void>
 /**
  * Log an agent action to the server
  */
-export async function logAction(action: string, reason: string, location: string): Promise<void> {
+export async function logAction(action: string, reason: string, location: string, reasoning?: string): Promise<void> {
   if (!config.agentWalletAddress) return;
   try {
     await fetchApi('/api/agents/action', {
@@ -251,6 +251,7 @@ export async function logAction(action: string, reason: string, location: string
         action,
         reason,
         location,
+        reasoning: reasoning || reason,
       }),
     });
   } catch {

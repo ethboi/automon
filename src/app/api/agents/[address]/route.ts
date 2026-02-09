@@ -67,6 +67,7 @@ export async function GET(
     const rawAction = agent.currentAction || latestAction?.action || null;
     const currentAction = rawAction?.toLowerCase() === 'came online' ? 'wandering' : rawAction;
     const currentReason = agent.currentReason || latestAction?.reason || null;
+    const currentReasoning = agent.currentReasoning || latestAction?.reasoning || null;
     const currentLocation = agent.currentLocation || latestAction?.location || null;
     const lastActionAt = agent.lastActionAt || latestAction?.timestamp || null;
     const maxHealth = typeof agent.maxHealth === 'number' && agent.maxHealth > 0 ? agent.maxHealth : 100;
@@ -83,6 +84,7 @@ export async function GET(
         maxHealth,
         currentAction,
         currentReason,
+        currentReasoning,
         currentLocation,
         lastActionAt,
         lastSeen: agent.lastSeen,
@@ -110,8 +112,10 @@ export async function GET(
       actions: actions.map(a => ({
         action: a.action,
         reason: a.reason,
+        reasoning: a.reasoning || a.reason,
         timestamp: a.timestamp,
         location: a.location,
+        healthDelta: a.healthDelta,
       })),
     });
   } catch (error) {

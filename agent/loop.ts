@@ -294,10 +294,6 @@ async function runIteration(): Promise<void> {
     await checkAndJoinBattles();
     // If no battle was joined this cycle, continue with secondary actions.
     if (stats.battlesJoined === battlesJoinedBefore) {
-      // Create a battle sometimes (20% chance when at Town Arena with good health)
-      if (currentHealth >= 50 && Math.random() < 0.2) {
-        await checkAndCreateBattle();
-      }
       await checkAndBuyPacks();
       await checkTournaments();
     }
@@ -384,46 +380,15 @@ export async function runAutoLoop(): Promise<void> {
     { name: 'Crystal Caves', x: 20, z: 16 },
   ];
 
-  // Healing locations and their actions
-  const HEALING_SPOTS = [
-    { name: 'Old Pond', action: 'fishing', reason: 'Catching fish to restore energy 🎣' },
-    { name: 'Community Farm', action: 'farming', reason: 'Harvesting crops for a meal 🌾' },
-    { name: 'Green Meadows', action: 'foraging', reason: 'Gathering berries and herbs 🌿' },
-  ];
-
-  const NORMAL_ACTIONS = [
-    { action: 'exploring', reason: 'Searching for wild AutoMon' },
-    { action: 'training', reason: 'Grinding XP' },
-    { action: 'battling', reason: 'Arena match!' },
-    { action: 'catching', reason: 'Found a rare spawn!' },
-    { action: 'trading', reason: 'Checking trades' },
-  ];
-
-  // Low-health threshold — agent seeks food
-  const LOW_HEALTH_THRESHOLD = 40;
-  const CRITICAL_HEALTH_THRESHOLD = 20;
-
   let targetLoc = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
-  let seekingFood = false;
+  let pendingAction: { action: string; reason: string; reasoning: string; wager?: string } | null = null;
+  let recentActionLog: string[] = [];
 
   while (isRunning) {
-    // Check health and decide behavior
+    // Check health and state
     const agentData = await actions.fetchAgent();
     if (agentData && typeof agentData.health === 'number') {
       currentHealth = agentData.health;
-    }
-
-    // If health is low, override target to a healing location
-    if (currentHealth <= LOW_HEALTH_THRESHOLD && !seekingFood) {
-      const healSpot = HEALING_SPOTS[Math.floor(Math.random() * HEALING_SPOTS.length)];
-      const healLoc = LOCATIONS.find(l => l.name === healSpot.name)!;
-      targetLoc = healLoc;
-      seekingFood = true;
-      if (currentHealth <= CRITICAL_HEALTH_THRESHOLD) {
-        log(`🚨 Health critical (${currentHealth}/100)! Rushing to ${healSpot.name} for ${healSpot.action}`);
-      } else {
-        log(`⚠️ Health low (${currentHealth}/100), heading to ${healSpot.name} for ${healSpot.action}`);
-      }
     }
 
     // Move toward target location
@@ -432,52 +397,103 @@ export async function runAutoLoop(): Promise<void> {
     const dist = Math.sqrt(dx * dx + dz * dz);
 
     if (dist > 2) {
-      const speed = currentHealth <= CRITICAL_HEALTH_THRESHOLD ? 1 : 2; // Slow when critical
+      const speed = currentHealth <= 20 ? 1 : 2;
       wanderX += (dx / dist) * speed;
       wanderZ += (dz / dist) * speed;
     } else {
-      // Arrived — choose action based on health and location
-      let action: string;
-      let reason: string;
+      // Arrived at location — execute the pending action or ask AI for one
+      if (!pendingAction) {
+        // Ask Claude what to do
+        const cards = await actions.getAgentCards();
+        const balance = await actions.getBalance();
+        const pendingBattles = await actions.getPendingBattles();
 
-      if (seekingFood) {
-        // At a healing location — do healing action
-        const healSpot = HEALING_SPOTS.find(h => h.name === targetLoc.name);
-        if (healSpot) {
-          action = healSpot.action;
-          reason = healSpot.reason;
-        } else {
-          action = 'resting';
-          reason = 'Resting to recover health 💤';
-        }
+        const decision = await strategy.decideNextAction(
+          targetLoc.name,
+          currentHealth,
+          100,
+          balance,
+          cards,
+          recentActionLog,
+          pendingBattles.length,
+        );
 
-        // Stay and heal until health is above 70
-        if (currentHealth >= 70) {
-          seekingFood = false;
-          log(`💚 Health restored to ${currentHealth}/100, back to adventuring!`);
+        pendingAction = {
+          action: decision.action,
+          reason: decision.reasoning,
+          reasoning: decision.reasoning,
+          wager: decision.wager,
+        };
+
+        // If AI chose a different location, navigate there first
+        const chosenLoc = LOCATIONS.find(l => l.name === decision.location);
+        if (chosenLoc && chosenLoc.name !== targetLoc.name) {
+          targetLoc = chosenLoc;
+          log(`🧠 AI decided: go to ${decision.location} to ${decision.action}`);
+          log(`   💭 "${decision.reasoning}"`);
+          // Don't execute action yet — need to travel there first
+          await actions.updatePosition({ x: wanderX, y: 0, z: wanderZ }, agentName);
+          await runIteration();
+          await sleep(config.pollIntervalMs);
+          continue;
         }
-      } else if (currentHealth <= CRITICAL_HEALTH_THRESHOLD) {
-        // Critical but not at a healing spot — rest wherever we are
-        action = 'resting';
-        reason = 'Too exhausted to continue... resting 💤';
-      } else {
-        // Normal behavior — pick random action
-        const pick = NORMAL_ACTIONS[Math.floor(Math.random() * NORMAL_ACTIONS.length)];
-        action = pick.action;
-        reason = pick.reason;
       }
 
-      log(`📍 ${targetLoc.name}: ${action} — "${reason}" [❤️ ${currentHealth}/100]`);
-      await actions.logAction(action, reason, targetLoc.name);
+      // Execute the action at current location
+      const { action, reasoning, wager } = pendingAction;
+      log(`📍 ${targetLoc.name}: ${action} [❤️ ${currentHealth}/100]`);
+      log(`   💭 "${reasoning}"`);
 
-      // Pick new destination (unless healing and not done yet)
-      if (!seekingFood) {
-        let next;
-        do {
-          next = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
-        } while (next.name === targetLoc.name);
-        targetLoc = next;
-        log(`   → heading to ${targetLoc.name}`);
+      await actions.logAction(action, reasoning, targetLoc.name, reasoning);
+      recentActionLog.push(`${action}@${targetLoc.name}`);
+      if (recentActionLog.length > 10) recentActionLog.shift();
+
+      // If the AI wants to create a battle with a wager
+      if (wager && action === 'battling' && targetLoc.name === 'Town Arena') {
+        log(`⚔️ Creating battle with ${wager} MON wager`);
+        const battle = await actions.createBattle(wager);
+        if (battle) {
+          log(`   Battle created: ${battle.battleId.slice(0, 8)}...`);
+          const cards = await actions.getAgentCards();
+          if (cards.length >= 3) {
+            const cardSelection = await strategy.selectBattleCards(cards);
+            const cardIds = cardSelection.indices.map(i => cards[i]._id);
+            await actions.selectBattleCards(battle.battleId, cardIds);
+            log(`   Cards selected: ${cardSelection.indices.map(i => cards[i]?.name).join(', ')}`);
+            log(`   💭 "${cardSelection.reasoning}"`);
+          }
+        }
+      }
+
+      // Clear pending action and ask AI for next move
+      pendingAction = null;
+
+      // Ask AI where to go next
+      const cards = await actions.getAgentCards();
+      const balance = await actions.getBalance();
+      const pendingBattles = await actions.getPendingBattles();
+
+      const nextDecision = await strategy.decideNextAction(
+        targetLoc.name,
+        currentHealth,
+        100,
+        balance,
+        cards,
+        recentActionLog,
+        pendingBattles.length,
+      );
+
+      pendingAction = {
+        action: nextDecision.action,
+        reason: nextDecision.reasoning,
+        reasoning: nextDecision.reasoning,
+        wager: nextDecision.wager,
+      };
+
+      const nextLoc = LOCATIONS.find(l => l.name === nextDecision.location);
+      if (nextLoc && nextLoc.name !== targetLoc.name) {
+        targetLoc = nextLoc;
+        log(`   → heading to ${nextDecision.location} for ${nextDecision.action}`);
       }
     }
 

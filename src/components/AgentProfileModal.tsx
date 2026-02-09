@@ -32,6 +32,7 @@ interface AgentDetails {
     maxHealth: number;
     currentAction?: string | null;
     currentReason?: string | null;
+    currentReasoning?: string | null;
     currentLocation?: string | null;
     lastActionAt?: string | null;
     lastSeen: string;
@@ -50,8 +51,10 @@ interface AgentDetails {
   actions: Array<{
     action: string;
     reason: string;
+    reasoning?: string;
     timestamp: string;
     location?: string;
+    healthDelta?: number;
   }>;
 }
 
@@ -201,8 +204,8 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
                 <div className="text-sm sm:text-base text-cyan-300 font-medium">
                   {currentActivity.icon} {currentActivity.label}
                 </div>
-                {details.agent.currentReason && (
-                  <div className="text-xs sm:text-sm text-gray-400 mt-1">{details.agent.currentReason}</div>
+                {(details.agent.currentReasoning || details.agent.currentReason) && (
+                  <div className="text-xs sm:text-sm text-gray-400 mt-1 italic">💭 {details.agent.currentReasoning || details.agent.currentReason}</div>
                 )}
                 {details.agent.currentLocation && (
                   <div className="text-xs text-cyan-400 mt-1.5">📍 {details.agent.currentLocation}</div>
@@ -350,9 +353,16 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
                       >
                         <div className="flex items-start justify-between gap-2 sm:gap-3">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm sm:text-base text-white font-medium truncate">{action.action}</p>
-                            {action.reason && (
-                              <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1">{action.reason}</p>
+                            <p className="text-sm sm:text-base text-white font-medium truncate">
+                              {action.action}
+                              {action.healthDelta != null && action.healthDelta !== 0 && (
+                                <span className={`ml-2 text-xs font-mono ${action.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  {action.healthDelta > 0 ? '+' : ''}{action.healthDelta} HP
+                                </span>
+                              )}
+                            </p>
+                            {(action.reasoning || action.reason) && (
+                              <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1 italic">💭 {action.reasoning || action.reason}</p>
                             )}
                           </div>
                           <div className="text-xs text-gray-500 whitespace-nowrap">

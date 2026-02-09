@@ -69,13 +69,14 @@ export async function GET() {
       }
     }
 
-    const latestActionByAgent = new Map<string, { action?: string; reason?: string; location?: string }>();
+    const latestActionByAgent = new Map<string, { action?: string; reason?: string; reasoning?: string; location?: string }>();
     for (const action of recentActions) {
       const addr = action.address?.toLowerCase?.();
       if (!addr || latestActionByAgent.has(addr)) continue;
       latestActionByAgent.set(addr, {
         action: action.action,
         reason: action.reason,
+        reasoning: action.reasoning,
         location: action.location,
       });
     }
@@ -98,6 +99,7 @@ export async function GET() {
         maxHealth,
         currentAction,
         currentReason: a.currentReason || latest.reason || null,
+        currentReasoning: a.currentReasoning || latest.reasoning || null,
         currentLocation: a.currentLocation || latest.location || null,
         lastSeen: a.lastSeen,
         online: isOnline,
@@ -111,7 +113,10 @@ export async function GET() {
         agent: a.address,
         action: a.action,
         reason: a.reason,
+        reasoning: a.reasoning || a.reason,
         location: a.location,
+        healthDelta: a.healthDelta,
+        healthAfter: a.healthAfter,
         timestamp: a.timestamp,
       })),
       battles: recentBattles.map(b => ({
