@@ -177,7 +177,7 @@ async function fetchApi(
     headers['x-agent-secret'] = jwtSecret;
   }
 
-  return fetch(url, { ...options, headers });
+  return fetch(url, { ...options, headers, redirect: 'follow' });
 }
 
 // ─── Agent-specific API functions ──────────────────────────────────────────────
