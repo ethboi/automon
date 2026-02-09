@@ -87,7 +87,8 @@ function Scene({
       {/* Fog for depth */}
       <fog attach="fog" args={['#0f1525', 70, 140]} />
 
-      <ambientLight intensity={0.7} />
+      <ambientLight intensity={0.8} />
+      <hemisphereLight args={['#b1e1ff', '#2a4a30', 0.5]} />
       <directionalLight
         position={[15, 25, 15]}
         intensity={1.5}

@@ -29,7 +29,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
       {/* Main ground — dark rich green */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow onClick={handleClick}>
         <planeGeometry args={[size, size]} />
-        <meshStandardMaterial color="#152218" roughness={1} />
+        <meshStandardMaterial color="#2a4a30" roughness={0.9} />
       </mesh>
 
       {/* Subtle grass variation patches */}
@@ -49,20 +49,20 @@ export function Ground({ size = 80, onClick }: GroundProps) {
       {[[-22, -18, 5], [22, -16, 4.5]].map(([x, z, r], i) => (
         <mesh key={`w-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.01, z]}>
           <circleGeometry args={[r, 24]} />
-          <meshStandardMaterial color="#0c1f3a" transparent opacity={0.6} roughness={0.3} />
+          <meshStandardMaterial color="#1a3a5e" transparent opacity={0.6} roughness={0.3} />
         </mesh>
       ))}
       {/* Dark zones */}
       {[[-24, 14, 5.5], [20, 16, 5]].map(([x, z, r], i) => (
         <mesh key={`d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.008, z]}>
           <circleGeometry args={[r, 24]} />
-          <meshStandardMaterial color="#0d0a15" transparent opacity={0.5} />
+          <meshStandardMaterial color="#1a1530" transparent opacity={0.5} />
         </mesh>
       ))}
       {/* Farm zone */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-18, 0.008, 0]}>
         <circleGeometry args={[5.5, 24]} />
-        <meshStandardMaterial color="#1e3314" transparent opacity={0.4} />
+        <meshStandardMaterial color="#2d5020" transparent opacity={0.4} />
       </mesh>
 
       {/* Trees */}
@@ -90,7 +90,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
       ].map(([x, z, s], i) => (
         <mesh key={`r-${i}`} position={[x, s * 0.4, z]} castShadow>
           <dodecahedronGeometry args={[s, 0]} />
-          <meshStandardMaterial color="#3a3f47" roughness={0.95} />
+          <meshStandardMaterial color="#505862" roughness={0.9} />
         </mesh>
       ))}
 
