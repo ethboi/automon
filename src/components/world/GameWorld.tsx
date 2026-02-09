@@ -1,9 +1,10 @@
 'use client';
 
-import { Canvas, useThree } from '@react-three/fiber';
-import { Suspense, useState, useCallback, useEffect } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
+import { MapControls } from '@react-three/drei';
 
 import { Ground } from './Ground';
 import { Character } from './Character';
@@ -44,21 +45,72 @@ export const WORLD_LOCATIONS = {
 
 const INTERACTION_DISTANCE = 5;
 
-function CameraSetup() {
+function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
   const { camera, size } = useThree();
+  const controlsRef = useRef<any>(null);
+  const flyingRef = useRef(false);
+  const targetPos = useRef(new THREE.Vector3());
+  const targetLookAt = useRef(new THREE.Vector3());
+  const currentLookAt = useRef(new THREE.Vector3(0, 0, -5));
+
   useEffect(() => {
-    // Adjust camera based on screen — mobile gets a higher/wider view
     const isMobile = size.width < 768;
     if (isMobile) {
       camera.position.set(0, 65, 50);
-      camera.lookAt(0, 0, -5);
     } else {
       camera.position.set(0, 50, 55);
-      camera.lookAt(0, 0, -5);
     }
+    currentLookAt.current.set(0, 0, -5);
+    camera.lookAt(0, 0, -5);
     camera.updateProjectionMatrix();
   }, [camera, size.width]);
-  return null;
+
+  // Start fly-to when target changes
+  useEffect(() => {
+    if (!flyTarget) return;
+    const isMobile = size.width < 768;
+    const height = isMobile ? 35 : 30;
+    const offsetZ = isMobile ? 25 : 22;
+    targetPos.current.set(flyTarget.x, height, flyTarget.z + offsetZ);
+    targetLookAt.current.copy(flyTarget);
+    flyingRef.current = true;
+  }, [flyTarget, size.width]);
+
+  useFrame(() => {
+    if (!flyingRef.current) return;
+
+    // Smoothly lerp camera position
+    camera.position.lerp(targetPos.current, 0.04);
+    currentLookAt.current.lerp(targetLookAt.current, 0.04);
+    camera.lookAt(currentLookAt.current);
+
+    // Update controls target to match
+    if (controlsRef.current) {
+      controlsRef.current.target.copy(currentLookAt.current);
+    }
+
+    // Stop when close enough
+    if (camera.position.distanceTo(targetPos.current) < 0.5) {
+      flyingRef.current = false;
+    }
+  });
+
+  return (
+    <MapControls
+      ref={controlsRef}
+      enableRotate={true}
+      enablePan={true}
+      enableZoom={true}
+      minDistance={15}
+      maxDistance={120}
+      maxPolarAngle={Math.PI / 2.5}
+      minPolarAngle={Math.PI / 8}
+      panSpeed={1.2}
+      zoomSpeed={1.0}
+      // Enable screen-space panning (drag to move around map)
+      screenSpacePanning={false}
+    />
+  );
 }
 
 function Scene({
@@ -67,12 +119,14 @@ function Scene({
   targetPosition,
   onCharacterMove,
   onlineAgents,
+  cameraFlyTarget,
 }: {
   onLocationClick: (route: string) => void;
   onGroundClick: (point: THREE.Vector3) => void;
   targetPosition: THREE.Vector3 | null;
   onCharacterMove: (position: THREE.Vector3) => void;
   onlineAgents: OnlineAgent[];
+  cameraFlyTarget: THREE.Vector3 | null;
 }) {
   const buildingsArray = Object.values(WORLD_LOCATIONS).map((b) => ({
     position: b.position,
@@ -82,7 +136,7 @@ function Scene({
   return (
     <>
       <color attach="background" args={['#0f1525']} />
-      <CameraSetup />
+      <CameraController flyTarget={cameraFlyTarget} />
 
       {/* Fog for depth */}
       <fog attach="fog" args={['#0f1525', 70, 140]} />
@@ -124,7 +178,14 @@ function Scene({
             icon={loc.icon}
             color={loc.color}
             variant={loc.variant}
-            onClick={loc.route ? () => onLocationClick(loc.route!) : undefined}
+            onClick={() => {
+              // Fly camera to this location
+              onGroundClick(new THREE.Vector3(...loc.position));
+              // If it has a route, navigate after a brief delay
+              if (loc.route) {
+                setTimeout(() => onLocationClick(loc.route!), 800);
+              }
+            }}
           />
         ))}
 
@@ -188,6 +249,7 @@ function Roads() {
 export function GameWorld() {
   const router = useRouter();
   const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
+  const [cameraFlyTarget, setCameraFlyTarget] = useState<THREE.Vector3 | null>(null);
   const [nearbyBuilding, setNearbyBuilding] = useState<string | null>(null);
   const [nearbyRoute, setNearbyRoute] = useState<string | null>(null);
   const [onlineAgents, setOnlineAgents] = useState<OnlineAgent[]>([]);
@@ -218,7 +280,10 @@ export function GameWorld() {
   }, []);
 
   const handleLocationClick = useCallback((route: string) => { router.push(route); }, [router]);
-  const handleGroundClick = useCallback((point: THREE.Vector3) => { setTargetPosition(point); }, []);
+  const handleGroundClick = useCallback((point: THREE.Vector3) => {
+    setTargetPosition(point);
+    setCameraFlyTarget(point.clone());
+  }, []);
 
   const handleCharacterMove = useCallback((position: THREE.Vector3) => {
     let foundNearby: string | null = null;
@@ -255,6 +320,7 @@ export function GameWorld() {
             targetPosition={targetPosition}
             onCharacterMove={handleCharacterMove}
             onlineAgents={onlineAgents}
+            cameraFlyTarget={cameraFlyTarget}
           />
         </Suspense>
       </Canvas>
