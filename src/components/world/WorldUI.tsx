@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useWallet } from '@/context/WalletContext';
 
 interface WorldUIProps {
   nearbyBuilding: string | null;
@@ -89,9 +88,8 @@ const TX_ICONS: Record<string, string> = {
 export function WorldUI({
   nearbyBuilding, onEnterBuilding, onSelectAgent,
   onlineAgents = [], events = [], transactions = [],
-  totalBattles = 0, totalCards = 0,
+  totalBattles: _totalBattles = 0, totalCards: _totalCards = 0,
 }: WorldUIProps) {
-  const { address, isAuthenticated, isConnecting, connect, disconnect } = useWallet();
   const [tab, setTab] = useState<Tab>('feed');
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -109,78 +107,6 @@ export function WorldUI({
 
   return (
     <div className="absolute inset-0 pointer-events-none">
-
-      {/* ─── Top Bar ─── */}
-      <div className="absolute top-0 left-0 right-0 pointer-events-auto">
-        <div className="flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3"
-          style={{ background: 'linear-gradient(180deg, rgba(8,12,24,0.9) 0%, rgba(8,12,24,0) 100%)' }}>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-              <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-6 sm:h-6" fill="none">
-                <circle cx="16" cy="16" r="12" fill="#a855f7" />
-                <circle cx="11" cy="14" r="3" fill="white" />
-                <circle cx="21" cy="14" r="3" fill="white" />
-                <circle cx="12" cy="14" r="1.5" fill="#1f2937" />
-                <circle cx="22" cy="14" r="1.5" fill="#1f2937" />
-                <path d="M10 20 Q16 25 22 20" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div>
-              <div className="font-[var(--font-orbitron)] text-sm sm:text-lg font-black tracking-wide">
-                <span className="text-white">AUTO</span><span className="text-purple-400">MON</span>
-              </div>
-              <div className="text-[9px] sm:text-[10px] text-gray-500 -mt-0.5 hidden sm:block">Autonomous AI Battles</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {address ? (
-              <button
-                onClick={() => disconnect()}
-                className={`flex items-center gap-1 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border transition-colors ${
-                  isAuthenticated
-                    ? 'bg-emerald-500/15 border-emerald-500/40 hover:bg-emerald-500/20'
-                    : 'bg-amber-500/15 border-amber-500/40 hover:bg-amber-500/20'
-                }`}
-                title={address || undefined}
-              >
-                <span className={`text-[10px] sm:text-xs font-semibold ${isAuthenticated ? 'text-emerald-300' : 'text-amber-300'}`}>
-                  {`${address.slice(0, 6)}…${address.slice(-4)}`}
-                </span>
-              </button>
-            ) : (
-              <button
-                onClick={async () => {
-                  try {
-                    await connect();
-                  } catch (error) {
-                    console.error('Wallet connect failed:', error);
-                  }
-                }}
-                disabled={isConnecting}
-                className="flex items-center gap-1 bg-purple-500/20 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-purple-500/40 hover:bg-purple-500/30 disabled:opacity-60 transition-colors"
-              >
-                <span className="text-[10px] sm:text-xs font-semibold text-purple-200">
-                  {isConnecting ? 'Connecting...' : 'Connect'}
-                </span>
-              </button>
-            )}
-            <div className="flex items-center gap-1 sm:gap-1.5 bg-white/5 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-white/5">
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[10px] sm:text-xs font-semibold text-green-400">{onlineCount}</span>
-              <span className="text-[10px] sm:text-xs text-gray-500 hidden sm:inline">online</span>
-            </div>
-            <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-white/5">
-              <span className="text-[10px] sm:text-xs">⚔️</span>
-              <span className="text-[10px] sm:text-xs font-semibold text-purple-400">{totalBattles}</span>
-            </div>
-            <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-white/5">
-              <span className="text-[10px] sm:text-xs">🃏</span>
-              <span className="text-[10px] sm:text-xs font-semibold text-amber-400">{totalCards}</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* ─── Controls (desktop) ─── */}
       <div className="absolute top-16 right-4 pointer-events-auto hidden lg:block">

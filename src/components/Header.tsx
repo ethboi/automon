@@ -91,8 +91,8 @@ export default function Header() {
             )}
           </div>
 
-          {/* Right side */}
-          <div className="flex items-center gap-3 sm:gap-4">
+        {/* Right side */}
+        <div className="flex items-center gap-3 sm:gap-4">
             {isAuthenticated && address ? (
               <>
                 {/* Balance pill */}
@@ -130,6 +130,31 @@ export default function Header() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                     )}
                   </svg>
+                </button>
+              </>
+            ) : address ? (
+              <>
+                <div className="glass rounded-full px-4 py-2 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                  <span className="text-amber-300 font-mono text-sm">
+                    {formatAddress(address)}
+                  </span>
+                </div>
+                <button
+                  onClick={connect}
+                  disabled={isConnecting}
+                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="flex items-center gap-2">
+                    {isConnecting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        <span>Signing In...</span>
+                      </>
+                    ) : (
+                      <span>Sign In</span>
+                    )}
+                  </span>
                 </button>
               </>
             ) : (

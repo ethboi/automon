@@ -6,18 +6,14 @@ import ChatBox from '@/components/ChatBox';
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isHome = pathname === '/';
-
-  // Homepage is fullscreen — no header/chatbox
-  if (isHome) {
-    return <>{children}</>;
-  }
+  const normalizedPath = (pathname || '').replace(/\/+$/, '') || '/';
+  const isWorldRoute = normalizedPath === '/' || normalizedPath === '/index';
 
   return (
     <>
       <Header />
       <main>{children}</main>
-      <ChatBox />
+      {!isWorldRoute && <ChatBox />}
     </>
   );
 }
