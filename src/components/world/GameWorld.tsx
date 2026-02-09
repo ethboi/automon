@@ -135,14 +135,14 @@ function Scene({
 
   return (
     <>
-      <color attach="background" args={['#0f1525']} />
+      <color attach="background" args={['#1a2540']} />
       <CameraController flyTarget={cameraFlyTarget} />
 
       {/* Fog for depth */}
-      <fog attach="fog" args={['#0f1525', 70, 140]} />
+      <fog attach="fog" args={['#1a2540', 80, 150]} />
 
       <ambientLight intensity={0.8} />
-      <hemisphereLight args={['#b1e1ff', '#2a4a30', 0.5]} />
+      <hemisphereLight args={['#c8e8ff', '#2a4a30', 0.6]} />
       <directionalLight
         position={[15, 25, 15]}
         intensity={1.5}
@@ -310,7 +310,7 @@ export function GameWorld() {
       <Canvas
         camera={{ fov: 45, position: [0, 50, 55], near: 0.1, far: 1000 }}
         shadows
-        style={{ background: '#0f1525' }}
+        style={{ background: '#1a2540' }}
         gl={{ antialias: true, alpha: false }}
       >
         <Suspense fallback={null}>
