@@ -9,7 +9,7 @@ import { ethers } from 'ethers';
 const PACK_PRICE = process.env.NEXT_PUBLIC_PACK_PRICE || '100000000000000000'; // 0.1 MON
 
 export default function ShopPage() {
-  const { refreshBalance } = useWallet();
+  const { refreshBalance, isAuthenticated } = useWallet();
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
@@ -34,6 +34,10 @@ export default function ShopPage() {
 
   const buyPack = async () => {
     if (buying) return;
+    if (!isAuthenticated) {
+      setError('Please authenticate your wallet from the header before buying packs.');
+      return;
+    }
     setError(null);
     setBuying(true);
 
@@ -43,6 +47,7 @@ export default function ShopPage() {
       const res = await fetch('/api/packs/buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           txHash,
           price: PACK_PRICE,
@@ -66,11 +71,16 @@ export default function ShopPage() {
   };
 
   const openPack = async (packId: string) => {
+    if (!isAuthenticated) {
+      setError('Please authenticate your wallet from the header before opening packs.');
+      return;
+    }
     setError(null);
     try {
       const res = await fetch('/api/packs/open', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ packId }),
       });
 

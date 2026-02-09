@@ -64,7 +64,7 @@ export default function Header() {
             </Link>
 
             {/* Desktop Navigation */}
-            {isAuthenticated && (
+            {address && (
               <nav className="hidden lg:flex items-center gap-1">
                 {navLinks.map((link) => (
                   <Link
@@ -93,7 +93,7 @@ export default function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-3 sm:gap-4">
-            {isAuthenticated && address ? (
+            {address ? (
               <>
                 {/* Balance pill */}
                 <div className="hidden sm:flex items-center gap-2 glass-purple rounded-full px-4 py-2">
@@ -104,11 +104,21 @@ export default function Header() {
 
                 {/* Address pill */}
                 <div className="glass rounded-full px-4 py-2 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${isAuthenticated ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                   <span className="text-purple-300 font-mono text-sm">
                     {formatAddress(address)}
                   </span>
                 </div>
+
+                {!isAuthenticated && (
+                  <button
+                    onClick={connect}
+                    disabled={isConnecting}
+                    className="hidden sm:block text-xs text-amber-300/90 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-60"
+                  >
+                    {isConnecting ? 'Authenticating...' : 'Authenticate'}
+                  </button>
+                )}
 
                 {/* Disconnect button */}
                 <button
@@ -130,31 +140,6 @@ export default function Header() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                     )}
                   </svg>
-                </button>
-              </>
-            ) : address ? (
-              <>
-                <div className="glass rounded-full px-4 py-2 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-                  <span className="text-amber-300 font-mono text-sm">
-                    {formatAddress(address)}
-                  </span>
-                </div>
-                <button
-                  onClick={connect}
-                  disabled={isConnecting}
-                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="flex items-center gap-2">
-                    {isConnecting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        <span>Signing In...</span>
-                      </>
-                    ) : (
-                      <span>Sign In</span>
-                    )}
-                  </span>
                 </button>
               </>
             ) : (
@@ -184,7 +169,7 @@ export default function Header() {
         </div>
 
         {/* Mobile Navigation */}
-        {isAuthenticated && mobileMenuOpen && (
+        {address && mobileMenuOpen && (
           <nav className="lg:hidden py-4 border-t border-white/5 animate-fade-in-up">
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
@@ -210,6 +195,22 @@ export default function Header() {
                 <span className="text-gray-400 text-sm">Balance</span>
                 <span className="text-white font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
               </div>
+
+              {!isAuthenticated && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await connect();
+                    } finally {
+                      setMobileMenuOpen(false);
+                    }
+                  }}
+                  disabled={isConnecting}
+                  className="px-4 py-3 text-left text-amber-300 hover:text-amber-200 text-sm font-medium transition-colors"
+                >
+                  {isConnecting ? 'Authenticating...' : 'Authenticate Wallet'}
+                </button>
+              )}
 
               {/* Mobile disconnect */}
               <button
