@@ -1,0 +1,44 @@
+/**
+ * Fund new agent wallets from the main agent wallet.
+ * Run: npx ts-node scripts/fund-agents.ts
+ */
+import { ethers } from 'ethers';
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+
+const RPC = 'https://testnet-rpc.monadchain.com';
+const MAIN_AGENT_KEY = process.env.AGENT_PRIVATE_KEY!;
+
+const NEW_AGENTS = [
+  { name: 'Kira 🌙 (Collector)', address: '0xEf86E433E13C3D898b2e730F87667f81e0619AeC' },
+  { name: 'Sage 🌿 (Farmer)', address: '0x8BEb4B395D5F1F53Bb51964228E3D4cBF8b3ac22' },
+];
+
+const AMOUNT = ethers.parseEther('0.5');
+
+async function main() {
+  const provider = new ethers.JsonRpcProvider(RPC);
+  const wallet = new ethers.Wallet(MAIN_AGENT_KEY, provider);
+
+  const balance = await provider.getBalance(wallet.address);
+  console.log(`Main agent (${wallet.address}): ${ethers.formatEther(balance)} MON`);
+
+  for (const agent of NEW_AGENTS) {
+    console.log(`\nSending 0.5 MON to ${agent.name} (${agent.address})...`);
+    const tx = await wallet.sendTransaction({
+      to: agent.address,
+      value: AMOUNT,
+    });
+    console.log(`  TX: ${tx.hash}`);
+    await tx.wait();
+    console.log(`  Confirmed ✅`);
+  }
+
+  console.log('\nDone! New agent balances:');
+  for (const agent of NEW_AGENTS) {
+    const bal = await provider.getBalance(agent.address);
+    console.log(`  ${agent.name}: ${ethers.formatEther(bal)} MON`);
+  }
+}
+
+main().catch(console.error);

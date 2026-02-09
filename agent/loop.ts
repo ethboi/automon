@@ -416,6 +416,7 @@ export async function runAutoLoop(): Promise<void> {
           cards,
           recentActionLog,
           pendingBattles.length,
+          config.aiPersonality,
         );
 
         pendingAction = {
@@ -481,6 +482,7 @@ export async function runAutoLoop(): Promise<void> {
         cards,
         recentActionLog,
         pendingBattles.length,
+        config.aiPersonality,
       );
 
       pendingAction = {
