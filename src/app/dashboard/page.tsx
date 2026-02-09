@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
+
+const SimWorld3D = dynamic(() => import("@/components/sim/SimWorld3D"), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────
 interface Snapshot {
   tickMs: number;
   locationGraph: Array<{ id: string; name: string; dangerLevel: number; connections: Array<{ to: string; travelTicks: number }> }>;
-  speciesDex: Array<{ id: string; name: string; element: string; rarity: string }>;
+  speciesDex: Array<{ id: string; name: string; element: string; rarity: string; habitats?: string[] }>;
   state: GameState;
 }
 
@@ -34,6 +37,9 @@ interface Trainer {
   automons: AutoMon[];
   elo: number;
   crops: { cropType: string; plantedAtTick: number; wateredTicks: number; growthTicks: number }[];
+  busyAction?: string;
+  pendingTravelTo?: string;
+  busyUntilTick?: number;
   _style?: string;
 }
 
@@ -63,35 +69,6 @@ interface GameEvent {
 }
 
 // ─── Constants ────────────────────────────────────────────────────
-const COORDS: Record<string, { x: number; y: number }> = {
-  starter_town: { x: 50, y: 50 }, town_arena: { x: 30, y: 26 },
-  green_meadows: { x: 22, y: 58 }, town_market: { x: 72, y: 38 },
-  community_farm: { x: 78, y: 64 }, old_pond: { x: 14, y: 78 },
-  dark_forest: { x: 10, y: 38 }, river_delta: { x: 56, y: 82 },
-  crystal_caves: { x: 30, y: 12 },
-};
-
-const EDGES = [
-  ["starter_town", "town_arena"], ["starter_town", "green_meadows"],
-  ["starter_town", "town_market"], ["starter_town", "community_farm"],
-  ["green_meadows", "old_pond"], ["green_meadows", "dark_forest"],
-  ["town_market", "town_arena"], ["town_market", "community_farm"],
-  ["town_market", "river_delta"], ["old_pond", "river_delta"],
-  ["dark_forest", "crystal_caves"], ["river_delta", "crystal_caves"],
-];
-
-const LOC_ICON: Record<string, string> = {
-  starter_town: "🏘️", town_arena: "⚔️", green_meadows: "🌿",
-  town_market: "🏪", community_farm: "🌾", old_pond: "🎣",
-  dark_forest: "🌲", river_delta: "🌊", crystal_caves: "💎",
-};
-
-const DANGER: Record<string, number> = {
-  starter_town: 1, town_arena: 2, green_meadows: 2, town_market: 1,
-  community_farm: 1, old_pond: 2, dark_forest: 5, river_delta: 3, crystal_caves: 7,
-};
-const DC: Record<number, string> = { 1: "#22c55e", 2: "#84cc16", 3: "#eab308", 5: "#f97316", 7: "#ef4444" };
-
 const SC: Record<string, string> = { explorer: "#3b82f6", grinder: "#ef4444", hoarder: "#eab308", farmer: "#22c55e", balanced: "#a78bfa" };
 const SI: Record<string, string> = { explorer: "🧭", grinder: "⚔️", hoarder: "💰", farmer: "🌱", balanced: "⚖️" };
 const EC: Record<string, string> = { fire: "#ef4444", water: "#3b82f6", earth: "#a16207", air: "#67e8f9", electric: "#eab308", shadow: "#8b5cf6", light: "#fbbf24" };
@@ -168,78 +145,6 @@ function StatBar({ label, value, max, color }: { label: string; value: number; m
       </div>
       <span style={{ fontSize: 10, width: 24, textAlign: "right", color: "#6b7280" }}>{Math.round(value)}</span>
     </div>
-  );
-}
-
-function WorldMap({ locs, trainers, selected, onSelect }: { locs: Snapshot["locationGraph"]; trainers: Trainer[]; selected: string | null; onSelect: (id: string | null) => void }) {
-  const byLoc = useMemo(() => {
-    const m: Record<string, Trainer[]> = {};
-    trainers.filter(t => t.health > 0).forEach(t => {
-      (m[t.locationId] ||= []).push(t);
-    });
-    return m;
-  }, [trainers]);
-
-  const locNames = useMemo(() => {
-    const m: Record<string, string> = {};
-    locs.forEach(l => m[l.id] = l.name);
-    return m;
-  }, [locs]);
-
-  return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <pattern id="g" width={10} height={10} patternUnits="userSpaceOnUse">
-          <path d="M10 0L0 0 0 10" fill="none" stroke="#1f2937" strokeWidth={0.15} />
-        </pattern>
-        <filter id="gl">
-          <feGaussianBlur stdDeviation={0.8} result="b" />
-          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-      <rect width={100} height={100} fill="url(#g)" />
-
-      {EDGES.map(([a, b]) => {
-        const pa = COORDS[a], pb = COORDS[b];
-        return <line key={a + b} x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke="#252d3d" strokeWidth={0.3} strokeDasharray="1.5,1" />;
-      })}
-
-      {Object.entries(COORDS).map(([id, pos]) => {
-        const d = DANGER[id] || 1;
-        const col = DC[d] || "#6b7280";
-        const here = byLoc[id] || [];
-        const hasSel = here.some(t => t.id === selected);
-
-        return (
-          <g key={id}>
-            <circle cx={pos.x} cy={pos.y} r={here.length > 0 ? 4 : 2.8} fill={col + "15"} stroke={col} strokeWidth={hasSel ? 0.5 : 0.25} filter={here.length > 0 ? "url(#gl)" : undefined} />
-            <text x={pos.x} y={pos.y + 1} textAnchor="middle" fontSize={3.5} style={{ pointerEvents: "none" }}>{LOC_ICON[id] || "📍"}</text>
-            <text x={pos.x} y={pos.y - 4.5} textAnchor="middle" fontSize={2} fill="#9ca3af" fontWeight={500} style={{ pointerEvents: "none" }}>{locNames[id] || id}</text>
-
-            {here.map((trainer, i) => {
-              const angle = (i / Math.max(here.length, 1)) * Math.PI * 2 - Math.PI / 2;
-              const tx = pos.x + Math.cos(angle) * 6;
-              const ty = pos.y + Math.sin(angle) * 6;
-              const sty = trainer._style || "balanced";
-              const isSel = trainer.id === selected;
-
-              return (
-                <g key={trainer.id} style={{ cursor: "pointer" }} onClick={() => onSelect(isSel ? null : trainer.id)}>
-                  {isSel && <circle cx={tx} cy={ty} r={3} fill="none" stroke="#fbbf24" strokeWidth={0.3} opacity={0.7}>
-                    <animate attributeName="r" values="2.8;3.4;2.8" dur="1.5s" repeatCount="indefinite" />
-                  </circle>}
-                  <circle cx={tx} cy={ty} r={isSel ? 2 : 1.6} fill={SC[sty] || "#a78bfa"} stroke={isSel ? "#fbbf24" : "#000"} strokeWidth={isSel ? 0.3 : 0.15} filter="url(#gl)" />
-                  <rect x={tx - 1.8} y={ty + 2.2} width={3.6} height={0.5} rx={0.25} fill="#374151" />
-                  <rect x={tx - 1.8} y={ty + 2.2} width={3.6 * Math.max(0, trainer.health / 100)} height={0.5} rx={0.25} fill={trainer.health > 50 ? "#22c55e" : trainer.health > 20 ? "#eab308" : "#ef4444"} />
-                  <text x={tx} y={ty - 2.8} textAnchor="middle" fontSize={1.8} fill={isSel ? "#fbbf24" : "#e5e7eb"} fontWeight={isSel ? 700 : 500} style={{ pointerEvents: "none" }}>{trainer.name}</text>
-                  <text x={tx + 2.2} y={ty + 0.6} fontSize={1.6} style={{ pointerEvents: "none" }}>{SI[sty] || "⚖️"}</text>
-                </g>
-              );
-            })}
-          </g>
-        );
-      })}
-    </svg>
   );
 }
 
@@ -493,7 +398,7 @@ export default function DashboardPage() {
         <div style={{ ...S.card, gridRow: 1, gridColumn: 1 }}>
           <div style={S.cardHeader}>World Map</div>
           <div style={{ flex: 1, padding: 0, minHeight: 0 }}>
-            <WorldMap locs={snapshot.locationGraph} trainers={trainers} selected={selected} onSelect={setSelected} />
+            <SimWorld3D trainers={trainers} selected={selected} onSelect={setSelected} speciesDex={snapshot.speciesDex} tick={state.tick} />
           </div>
         </div>
 
