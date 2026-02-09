@@ -2,9 +2,9 @@
 
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useState } from 'react';
+import { LocationLabel } from '../locations/LocationMarker';
 
 interface BattleArenaProps {
   position: [number, number, number];
@@ -117,16 +117,7 @@ export function BattleArena({ position, onClick }: BattleArenaProps) {
         </mesh>
       )}
 
-      {/* Floating label */}
-      <Html position={[0, 6, 0]} center distanceFactor={15} style={{ pointerEvents: 'none' }}>
-        <div
-          className={`px-4 py-2 rounded-lg text-white font-bold whitespace-nowrap transition-all ${
-            hovered ? 'bg-red-500 scale-110' : 'bg-red-700/80'
-          }`}
-        >
-          Battle Arena
-        </div>
-      </Html>
+      <LocationLabel icon="⚔️" label="Town Arena" color="#ef4444" />
     </group>
   );
 }

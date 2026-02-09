@@ -14,48 +14,58 @@ interface LocationMarkerProps {
   variant?: 'building' | 'nature' | 'water' | 'dark';
 }
 
+export function LocationLabel({ icon, label, color }: { icon: string; label: string; color: string }) {
+  return (
+    <Html position={[0, 5.5, 0]} center distanceFactor={18} style={{ pointerEvents: 'none' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+        background: 'rgba(8, 12, 24, 0.85)',
+        backdropFilter: 'blur(8px)',
+        padding: '5px 12px',
+        borderRadius: 10,
+        border: `1px solid ${color}30`,
+        boxShadow: `0 0 12px ${color}15, 0 2px 8px rgba(0,0,0,0.4)`,
+        whiteSpace: 'nowrap',
+      }}>
+        <span style={{ fontSize: 13 }}>{icon}</span>
+        <span style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#e2e8f0',
+          letterSpacing: '0.3px',
+          textShadow: `0 0 8px ${color}40`,
+        }}>{label}</span>
+      </div>
+    </Html>
+  );
+}
+
 export function LocationMarker({ position, label, icon, color, onClick, variant = 'nature' }: LocationMarkerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
     if (glowRef.current) {
-      glowRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 2) * 0.1);
+      glowRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 2) * 0.08);
     }
   });
 
   return (
     <group ref={groupRef} position={position} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Label */}
-      <Html position={[0, 6, 0]} center>
-        <div style={{
-          background: 'rgba(0,0,0,0.7)',
-          backdropFilter: 'blur(4px)',
-          padding: '4px 10px',
-          borderRadius: 8,
-          border: `1px solid ${color}40`,
-          whiteSpace: 'nowrap',
-          textAlign: 'center',
-          cursor: onClick ? 'pointer' : 'default',
-        }}>
-          <div style={{ fontSize: 16 }}>{icon}</div>
-          <div style={{ fontSize: 11, fontWeight: 600, color, letterSpacing: '0.5px' }}>{label}</div>
-        </div>
-      </Html>
+      <LocationLabel icon={icon} label={label} color={color} />
 
       {variant === 'building' && (
         <>
-          {/* Main structure */}
           <mesh position={[0, 1.5, 0]} castShadow>
             <boxGeometry args={[3, 3, 3]} />
             <meshStandardMaterial color={color} roughness={0.6} />
           </mesh>
-          {/* Roof */}
           <mesh position={[0, 3.5, 0]} castShadow>
             <coneGeometry args={[2.5, 1.5, 4]} />
             <meshStandardMaterial color={new THREE.Color(color).multiplyScalar(0.7)} roughness={0.5} />
           </mesh>
-          {/* Door */}
           <mesh position={[0, 0.8, 1.51]}>
             <planeGeometry args={[1, 1.6]} />
             <meshStandardMaterial color="#3a2a1a" />
@@ -65,12 +75,10 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
 
       {variant === 'nature' && (
         <>
-          {/* Terrain mound */}
           <mesh position={[0, 0.5, 0]} castShadow>
             <sphereGeometry args={[2.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
             <meshStandardMaterial color={color} roughness={0.8} />
           </mesh>
-          {/* Vegetation */}
           {[-1, 0.5, 1.2].map((x, i) => (
             <group key={i} position={[x, 0, (i - 1) * 0.8]}>
               <mesh position={[0, 1.2, 0]} castShadow>
@@ -88,17 +96,14 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
 
       {variant === 'water' && (
         <>
-          {/* Water surface */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
             <circleGeometry args={[3, 32]} />
             <meshStandardMaterial color="#1e40af" transparent opacity={0.7} roughness={0.2} metalness={0.3} />
           </mesh>
-          {/* Shore ring */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
             <ringGeometry args={[2.8, 3.5, 32]} />
             <meshStandardMaterial color="#d4a574" roughness={0.9} />
           </mesh>
-          {/* Reeds */}
           {[0, 1.5, -1.2].map((a, i) => (
             <mesh key={i} position={[Math.cos(a) * 2.5, 0.8, Math.sin(a) * 2.5]} castShadow>
               <cylinderGeometry args={[0.05, 0.05, 1.6, 4]} />
@@ -110,7 +115,6 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
 
       {variant === 'dark' && (
         <>
-          {/* Dead trees */}
           {[-1, 0.8, 0].map((x, i) => (
             <group key={i} position={[x, 0, (i - 1) * 1.2]}>
               <mesh position={[0, 1.5, 0]} castShadow>
@@ -123,7 +127,6 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
               </mesh>
             </group>
           ))}
-          {/* Fog */}
           <mesh position={[0, 0.5, 0]}>
             <sphereGeometry args={[3, 16, 16]} />
             <meshStandardMaterial color={color} transparent opacity={0.15} />
@@ -131,10 +134,10 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
         </>
       )}
 
-      {/* Ground glow ring */}
+      {/* Ground glow */}
       <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
         <ringGeometry args={[3, 3.5, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={0.25} side={THREE.DoubleSide} />
+        <meshBasicMaterial color={color} transparent opacity={0.2} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );
