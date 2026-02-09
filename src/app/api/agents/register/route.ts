@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
       position: existing?.position || { x: 0, y: 0, z: 8 },
       health: typeof existing?.health === 'number' ? existing.health : 100,
       maxHealth: typeof existing?.maxHealth === 'number' ? existing.maxHealth : 100,
-      currentAction: existing?.currentAction || 'Came online',
-      currentReason: existing?.currentReason || 'Joined the world',
-      currentLocation: existing?.currentLocation || 'Spawn point',
+      currentAction: existing?.currentAction || 'wandering',
+      currentReason: existing?.currentReason || 'Exploring the world',
+      currentLocation: existing?.currentLocation || 'Starter Town',
       createdAt: existing?.createdAt || new Date(),
       lastSeen: new Date(),
     };

@@ -64,6 +64,7 @@ function shortHash(hash: string) {
 
 function activityBadge(activity?: string | null): { icon: string; label: string; cls: string } {
   const value = (activity || '').toLowerCase();
+  if (value === 'came online') return { icon: '🚶', label: 'wandering', cls: 'text-cyan-300 bg-cyan-500/10' };
   if (!value) return { icon: '💤', label: 'idle', cls: 'text-gray-400 bg-white/5' };
   if (value.includes('battle') || value.includes('arena') || value.includes('duel')) return { icon: '⚔️', label: 'battling', cls: 'text-red-300 bg-red-500/10' };
   if (value.includes('fish') || value.includes('catch')) return { icon: '🎣', label: 'fishing', cls: 'text-sky-300 bg-sky-500/10' };

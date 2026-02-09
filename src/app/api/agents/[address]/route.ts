@@ -64,7 +64,8 @@ export async function GET(
 
     const cardsCount = cardsData.length;
     const latestAction = actions[0];
-    const currentAction = agent.currentAction || latestAction?.action || null;
+    const rawAction = agent.currentAction || latestAction?.action || null;
+    const currentAction = rawAction?.toLowerCase() === 'came online' ? 'wandering' : rawAction;
     const currentReason = agent.currentReason || latestAction?.reason || null;
     const currentLocation = agent.currentLocation || latestAction?.location || null;
     const lastActionAt = agent.lastActionAt || latestAction?.timestamp || null;

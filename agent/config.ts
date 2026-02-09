@@ -2,11 +2,15 @@
  * AutoMon Agent Configuration
  *
  * All configuration settings for both manual (CLI) and autonomous modes.
- * Loads .env.local here so env vars are available before any config reads.
+ * Loads an env file based on AGENT_ENV:
+ *   AGENT_ENV=agent1 -> .env.agent1.local
+ *   default          -> .env.local
  */
 
 import dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+const envName = process.env.AGENT_ENV || 'local';
+const envPath = envName === 'local' ? '.env.local' : `.env.${envName}.local`;
+dotenv.config({ path: envPath });
 
 import { ethers } from 'ethers';
 
@@ -100,6 +104,7 @@ export function logConfig(): void {
   console.log('AUTOMON AGENT CONFIGURATION');
   console.log('========================================');
   console.log(`API URL: ${config.apiUrl}`);
+  console.log(`Env File: ${envPath}`);
   console.log(`RPC URL: ${config.rpcUrl}`);
   console.log(`Agent Name: ${config.agentName}`);
   console.log(`Agent Address: ${config.agentWalletAddress || 'NOT SET'}`);

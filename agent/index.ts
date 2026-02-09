@@ -7,34 +7,49 @@
  *   --mode manual : Interactive CLI with slash commands and AI chat (default)
  *
  * Usage:
- *   npm run agent          # interactive CLI (default)
- *   npm run agent:auto     # autonomous loop
+ *   npm run agent -- --env agent1
+ *   npm run agent:auto -- --env agent2
  */
 
-import { runCLI } from './cli';
-import { runAutoLoop } from './loop';
+interface CliArgs {
+  mode: 'manual' | 'auto';
+  envName: string;
+}
 
-// Parse --mode argument
-function getMode(): 'manual' | 'auto' {
+function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
+  let mode: 'manual' | 'auto' = 'manual';
+  let envName = 'local';
+
   const modeIdx = args.indexOf('--mode');
-  if (modeIdx !== -1 && args[modeIdx + 1]) {
-    const mode = args[modeIdx + 1].toLowerCase();
-    if (mode === 'auto') return 'auto';
+  if (modeIdx !== -1 && args[modeIdx + 1]?.toLowerCase() === 'auto') {
+    mode = 'auto';
   }
-  return 'manual';
+
+  const envIdx = args.indexOf('--env');
+  if (envIdx !== -1 && args[envIdx + 1]) {
+    envName = args[envIdx + 1].toLowerCase();
+  }
+
+  return { mode, envName };
 }
 
-const mode = getMode();
+async function main(): Promise<void> {
+  const { mode, envName } = parseArgs();
 
-if (mode === 'auto') {
-  runAutoLoop().catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
-} else {
-  runCLI().catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
+  // Must be set before importing config-dependent modules.
+  process.env.AGENT_ENV = envName;
+
+  if (mode === 'auto') {
+    const { runAutoLoop } = await import('./loop');
+    await runAutoLoop();
+  } else {
+    const { runCLI } = await import('./cli');
+    await runCLI();
+  }
 }
+
+main().catch(error => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+});

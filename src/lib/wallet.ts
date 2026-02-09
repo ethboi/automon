@@ -20,7 +20,7 @@ export async function connectWallet(): Promise<string> {
     method: 'eth_requestAccounts',
   });
 
-  return accounts[0];
+  return ethers.getAddress(accounts[0]);
 }
 
 export async function switchToMonad(): Promise<void> {
@@ -60,12 +60,13 @@ export async function signInWithEthereum(address: string, nonce: string): Promis
     throw new Error('No wallet found');
   }
 
+  const normalizedAddress = ethers.getAddress(address);
   const domain = window.location.host;
   const origin = window.location.origin;
 
   const message = new SiweMessage({
     domain,
-    address,
+    address: normalizedAddress,
     statement: 'Sign in to AutoMon',
     uri: origin,
     version: '1',
@@ -88,7 +89,7 @@ export async function getBalance(address: string): Promise<string> {
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
-  const balance = await provider.getBalance(address);
+  const balance = await provider.getBalance(ethers.getAddress(address));
 
   return ethers.formatEther(balance);
 }

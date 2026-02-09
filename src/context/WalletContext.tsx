@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { ethers } from 'ethers';
 import { connectWallet, switchToMonad, signInWithEthereum, getBalance } from '@/lib/wallet';
 
 interface WalletContextType {
@@ -21,6 +22,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const normalizeAddress = useCallback((value: string | null | undefined): string | null => {
+    if (!value) return null;
+    try {
+      return ethers.getAddress(value);
+    } catch {
+      return value;
+    }
+  }, []);
+
   const refreshBalance = useCallback(async () => {
     if (address) {
       try {
@@ -38,13 +48,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (data.authenticated) {
-        setAddress(data.address);
+        setAddress(normalizeAddress(data.address));
         setIsAuthenticated(true);
       }
     } catch (error) {
       console.error('Session check failed:', error);
     }
-  }, []);
+  }, [normalizeAddress]);
 
   useEffect(() => {
     checkSession();
@@ -62,7 +72,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         if (accounts.length === 0) {
           setAddress(null);
           setIsAuthenticated(false);
-        } else if (accounts[0] !== address) {
+        } else if (accounts[0].toLowerCase() !== (address || '').toLowerCase()) {
           setAddress(null);
           setIsAuthenticated(false);
         }
@@ -77,7 +87,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const connect = async () => {
     setIsConnecting(true);
     try {
-      const addr = await connectWallet();
+      const walletAddress = await connectWallet();
+      const addr = normalizeAddress(walletAddress) || walletAddress;
       await switchToMonad();
 
       // Get nonce
@@ -103,7 +114,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { address: verifiedAddress } = await verifyRes.json();
-      setAddress(verifiedAddress);
+      setAddress(normalizeAddress(verifiedAddress));
       setIsAuthenticated(true);
     } catch (error) {
       console.error('Connection failed:', error);

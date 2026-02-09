@@ -17,6 +17,7 @@ const SPEED = 6;
 
 function getActivityIndicator(activity?: string | null): { icon: string; label: string; color: string } {
   const value = (activity || '').toLowerCase();
+  if (value === 'came online') return { icon: '🚶', label: 'wandering', color: 'text-cyan-300 border-cyan-500/60' };
   if (!value) return { icon: '💤', label: 'idle', color: 'text-gray-300 border-gray-500/60' };
   if (value.includes('battle') || value.includes('arena') || value.includes('duel')) {
     return { icon: '⚔️', label: 'battling', color: 'text-red-300 border-red-500/60' };
@@ -90,13 +91,8 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
     >
       {/* Name tag */}
       <Html position={[0, 3.5, 0]} center>
-        <div className="flex flex-col items-center gap-1">
-          <div className="bg-purple-900/80 px-2 py-1 rounded text-xs text-purple-200 whitespace-nowrap border border-purple-500/50">
-            🤖 {name}
-          </div>
-          <div className={`bg-black/70 px-2 py-0.5 rounded text-[10px] whitespace-nowrap border ${indicator.color}`}>
-            {indicator.icon} {indicator.label}
-          </div>
+        <div className={`bg-purple-900/85 px-2.5 py-1 rounded text-xs whitespace-nowrap border border-purple-500/50 ${indicator.color}`}>
+          🤖 {name} • {indicator.icon} {indicator.label}
         </div>
       </Html>
 

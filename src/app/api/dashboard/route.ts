@@ -87,7 +87,8 @@ export async function GET() {
       const health = typeof a.health === 'number' ? Math.max(0, Math.min(a.health, maxHealth)) : maxHealth;
       const latest = latestActionByAgent.get(addr) || {};
       const isOnline = a.lastSeen >= fiveMinAgo;
-      const currentAction = a.currentAction || latest.action || (isOnline ? 'wandering' : null);
+      const rawAction = a.currentAction || latest.action || (isOnline ? 'wandering' : null);
+      const currentAction = rawAction?.toLowerCase() === 'came online' ? 'wandering' : rawAction;
       return {
         address: a.address,
         name: a.name,
