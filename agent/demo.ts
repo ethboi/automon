@@ -24,15 +24,15 @@ const MONGODB_URI = process.env.MONGODB_URI || '';
 const DB_NAME = process.env.MONGODB_DB || 'automon';
 
 const LOCATIONS = [
-  { name: 'Ember Plains',     x: -20, z: -15 },
-  { name: 'Crystal Caverns',  x:  10, z: -25 },
-  { name: 'Tidal Shore',      x:  25, z:   5 },
-  { name: 'Shadow Forest',    x: -15, z:  20 },
-  { name: 'Storm Peak',       x:   0, z: -35 },
-  { name: 'Moonlit Glade',    x: -30, z:   0 },
-  { name: 'Sunfire Arena',    x:  15, z:  15 },
-  { name: 'Frozen Depths',    x: -10, z:  30 },
-  { name: 'Ancient Ruins',    x:  30, z: -10 },
+  { name: 'Starter Town',    x:   0, z:   0 },
+  { name: 'Town Arena',      x:   0, z: -20 },
+  { name: 'Town Market',     x:  18, z:   0 },
+  { name: 'Community Farm',  x: -18, z:   0 },
+  { name: 'Green Meadows',   x: -14, z: -18 },
+  { name: 'Old Pond',        x: -22, z: -18 },
+  { name: 'Dark Forest',     x: -24, z:  14 },
+  { name: 'River Delta',     x:  22, z: -16 },
+  { name: 'Crystal Caves',   x:  20, z:  16 },
 ];
 
 const ACTIONS = [
