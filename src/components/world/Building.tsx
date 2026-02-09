@@ -73,15 +73,15 @@ export function Building({
 
       {/* Floating label */}
       <Html
-        position={[0, size[1] + 2, 0]}
+        position={[0, size[1] + 1.5, 0]}
         center
-        distanceFactor={10}
+        distanceFactor={15}
         style={{
           pointerEvents: 'none',
         }}
       >
         <div
-          className={`px-4 py-2 rounded-xl text-white text-xl font-bold whitespace-nowrap transition-all ${
+          className={`px-3 py-1 rounded-lg text-white text-sm font-bold whitespace-nowrap transition-all ${
             hovered ? 'bg-white/30 scale-110' : 'bg-black/50'
           }`}
         >
