@@ -113,16 +113,16 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
       />
 
       {/* Modal */}
-      <div className="relative glass rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden animate-scale-in">
+      <div className="relative glass rounded-2xl w-full max-w-lg max-h-[85vh] sm:max-h-[80vh] overflow-hidden animate-scale-in">
         {/* Header */}
-        <div className="p-6 border-b border-white/10">
+        <div className="p-3 sm:p-6 border-b border-white/10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-2xl shadow-lg shadow-cyan-500/30">
+            <div className="flex items-center gap-2.5 sm:gap-4">
+              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-lg sm:text-2xl shadow-lg shadow-cyan-500/30">
                 🤖
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-base sm:text-xl font-bold text-white">
                   {loading ? 'Loading...' : details?.agent.name || 'Unknown Agent'}
                 </h2>
                 <p className="text-sm text-gray-400 font-mono">
@@ -132,9 +132,9 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
             </div>
             <button
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
             >
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -148,35 +148,35 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
         ) : error ? (
           <div className="p-12 text-center text-red-400">{error}</div>
         ) : details && (
-          <div className="overflow-y-auto max-h-[calc(80vh-100px)]">
+          <div className="overflow-y-auto max-h-[calc(85vh-84px)] sm:max-h-[calc(80vh-100px)]">
             {/* Stats Grid */}
-            <div className="p-6 grid grid-cols-3 gap-4">
-              <div className="glass-light rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-yellow-400">
+            <div className="p-3 sm:p-6 grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="glass-light rounded-lg sm:rounded-xl p-2 sm:p-4 text-center">
+                <div className="text-lg sm:text-2xl font-bold text-yellow-400">
                   {parseFloat(details.stats.balance).toFixed(2)}
                 </div>
-                <div className="text-xs text-gray-400 uppercase tracking-wide mt-1">MON</div>
+                <div className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide mt-0.5 sm:mt-1">MON</div>
               </div>
-              <div className="glass-light rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-purple-400">
+              <div className="glass-light rounded-lg sm:rounded-xl p-2 sm:p-4 text-center">
+                <div className="text-lg sm:text-2xl font-bold text-purple-400">
                   {details.stats.cards}
                 </div>
-                <div className="text-xs text-gray-400 uppercase tracking-wide mt-1">Cards</div>
+                <div className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide mt-0.5 sm:mt-1">Cards</div>
               </div>
-              <div className="glass-light rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold">
+              <div className="glass-light rounded-lg sm:rounded-xl p-2 sm:p-4 text-center">
+                <div className="text-lg sm:text-2xl font-bold">
                   <span className="text-emerald-400">{details.stats.wins}</span>
                   <span className="text-gray-500">/</span>
                   <span className="text-red-400">{details.stats.losses}</span>
                 </div>
-                <div className="text-xs text-gray-400 uppercase tracking-wide mt-1">W/L</div>
+                <div className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide mt-0.5 sm:mt-1">W/L</div>
               </div>
             </div>
 
             {/* Win Rate Bar */}
             {details.stats.battles > 0 && (
-              <div className="px-6 pb-4">
-                <div className="flex items-center justify-between text-sm mb-2">
+              <div className="px-3 pb-3 sm:px-6 sm:pb-4">
+                <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
                   <span className="text-gray-400">Win Rate</span>
                   <span className="text-white font-medium">{details.stats.winRate}%</span>
                 </div>
@@ -190,11 +190,11 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
             )}
 
             {/* Tabs */}
-            <div className="px-6 pt-4 border-t border-white/10">
+            <div className="px-3 pt-3 sm:px-6 sm:pt-4 border-t border-white/10">
               <div className="flex gap-2">
                 <button
                   onClick={() => setActiveTab('cards')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                     activeTab === 'cards'
                       ? 'bg-purple-500/30 text-purple-300'
                       : 'bg-white/5 text-gray-400 hover:bg-white/10'
@@ -204,7 +204,7 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
                 </button>
                 <button
                   onClick={() => setActiveTab('activity')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                     activeTab === 'activity'
                       ? 'bg-cyan-500/30 text-cyan-300'
                       : 'bg-white/5 text-gray-400 hover:bg-white/10'
@@ -217,18 +217,18 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
 
             {/* Cards Tab */}
             {activeTab === 'cards' && (
-              <div className="p-6">
+              <div className="p-3 sm:p-6">
                 {details.cards.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <div className="text-3xl mb-2">🎴</div>
                     <p>No cards yet</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     {details.cards.map((card) => (
                       <div
                         key={card.id}
-                        className={`rounded-xl p-3 bg-gradient-to-br ${ELEMENT_COLORS[card.element] || 'from-gray-600 to-gray-800'} bg-opacity-20 border ${RARITY_COLORS[card.rarity]?.split(' ')[1] || 'border-gray-600'}`}
+                        className={`rounded-xl p-2 sm:p-3 bg-gradient-to-br ${ELEMENT_COLORS[card.element] || 'from-gray-600 to-gray-800'} bg-opacity-20 border ${RARITY_COLORS[card.rarity]?.split(' ')[1] || 'border-gray-600'}`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className={`text-xs font-bold uppercase ${RARITY_COLORS[card.rarity]?.split(' ')[0] || 'text-gray-400'}`}>
@@ -238,8 +238,8 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
                             <span className="text-xs text-gray-400">#{card.tokenId}</span>
                           )}
                         </div>
-                        <div className="text-white font-bold truncate">{card.name}</div>
-                        <div className="text-xs text-gray-300 capitalize mb-2">{card.element}</div>
+                        <div className="text-sm sm:text-base text-white font-bold truncate">{card.name}</div>
+                        <div className="text-[11px] sm:text-xs text-gray-300 capitalize mb-1.5 sm:mb-2">{card.element}</div>
                         {card.stats && (
                           <div className="grid grid-cols-4 gap-1 text-xs">
                             <div className="text-center">
@@ -274,24 +274,24 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
 
             {/* Activity Tab */}
             {activeTab === 'activity' && (
-              <div className="p-6">
+              <div className="p-3 sm:p-6">
                 {details.actions.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <div className="text-3xl mb-2">📝</div>
                     <p>No activity recorded yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {details.actions.map((action, index) => (
                       <div
                         key={index}
-                        className="glass-light rounded-xl p-3"
+                        className="glass-light rounded-xl p-2.5 sm:p-3"
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-2 sm:gap-3">
                           <div className="flex-1 min-w-0">
-                            <p className="text-white font-medium truncate">{action.action}</p>
+                            <p className="text-sm sm:text-base text-white font-medium truncate">{action.action}</p>
                             {action.reason && (
-                              <p className="text-sm text-gray-400 mt-1">{action.reason}</p>
+                              <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1">{action.reason}</p>
                             )}
                           </div>
                           <div className="text-xs text-gray-500 whitespace-nowrap">
@@ -300,7 +300,7 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
                           </div>
                         </div>
                         {action.location && (
-                          <div className="mt-2 text-xs text-cyan-400">
+                          <div className="mt-1.5 sm:mt-2 text-xs text-cyan-400">
                             📍 {action.location}
                           </div>
                         )}
