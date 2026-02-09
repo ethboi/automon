@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 
@@ -15,23 +15,32 @@ interface LocationMarkerProps {
 }
 
 export function LocationLabel({ icon, label, color }: { icon: string; label: string; color: string }) {
+  const { size } = useThree();
+  const isMobile = size.width < 768;
+
   return (
-    <Html position={[0, 5.5, 0]} center distanceFactor={18} style={{ pointerEvents: 'none' }}>
+    <Html
+      position={[0, isMobile ? 4.5 : 5.5, 0]}
+      center
+      distanceFactor={isMobile ? 12 : 18}
+      style={{ pointerEvents: 'none' }}
+    >
       <div style={{
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         alignItems: 'center',
-        gap: 5,
-        background: 'rgba(8, 12, 24, 0.85)',
+        gap: isMobile ? 1 : 5,
+        background: 'rgba(8, 12, 24, 0.9)',
         backdropFilter: 'blur(8px)',
-        padding: '5px 12px',
-        borderRadius: 10,
-        border: `1px solid ${color}30`,
-        boxShadow: `0 0 12px ${color}15, 0 2px 8px rgba(0,0,0,0.4)`,
+        padding: isMobile ? '4px 8px' : '5px 12px',
+        borderRadius: isMobile ? 8 : 10,
+        border: `1px solid ${color}40`,
+        boxShadow: `0 0 16px ${color}20, 0 2px 8px rgba(0,0,0,0.5)`,
         whiteSpace: 'nowrap',
       }}>
-        <span style={{ fontSize: 13 }}>{icon}</span>
+        <span style={{ fontSize: isMobile ? 16 : 13 }}>{icon}</span>
         <span style={{
-          fontSize: 11,
+          fontSize: isMobile ? 9 : 11,
           fontWeight: 700,
           color: '#e2e8f0',
           letterSpacing: '0.3px',
