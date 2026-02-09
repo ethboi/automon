@@ -62,6 +62,10 @@ export interface Agent {
   personality?: string;
   position?: Position;
   online?: boolean;
+  health?: number;
+  maxHealth?: number;
+  currentAction?: string;
+  currentLocation?: string;
 }
 
 export interface StrategicDecision {

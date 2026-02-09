@@ -6,7 +6,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useState } from 'react';
 
 export default function Header() {
-  const { address, balance, isConnecting, isAuthenticated, connect, disconnect } = useWallet();
+  const { address, balance, isConnecting, isAuthenticated, connect, authenticate, disconnect } = useWallet();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -112,7 +112,13 @@ export default function Header() {
 
                 {!isAuthenticated && (
                   <button
-                    onClick={connect}
+                    onClick={async () => {
+                      try {
+                        await authenticate();
+                      } catch (error) {
+                        console.error('Authenticate failed:', error);
+                      }
+                    }}
                     disabled={isConnecting}
                     className="hidden sm:block text-xs text-amber-300/90 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-60"
                   >
@@ -200,7 +206,7 @@ export default function Header() {
                 <button
                   onClick={async () => {
                     try {
-                      await connect();
+                      await authenticate();
                     } finally {
                       setMobileMenuOpen(false);
                     }

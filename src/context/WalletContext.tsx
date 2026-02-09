@@ -10,6 +10,7 @@ interface WalletContextType {
   isConnecting: boolean;
   isAuthenticated: boolean;
   connect: () => Promise<void>;
+  authenticate: () => Promise<void>;
   disconnect: () => Promise<void>;
   refreshBalance: () => Promise<void>;
 }
@@ -84,6 +85,44 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }, [address]);
 
+  const authenticate = useCallback(async () => {
+    const provider = window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null;
+    const signer = provider ? await provider.getSigner() : null;
+    const signerAddress = signer ? await signer.getAddress() : null;
+    const addr = normalizeAddress(signerAddress) || signerAddress;
+    if (!addr) throw new Error('Could not resolve wallet address');
+    setAddress(addr);
+
+    const nonceRes = await fetch('/api/auth/nonce', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: addr }),
+    });
+    if (!nonceRes.ok) {
+      throw new Error(`Nonce request failed (${nonceRes.status})`);
+    }
+    const { nonce } = await nonceRes.json();
+    if (!nonce) {
+      throw new Error('Nonce missing from auth response');
+    }
+
+    const { message, signature } = await signInWithEthereum(addr, nonce);
+    const verifyRes = await fetch('/api/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, signature }),
+    });
+    if (!verifyRes.ok) {
+      const data = await verifyRes.json().catch(() => ({}));
+      const reason = data?.error ? `: ${data.error}` : '';
+      throw new Error(`Verification failed (${verifyRes.status})${reason}`);
+    }
+
+    const { address: verifiedAddress } = await verifyRes.json();
+    setAddress(normalizeAddress(verifiedAddress));
+    setIsAuthenticated(true);
+  }, [normalizeAddress]);
+
   const connect = async () => {
     setIsConnecting(true);
     try {
@@ -91,51 +130,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       try {
         await switchToMonad();
       } catch (error) {
-        // Some wallets/providers may not support programmatic chain switching.
-        // Keep going so user can still connect/sign-in manually.
         console.warn('Chain switch failed, continuing with current network:', error);
       }
-
-      const provider = window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null;
-      const signer = provider ? await provider.getSigner() : null;
-      const signerAddress = signer ? await signer.getAddress() : null;
-      const addr = normalizeAddress(signerAddress) || signerAddress;
-      if (!addr) throw new Error('Could not resolve wallet address');
-      setAddress(addr);
-
-      // Get nonce
-      const nonceRes = await fetch('/api/auth/nonce', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: addr }),
-      });
-      if (!nonceRes.ok) {
-        throw new Error(`Nonce request failed (${nonceRes.status})`);
-      }
-      const { nonce } = await nonceRes.json();
-      if (!nonce) {
-        throw new Error('Nonce missing from auth response');
-      }
-
-      // Sign message
-      const { message, signature } = await signInWithEthereum(addr, nonce);
-
-      // Verify and get token
-      const verifyRes = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, signature }),
-      });
-
-      if (!verifyRes.ok) {
-        const data = await verifyRes.json().catch(() => ({}));
-        const reason = data?.error ? `: ${data.error}` : '';
-        throw new Error(`Verification failed (${verifyRes.status})${reason}`);
-      }
-
-      const { address: verifiedAddress } = await verifyRes.json();
-      setAddress(normalizeAddress(verifiedAddress));
-      setIsAuthenticated(true);
+      await authenticate();
     } catch (error) {
       setIsAuthenticated(false);
       console.error('Connection failed:', error);
@@ -164,6 +161,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         isConnecting,
         isAuthenticated,
         connect,
+        authenticate,
         disconnect,
         refreshBalance,
       }}

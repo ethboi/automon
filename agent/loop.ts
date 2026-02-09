@@ -325,6 +325,7 @@ export async function runAutoLoop(): Promise<void> {
   // Wander state
   let wanderX = 0;
   let wanderZ = 8;
+  let currentHealth = 100;
   const LOCATIONS = [
     { name: 'Starter Town', x: 0, z: 0 },
     { name: 'Town Arena', x: 0, z: -20 },
@@ -336,38 +337,102 @@ export async function runAutoLoop(): Promise<void> {
     { name: 'River Delta', x: 22, z: -16 },
     { name: 'Crystal Caves', x: 20, z: 16 },
   ];
+
+  // Healing locations and their actions
+  const HEALING_SPOTS = [
+    { name: 'Old Pond', action: 'fishing', reason: 'Catching fish to restore energy 🎣' },
+    { name: 'Community Farm', action: 'farming', reason: 'Harvesting crops for a meal 🌾' },
+    { name: 'Green Meadows', action: 'foraging', reason: 'Gathering berries and herbs 🌿' },
+  ];
+
+  const NORMAL_ACTIONS = [
+    { action: 'exploring', reason: 'Searching for wild AutoMon' },
+    { action: 'training', reason: 'Grinding XP' },
+    { action: 'battling', reason: 'Arena match!' },
+    { action: 'catching', reason: 'Found a rare spawn!' },
+    { action: 'trading', reason: 'Checking trades' },
+  ];
+
+  // Low-health threshold — agent seeks food
+  const LOW_HEALTH_THRESHOLD = 40;
+  const CRITICAL_HEALTH_THRESHOLD = 20;
+
   let targetLoc = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+  let seekingFood = false;
 
   while (isRunning) {
+    // Check health and decide behavior
+    const agentData = await actions.fetchAgent();
+    if (agentData && typeof agentData.health === 'number') {
+      currentHealth = agentData.health;
+    }
+
+    // If health is low, override target to a healing location
+    if (currentHealth <= LOW_HEALTH_THRESHOLD && !seekingFood) {
+      const healSpot = HEALING_SPOTS[Math.floor(Math.random() * HEALING_SPOTS.length)];
+      const healLoc = LOCATIONS.find(l => l.name === healSpot.name)!;
+      targetLoc = healLoc;
+      seekingFood = true;
+      if (currentHealth <= CRITICAL_HEALTH_THRESHOLD) {
+        log(`🚨 Health critical (${currentHealth}/100)! Rushing to ${healSpot.name} for ${healSpot.action}`);
+      } else {
+        log(`⚠️ Health low (${currentHealth}/100), heading to ${healSpot.name} for ${healSpot.action}`);
+      }
+    }
+
     // Move toward target location
     const dx = targetLoc.x - wanderX;
     const dz = targetLoc.z - wanderZ;
     const dist = Math.sqrt(dx * dx + dz * dz);
 
     if (dist > 2) {
-      const speed = 2;
+      const speed = currentHealth <= CRITICAL_HEALTH_THRESHOLD ? 1 : 2; // Slow when critical
       wanderX += (dx / dist) * speed;
       wanderZ += (dz / dist) * speed;
     } else {
-      // Arrived — log action, pick new target
-      const actionTypes = ['exploring', 'training', 'battling', 'catching', 'resting', 'trading'];
-      const reasons = [
-        'Searching for wild AutoMon', 'Grinding XP', 'Arena match!',
-        'Found a rare spawn!', 'Taking a breather', 'Checking trades',
-      ];
-      const action = actionTypes[Math.floor(Math.random() * actionTypes.length)];
-      const reason = reasons[Math.floor(Math.random() * reasons.length)];
+      // Arrived — choose action based on health and location
+      let action: string;
+      let reason: string;
 
-      log(`📍 ${targetLoc.name}: ${action} — "${reason}"`);
+      if (seekingFood) {
+        // At a healing location — do healing action
+        const healSpot = HEALING_SPOTS.find(h => h.name === targetLoc.name);
+        if (healSpot) {
+          action = healSpot.action;
+          reason = healSpot.reason;
+        } else {
+          action = 'resting';
+          reason = 'Resting to recover health 💤';
+        }
+
+        // Stay and heal until health is above 70
+        if (currentHealth >= 70) {
+          seekingFood = false;
+          log(`💚 Health restored to ${currentHealth}/100, back to adventuring!`);
+        }
+      } else if (currentHealth <= CRITICAL_HEALTH_THRESHOLD) {
+        // Critical but not at a healing spot — rest wherever we are
+        action = 'resting';
+        reason = 'Too exhausted to continue... resting 💤';
+      } else {
+        // Normal behavior — pick random action
+        const pick = NORMAL_ACTIONS[Math.floor(Math.random() * NORMAL_ACTIONS.length)];
+        action = pick.action;
+        reason = pick.reason;
+      }
+
+      log(`📍 ${targetLoc.name}: ${action} — "${reason}" [❤️ ${currentHealth}/100]`);
       await actions.logAction(action, reason, targetLoc.name);
 
-      // Pick new destination
-      let next;
-      do {
-        next = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
-      } while (next.name === targetLoc.name);
-      targetLoc = next;
-      log(`   → heading to ${targetLoc.name}`);
+      // Pick new destination (unless healing and not done yet)
+      if (!seekingFood) {
+        let next;
+        do {
+          next = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+        } while (next.name === targetLoc.name);
+        targetLoc = next;
+        log(`   → heading to ${targetLoc.name}`);
+      }
     }
 
     // Update position on server
