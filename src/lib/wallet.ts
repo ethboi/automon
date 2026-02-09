@@ -60,13 +60,19 @@ export async function signInWithEthereum(address: string, nonce: string): Promis
     throw new Error('No wallet found');
   }
 
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  const signerAddress = ethers.getAddress(await signer.getAddress());
   const normalizedAddress = ethers.getAddress(address);
+  const messageAddress = signerAddress.toLowerCase() === normalizedAddress.toLowerCase()
+    ? signerAddress
+    : normalizedAddress;
   const domain = window.location.host;
   const origin = window.location.origin;
 
   const message = new SiweMessage({
     domain,
-    address: normalizedAddress,
+    address: messageAddress,
     statement: 'Sign in to AutoMon',
     uri: origin,
     version: '1',
@@ -75,9 +81,6 @@ export async function signInWithEthereum(address: string, nonce: string): Promis
   });
 
   const messageToSign = message.prepareMessage();
-
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  const signer = await provider.getSigner();
   const signature = await signer.signMessage(messageToSign);
 
   return { message: messageToSign, signature };

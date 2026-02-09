@@ -11,7 +11,7 @@ interface LocationMarkerProps {
   icon: string;
   color: string;
   onClick?: () => void;
-  variant?: 'building' | 'nature' | 'water' | 'dark';
+  variant?: 'building' | 'nature' | 'water' | 'dark' | 'farm';
 }
 
 export function LocationLabel({ icon, label, color }: { icon: string; label: string; color: string }) {
@@ -100,6 +100,71 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
               </mesh>
             </group>
           ))}
+        </>
+      )}
+
+      {variant === 'farm' && (
+        <>
+          {/* Planted rows */}
+          {[-1.5, -0.5, 0.5, 1.5].map((z, i) => (
+            <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, z]}>
+              <planeGeometry args={[5.2, 0.7]} />
+              <meshStandardMaterial color={i % 2 === 0 ? '#6b4b2a' : '#5a3f23'} roughness={0.95} />
+            </mesh>
+          ))}
+
+          {/* Barn */}
+          <mesh position={[0, 1.2, 0]} castShadow>
+            <boxGeometry args={[2.6, 2.4, 2.1]} />
+            <meshStandardMaterial color="#b45309" roughness={0.75} />
+          </mesh>
+          <mesh position={[0, 2.7, 0]} castShadow>
+            <coneGeometry args={[1.8, 1.2, 4]} />
+            <meshStandardMaterial color="#7c2d12" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.9, 1.06]}>
+            <planeGeometry args={[0.8, 1.1]} />
+            <meshStandardMaterial color="#3f2a1f" />
+          </mesh>
+
+          {/* Hay bales */}
+          <mesh position={[1.8, 0.45, -0.8]} castShadow>
+            <cylinderGeometry args={[0.35, 0.35, 0.7, 16]} />
+            <meshStandardMaterial color="#d4a017" roughness={0.9} />
+          </mesh>
+          <mesh position={[-1.9, 0.45, 0.9]} castShadow>
+            <cylinderGeometry args={[0.3, 0.3, 0.6, 16]} />
+            <meshStandardMaterial color="#ca8a04" roughness={0.9} />
+          </mesh>
+
+          {/* Windmill */}
+          <mesh position={[-2.2, 1.6, -1.6]} castShadow>
+            <cylinderGeometry args={[0.12, 0.16, 3.2, 8]} />
+            <meshStandardMaterial color="#d1d5db" roughness={0.65} />
+          </mesh>
+          {[0, Math.PI / 2].map((r, i) => (
+            <mesh key={i} position={[-2.2, 2.8, -1.6]} rotation={[0, 0, r]} castShadow>
+              <boxGeometry args={[1.2, 0.14, 0.06]} />
+              <meshStandardMaterial color="#e5e7eb" roughness={0.55} />
+            </mesh>
+          ))}
+
+          {/* Fence ring */}
+          {Array.from({ length: 14 }).map((_, i) => {
+            const t = (i / 14) * Math.PI * 2;
+            const x = Math.cos(t) * 3.1;
+            const z = Math.sin(t) * 3.1;
+            return (
+              <mesh key={`fence-post-${i}`} position={[x, 0.35, z]} castShadow>
+                <boxGeometry args={[0.12, 0.7, 0.12]} />
+                <meshStandardMaterial color="#7c5a34" roughness={0.95} />
+              </mesh>
+            );
+          })}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.42, 0]}>
+            <ringGeometry args={[2.95, 3.1, 28]} />
+            <meshStandardMaterial color="#8b6b3f" roughness={0.95} />
+          </mesh>
         </>
       )}
 

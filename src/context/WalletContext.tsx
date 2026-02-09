@@ -87,9 +87,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const connect = async () => {
     setIsConnecting(true);
     try {
-      const walletAddress = await connectWallet();
-      const addr = normalizeAddress(walletAddress) || walletAddress;
-      await switchToMonad();
+      await connectWallet();
+      try {
+        await switchToMonad();
+      } catch (error) {
+        // Some wallets/providers may not support programmatic chain switching.
+        // Keep going so user can still connect/sign-in manually.
+        console.warn('Chain switch failed, continuing with current network:', error);
+      }
+
+      const provider = window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null;
+      const signer = provider ? await provider.getSigner() : null;
+      const signerAddress = signer ? await signer.getAddress() : null;
+      const addr = normalizeAddress(signerAddress) || signerAddress;
+      if (!addr) throw new Error('Could not resolve wallet address');
+      setAddress(addr);
 
       // Get nonce
       const nonceRes = await fetch('/api/auth/nonce', {
@@ -97,7 +109,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: addr }),
       });
+      if (!nonceRes.ok) {
+        throw new Error(`Nonce request failed (${nonceRes.status})`);
+      }
       const { nonce } = await nonceRes.json();
+      if (!nonce) {
+        throw new Error('Nonce missing from auth response');
+      }
 
       // Sign message
       const { message, signature } = await signInWithEthereum(addr, nonce);
@@ -110,13 +128,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!verifyRes.ok) {
-        throw new Error('Verification failed');
+        const data = await verifyRes.json().catch(() => ({}));
+        const reason = data?.error ? `: ${data.error}` : '';
+        throw new Error(`Verification failed (${verifyRes.status})${reason}`);
       }
 
       const { address: verifiedAddress } = await verifyRes.json();
       setAddress(normalizeAddress(verifiedAddress));
       setIsAuthenticated(true);
     } catch (error) {
+      setIsAuthenticated(false);
       console.error('Connection failed:', error);
       throw error;
     } finally {

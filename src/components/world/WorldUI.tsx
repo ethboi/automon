@@ -134,14 +134,18 @@ export function WorldUI({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {isAuthenticated ? (
+            {address ? (
               <button
                 onClick={() => disconnect()}
-                className="flex items-center gap-1 bg-emerald-500/15 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-emerald-500/40 hover:bg-emerald-500/20 transition-colors"
+                className={`flex items-center gap-1 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border transition-colors ${
+                  isAuthenticated
+                    ? 'bg-emerald-500/15 border-emerald-500/40 hover:bg-emerald-500/20'
+                    : 'bg-amber-500/15 border-amber-500/40 hover:bg-amber-500/20'
+                }`}
                 title={address || undefined}
               >
-                <span className="text-[10px] sm:text-xs font-semibold text-emerald-300">
-                  {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : 'Connected'}
+                <span className={`text-[10px] sm:text-xs font-semibold ${isAuthenticated ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  {`${address.slice(0, 6)}…${address.slice(-4)}`}
                 </span>
               </button>
             ) : (
