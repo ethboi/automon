@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
@@ -13,7 +13,7 @@ interface AICharacterProps {
 
 const SPEED = 6;
 
-export function AICharacter({ address, name, targetPosition }: AICharacterProps) {
+export function AICharacter({ address: _address, name, targetPosition }: AICharacterProps) {
   const groupRef = useRef<THREE.Group>(null);
   const [position, setPosition] = useState(new THREE.Vector3(targetPosition.x, 0, targetPosition.z));
   const [isMoving, setIsMoving] = useState(false);
