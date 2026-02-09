@@ -3,9 +3,8 @@ import localFont from "next/font/local";
 import { Orbitron } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/context/WalletContext";
-import Header from "@/components/Header";
-import ChatBox from "@/components/ChatBox";
 import { Analytics } from "@vercel/analytics/next";
+import LayoutShell from "@/components/LayoutShell";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -40,9 +39,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} antialiased bg-gray-950 text-white min-h-screen`}
       >
         <WalletProvider>
-          <Header />
-          <main>{children}</main>
-          <ChatBox />
+          <LayoutShell>{children}</LayoutShell>
         </WalletProvider>
         <Analytics />
       </body>

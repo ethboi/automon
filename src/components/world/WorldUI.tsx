@@ -40,7 +40,8 @@ function timeAgo(ts: string) {
 
 export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], events = [], totalBattles = 0, totalCards = 0 }: WorldUIProps) {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('agents');
+  const [tab, setTab] = useState<Tab>('feed');
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const onlineCount = onlineAgents.filter(a => a.online).length;
 
@@ -56,185 +57,219 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
 
   return (
     <div className="absolute inset-0 pointer-events-none">
-      {/* Top stats bar */}
-      <div className="absolute top-4 left-4 right-4 flex justify-between items-start gap-4">
-        <div className="flex flex-wrap gap-2 pointer-events-auto">
-          <div className="glass rounded-xl px-3 py-2 flex items-center gap-2">
+
+      {/* ─── Top Bar: Logo + Stats ─── */}
+      <div className="absolute top-0 left-0 right-0 pointer-events-auto">
+        <div className="flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3"
+          style={{ background: 'linear-gradient(180deg, rgba(8,12,24,0.9) 0%, rgba(8,12,24,0) 100%)' }}>
+
+          {/* Logo */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+              <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-6 sm:h-6" fill="none">
+                <circle cx="16" cy="16" r="12" fill="#a855f7" />
+                <circle cx="11" cy="14" r="3" fill="white" />
+                <circle cx="21" cy="14" r="3" fill="white" />
+                <circle cx="12" cy="14" r="1.5" fill="#1f2937" />
+                <circle cx="22" cy="14" r="1.5" fill="#1f2937" />
+                <path d="M10 20 Q16 25 22 20" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-[var(--font-orbitron)] text-sm sm:text-lg font-black tracking-wide">
+                <span className="text-white">AUTO</span>
+                <span className="text-purple-400">MON</span>
+              </div>
+              <div className="text-[9px] sm:text-[10px] text-gray-500 -mt-0.5 hidden sm:block">Autonomous AI Battles</div>
+            </div>
+          </div>
+
+          {/* Stats pills */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-white/5 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-white/5">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-[10px] sm:text-xs font-semibold text-green-400">{onlineCount}</span>
+              <span className="text-[10px] sm:text-xs text-gray-500 hidden sm:inline">online</span>
+            </div>
+            <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-white/5">
+              <span className="text-[10px] sm:text-xs">⚔️</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-purple-400">{totalBattles}</span>
+            </div>
+            <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-white/5">
+              <span className="text-[10px] sm:text-xs">🃏</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-amber-400">{totalCards}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Controls hint (desktop only) ─── */}
+      <div className="absolute top-16 right-4 pointer-events-auto hidden lg:block">
+        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/5 text-[10px] text-gray-500">
+          <div className="flex gap-0.5">
+            {['W', 'A', 'S', 'D'].map((key) => (
+              <kbd key={key} className="w-4 h-4 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold text-gray-400 border border-white/10">
+                {key}
+              </kbd>
+            ))}
+          </div>
+          <span>Move</span>
+          <span className="mx-1 text-gray-700">|</span>
+          <span>🖱️ Click to walk</span>
+        </div>
+      </div>
+
+      {/* ─── Activity Panel Toggle (bottom right) ─── */}
+      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 pointer-events-auto">
+        {/* Collapsed: just the toggle button */}
+        {!panelOpen && (
+          <button
+            onClick={() => setPanelOpen(true)}
+            className="flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 border border-white/10 hover:border-purple-500/30 transition-all shadow-xl"
+          >
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm font-bold text-green-400">{onlineCount}</span>
-            <span className="text-xs text-gray-400">online</span>
-          </div>
-          <div className="glass rounded-xl px-3 py-2 flex items-center gap-2">
-            <span className="text-sm">⚔️</span>
-            <span className="text-sm font-bold text-purple-400">{totalBattles}</span>
-            <span className="text-xs text-gray-400">battles</span>
-          </div>
-          <div className="glass rounded-xl px-3 py-2 flex items-center gap-2">
-            <span className="text-sm">🃏</span>
-            <span className="text-sm font-bold text-amber-400">{totalCards}</span>
-            <span className="text-xs text-gray-400">cards</span>
-          </div>
-        </div>
+            <span className="text-xs sm:text-sm font-medium text-gray-300">
+              {onlineCount} agent{onlineCount !== 1 ? 's' : ''}
+            </span>
+            <span className="text-gray-600">|</span>
+            <span className="text-[10px] sm:text-xs text-gray-500">📡 Feed</span>
+          </button>
+        )}
 
-        {/* Controls hint */}
-        <div className="glass rounded-xl px-4 py-3 hidden sm:block pointer-events-auto">
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-0.5">
-                {['W', 'A', 'S', 'D'].map((key) => (
-                  <kbd key={key} className="w-6 h-6 bg-white/10 rounded flex items-center justify-center text-[10px] font-bold text-white border border-white/20">
-                    {key}
-                  </kbd>
-                ))}
-              </div>
-              <span className="text-gray-400">Move</span>
+        {/* Expanded panel */}
+        {panelOpen && (
+          <div className="w-[280px] sm:w-[320px] bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in">
+            {/* Tabs + close */}
+            <div className="flex items-center border-b border-white/5">
+              <button
+                onClick={() => setTab('agents')}
+                className={`flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  tab === 'agents' ? 'text-cyan-400 bg-white/5' : 'text-gray-600 hover:text-gray-400'
+                }`}
+              >
+                🤖 Agents ({onlineCount})
+              </button>
+              <button
+                onClick={() => setTab('feed')}
+                className={`flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  tab === 'feed' ? 'text-cyan-400 bg-white/5' : 'text-gray-600 hover:text-gray-400'
+                }`}
+              >
+                📡 Live Feed
+              </button>
+              <button
+                onClick={() => setPanelOpen(false)}
+                className="px-3 py-2.5 text-gray-600 hover:text-gray-400 transition-colors"
+              >
+                ✕
+              </button>
             </div>
-            <div className="w-px h-4 bg-white/10" />
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400">🖱️ Click</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Mini-map */}
-      <div className="absolute bottom-4 left-4 pointer-events-auto">
-        <div className="glass rounded-2xl p-3">
-          <div className="relative w-36 h-36 rounded-xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/50 to-green-900/50" />
-            <div className="absolute inset-0 opacity-20" style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-              backgroundSize: '18px 18px'
-            }} />
-            <div className="absolute inset-0">
-              <div className="absolute left-1/2 top-[30%] bottom-[20%] w-3 bg-gray-600/40 -translate-x-1/2 rounded-full" />
-              <div className="absolute top-[65%] left-[20%] right-[20%] h-3 bg-gray-600/40 -translate-y-1/2 rounded-full" />
-            </div>
-            {/* Arena */}
-            <div className="absolute w-5 h-5 rounded-full flex items-center justify-center" style={{ left: '50%', top: '25%', transform: 'translate(-50%, -50%)' }}>
-              <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-30" />
-              <div className="relative w-full h-full bg-gradient-to-br from-red-400 to-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                <span className="text-[8px]">⚔️</span>
-              </div>
-            </div>
-            {/* Home */}
-            <div className="absolute w-4 h-4 rounded-lg flex items-center justify-center" style={{ left: '25%', top: '65%', transform: 'translate(-50%, -50%)' }}>
-              <div className="relative w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg border-2 border-white shadow-lg flex items-center justify-center">
-                <span className="text-[8px]">🏠</span>
-              </div>
-            </div>
-            {/* Bank */}
-            <div className="absolute w-4 h-4 rounded-lg flex items-center justify-center" style={{ left: '75%', top: '65%', transform: 'translate(-50%, -50%)' }}>
-              <div className="relative w-full h-full bg-gradient-to-br from-yellow-400 to-amber-500 rounded-lg border-2 border-white shadow-lg flex items-center justify-center">
-                <span className="text-[8px]">🏦</span>
-              </div>
-            </div>
-            {/* Player */}
-            <div className="absolute w-3 h-3 rounded-full" style={{ left: '50%', top: '75%', transform: 'translate(-50%, -50%)' }}>
-              <div className="absolute inset-0 bg-purple-500 rounded-full animate-ping" />
-              <div className="relative w-full h-full bg-purple-500 rounded-full border-2 border-white shadow-lg" />
-            </div>
-            <div className="absolute text-[9px] text-white font-bold drop-shadow-lg" style={{ left: '50%', top: '12%', transform: 'translateX(-50%)' }}>Arena</div>
-            <div className="absolute text-[8px] text-white font-medium drop-shadow-lg" style={{ left: '25%', top: '80%', transform: 'translateX(-50%)' }}>Home</div>
-            <div className="absolute text-[8px] text-white font-medium drop-shadow-lg" style={{ left: '75%', top: '80%', transform: 'translateX(-50%)' }}>Shop</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Combined Panel — bottom right */}
-      <div className="absolute bottom-4 right-4 pointer-events-auto w-72">
-        <div className="glass rounded-2xl overflow-hidden">
-          {/* Tabs */}
-          <div className="flex border-b border-white/10">
-            <button
-              onClick={() => setTab('agents')}
-              className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                tab === 'agents' ? 'text-cyan-400 bg-white/5' : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              🤖 Agents ({onlineCount})
-            </button>
-            <button
-              onClick={() => setTab('feed')}
-              className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                tab === 'feed' ? 'text-cyan-400 bg-white/5' : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              📡 Live Feed
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-3 max-h-56 overflow-y-auto">
-            {tab === 'agents' ? (
-              onlineAgents.length === 0 ? (
-                <div className="text-xs text-gray-500 italic py-4 text-center">
-                  No agents online.<br />
-                  <span className="text-gray-600">Run <code className="bg-white/10 px-1 rounded">npm run agent:demo</code></span>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {onlineAgents
-                    .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
-                    .map((agent) => (
-                    <button
-                      key={agent.address}
-                      onClick={() => setSelectedAgent(agent.address)}
-                      className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-2 py-1.5 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${agent.online ? 'bg-green-500' : 'bg-gray-600'}`} />
-                        <span className="text-sm text-cyan-400 font-medium">{agent.name}</span>
-                        <span className="text-[10px] text-gray-600">{agent.personality}</span>
-                      </div>
-                      {agent.stats && (
-                        <span className="text-[10px] text-gray-500">
-                          {agent.stats.wins}W {agent.stats.losses}L
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )
-            ) : (
-              events.length === 0 ? (
-                <div className="text-xs text-gray-500 italic py-4 text-center">Waiting for activity...</div>
-              ) : (
-                <div className="space-y-1">
-                  {events.slice(0, 20).map((e, i) => {
-                    const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || e.agent?.slice(0, 8);
-                    return (
-                      <div key={i} className="text-xs leading-relaxed">
-                        <span className="text-gray-600">{timeAgo(e.timestamp)} </span>
-                        <span className="text-cyan-400 font-medium">{agentName}</span>
-                        <span className="text-gray-400"> {e.action}</span>
-                        {e.location && <span className="text-gray-600"> @ {e.location}</span>}
-                        {e.reason && (
-                          <div className="text-gray-600 italic pl-4 truncate" title={e.reason}>💭 {e.reason}</div>
+            {/* Content */}
+            <div className="p-2.5 sm:p-3 max-h-48 sm:max-h-64 overflow-y-auto">
+              {tab === 'agents' ? (
+                onlineAgents.length === 0 ? (
+                  <div className="text-[10px] sm:text-xs text-gray-600 italic py-6 text-center">
+                    No agents online<br />
+                    <code className="text-[9px] bg-white/5 px-1.5 py-0.5 rounded mt-1 inline-block">npm run agent:demo</code>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {onlineAgents
+                      .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
+                      .map((agent) => (
+                      <button
+                        key={agent.address}
+                        onClick={() => setSelectedAgent(agent.address)}
+                        className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-2 py-1.5 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${agent.online ? 'bg-green-500 shadow-sm shadow-green-500/50' : 'bg-gray-700'}`} />
+                          <span className="text-xs sm:text-sm text-cyan-400 font-medium">{agent.name}</span>
+                          <span className="text-[9px] text-gray-600">{agent.personality}</span>
+                        </div>
+                        {agent.stats && (
+                          <span className="text-[9px] text-gray-600">
+                            {agent.stats.wins}W {agent.stats.losses}L
+                          </span>
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )
-            )}
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : (
+                events.length === 0 ? (
+                  <div className="text-[10px] sm:text-xs text-gray-600 italic py-6 text-center">Waiting for activity…</div>
+                ) : (
+                  <div className="space-y-0.5">
+                    {events.slice(0, 20).map((e, i) => {
+                      const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || e.agent?.slice(0, 8);
+                      return (
+                        <div key={i} className="text-[10px] sm:text-xs leading-relaxed py-0.5">
+                          <span className="text-gray-700 mr-1">{timeAgo(e.timestamp)}</span>
+                          <span className="text-cyan-500 font-medium">{agentName}</span>
+                          <span className="text-gray-500"> {e.action}</span>
+                          {e.location && <span className="text-gray-700"> @ {e.location}</span>}
+                          {e.reason && (
+                            <div className="text-gray-700 italic pl-3 truncate" title={e.reason}>💭 {e.reason}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Minimap (desktop only) ─── */}
+      <div className="absolute bottom-4 left-4 pointer-events-auto hidden md:block">
+        <div className="bg-black/50 backdrop-blur-sm rounded-xl p-2 border border-white/5">
+          <div className="relative w-28 h-28 rounded-lg overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-green-900/40" />
+            <div className="absolute inset-0 opacity-15" style={{
+              backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+              backgroundSize: '14px 14px'
+            }} />
+            {/* Location dots on minimap */}
+            {Object.entries(WORLD_LOCATIONS).map(([key, loc]) => {
+              const mx = 50 + (loc.position[0] / 30) * 40;
+              const mz = 50 + (loc.position[2] / 30) * 40;
+              return (
+                <div key={key} className="absolute w-2 h-2 rounded-full" style={{
+                  left: `${mx}%`, top: `${mz}%`,
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: loc.color,
+                  boxShadow: `0 0 4px ${loc.color}60`,
+                }} title={loc.label} />
+              );
+            })}
+            {/* Player dot */}
+            <div className="absolute w-2.5 h-2.5 rounded-full" style={{ left: '50%', top: '60%', transform: 'translate(-50%, -50%)' }}>
+              <div className="absolute inset-0 bg-purple-500 rounded-full animate-ping opacity-60" />
+              <div className="relative w-full h-full bg-purple-400 rounded-full border border-white/50" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Interaction prompt */}
+      {/* ─── "Powered by" badge (bottom center on mobile) ─── */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 sm:bottom-3 pointer-events-none">
+        <div className="text-[8px] sm:text-[9px] text-gray-700 tracking-wider uppercase">
+          On-chain AI Battles • <span className="text-purple-800">Monad</span>
+        </div>
+      </div>
+
+      {/* ─── Interaction prompt ─── */}
       {nearbyBuilding && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 pointer-events-auto animate-bounce-subtle">
+        <div className="absolute bottom-12 sm:bottom-16 left-1/2 transform -translate-x-1/2 pointer-events-auto">
           <button onClick={onEnterBuilding} className="relative group">
-            <div className="absolute inset-0 bg-purple-500/30 blur-xl rounded-2xl" />
-            <div className="relative glass-purple rounded-2xl px-8 py-4 flex items-center gap-4 border border-purple-500/30 shadow-xl hover:shadow-purple-500/40 transition-all duration-300 group-hover:scale-105">
-              <div className="flex items-center gap-2">
-                <kbd className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-sm font-bold text-white border border-purple-400">E</kbd>
-                <span className="text-gray-400">or</span>
-                <span className="text-white font-medium">Click</span>
-              </div>
-              <div className="w-px h-6 bg-white/20" />
-              <span className="text-white font-semibold text-lg">Enter {nearbyBuilding}</span>
+            <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-2xl" />
+            <div className="relative bg-black/60 backdrop-blur-md rounded-xl px-4 py-2.5 sm:px-6 sm:py-3 flex items-center gap-3 border border-purple-500/30 shadow-xl hover:shadow-purple-500/30 transition-all group-hover:scale-105">
+              <kbd className="w-6 h-6 sm:w-7 sm:h-7 bg-purple-600 rounded-lg flex items-center justify-center text-xs font-bold text-white border border-purple-400 shadow">E</kbd>
+              <span className="text-white font-semibold text-sm sm:text-base">Enter {nearbyBuilding}</span>
             </div>
           </button>
         </div>
@@ -247,3 +282,16 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
     </div>
   );
 }
+
+// Re-export for minimap
+const WORLD_LOCATIONS = {
+  starter_town:   { position: [0, 0, 0],      color: '#f59e0b', label: 'Starter Town' },
+  town_arena:     { position: [0, 0, -20],     color: '#ef4444', label: 'Town Arena' },
+  town_market:    { position: [18, 0, 0],      color: '#f97316', label: 'Town Market' },
+  community_farm: { position: [-18, 0, 0],     color: '#84cc16', label: 'Community Farm' },
+  green_meadows:  { position: [-14, 0, -18],   color: '#22c55e', label: 'Green Meadows' },
+  old_pond:       { position: [-22, 0, -18],   color: '#3b82f6', label: 'Old Pond' },
+  dark_forest:    { position: [-24, 0, 14],    color: '#7c3aed', label: 'Dark Forest' },
+  river_delta:    { position: [22, 0, -16],    color: '#06b6d4', label: 'River Delta' },
+  crystal_caves:  { position: [20, 0, 16],     color: '#a78bfa', label: 'Crystal Caves' },
+};

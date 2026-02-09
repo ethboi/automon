@@ -30,7 +30,6 @@ interface EventData {
   timestamp: string;
 }
 
-// All 9 world locations — matches demo agent + sim engine
 export const WORLD_LOCATIONS = {
   starter_town:   { position: [0, 0, 0] as [number, number, number],      label: 'Starter Town',    icon: '🏠', color: '#f59e0b', variant: 'building' as const, route: '/collection' },
   town_arena:     { position: [0, 0, -20] as [number, number, number],     label: 'Town Arena',      icon: '⚔️', color: '#ef4444', variant: 'building' as const, route: '/battle' },
@@ -46,12 +45,19 @@ export const WORLD_LOCATIONS = {
 const INTERACTION_DISTANCE = 5;
 
 function CameraSetup() {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   useEffect(() => {
-    camera.position.set(0, 50, 55);
-    camera.lookAt(0, 0, -5);
+    // Adjust camera based on screen — mobile gets a higher/wider view
+    const isMobile = size.width < 768;
+    if (isMobile) {
+      camera.position.set(0, 65, 50);
+      camera.lookAt(0, 0, -5);
+    } else {
+      camera.position.set(0, 50, 55);
+      camera.lookAt(0, 0, -5);
+    }
     camera.updateProjectionMatrix();
-  }, [camera]);
+  }, [camera, size.width]);
   return null;
 }
 
@@ -75,12 +81,16 @@ function Scene({
 
   return (
     <>
-      <color attach="background" args={['#0f1729']} />
+      <color attach="background" args={['#080c18']} />
       <CameraSetup />
-      <ambientLight intensity={0.5} />
+
+      {/* Fog for depth */}
+      <fog attach="fog" args={['#080c18', 60, 120]} />
+
+      <ambientLight intensity={0.4} />
       <directionalLight
         position={[15, 25, 15]}
-        intensity={1.1}
+        intensity={1.2}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -90,17 +100,19 @@ function Scene({
         shadow-camera-top={35}
         shadow-camera-bottom={-35}
       />
-      <directionalLight position={[-15, 10, -15]} intensity={0.2} color="#6366f1" />
+      <directionalLight position={[-10, 15, -10]} intensity={0.15} color="#6366f1" />
+      {/* Rim light for atmosphere */}
+      <pointLight position={[0, 8, -20]} intensity={0.8} color="#ef4444" distance={30} />
+      <pointLight position={[-18, 5, 0]} intensity={0.5} color="#84cc16" distance={25} />
+      <pointLight position={[20, 5, 16]} intensity={0.5} color="#a78bfa" distance={25} />
 
       <Ground size={80} onClick={onGroundClick} />
 
-      {/* Town Arena — custom building */}
       <BattleArena
         position={WORLD_LOCATIONS.town_arena.position}
         onClick={() => onLocationClick(WORLD_LOCATIONS.town_arena.route!)}
       />
 
-      {/* All other locations */}
       {Object.entries(WORLD_LOCATIONS)
         .filter(([key]) => key !== 'town_arena')
         .map(([key, loc]) => (
@@ -115,10 +127,8 @@ function Scene({
           />
         ))}
 
-      {/* Paths between connected locations */}
       <Roads />
 
-      {/* AI Agents */}
       {onlineAgents.filter(a => a.online).map((agent) => (
         <AICharacter
           key={agent.address}
@@ -128,7 +138,6 @@ function Scene({
         />
       ))}
 
-      {/* Player */}
       <Character
         initialPosition={[0, 0, 8]}
         targetPosition={targetPosition}
@@ -139,7 +148,6 @@ function Scene({
   );
 }
 
-/** Roads connecting locations */
 function Roads() {
   const connections: [string, string][] = [
     ['starter_town', 'town_arena'],
@@ -166,13 +174,9 @@ function Roads() {
         const angle = Math.atan2(dx, dz);
 
         return (
-          <mesh
-            key={i}
-            rotation={[-Math.PI / 2, 0, -angle]}
-            position={[(a[0] + b[0]) / 2, 0.02, (a[2] + b[2]) / 2]}
-          >
-            <planeGeometry args={[2, len]} />
-            <meshStandardMaterial color="#4a5568" transparent opacity={0.6} />
+          <mesh key={i} rotation={[-Math.PI / 2, 0, -angle]} position={[(a[0] + b[0]) / 2, 0.02, (a[2] + b[2]) / 2]}>
+            <planeGeometry args={[1.5, len]} />
+            <meshStandardMaterial color="#3d4555" transparent opacity={0.5} />
           </mesh>
         );
       })}
@@ -234,10 +238,12 @@ export function GameWorld() {
   }, [nearbyRoute, router]);
 
   return (
-    <div className="relative w-full h-[calc(100vh-80px)] bg-gray-900">
+    <div className="relative w-full h-full">
       <Canvas
         camera={{ fov: 45, position: [0, 50, 55], near: 0.1, far: 1000 }}
         shadows
+        style={{ background: '#080c18' }}
+        gl={{ antialias: true, alpha: false }}
       >
         <Suspense fallback={null}>
           <Scene
