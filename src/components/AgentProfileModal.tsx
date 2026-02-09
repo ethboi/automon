@@ -28,6 +28,12 @@ interface AgentDetails {
     personality: string;
     isAI: boolean;
     position: { x: number; y: number; z: number };
+    health: number;
+    maxHealth: number;
+    currentAction?: string | null;
+    currentReason?: string | null;
+    currentLocation?: string | null;
+    lastActionAt?: string | null;
     lastSeen: string;
     createdAt?: string;
   };
@@ -38,6 +44,7 @@ interface AgentDetails {
     wins: number;
     losses: number;
     winRate: number;
+    healthPercent: number;
   };
   cards: CardInfo[];
   actions: Array<{
@@ -104,6 +111,26 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  const healthTone = (pct: number) => {
+    if (pct > 60) return 'from-emerald-500 to-green-400';
+    if (pct > 30) return 'from-yellow-500 to-amber-400';
+    return 'from-red-600 to-red-400';
+  };
+
+  const activityIndicator = (activity?: string | null): { icon: string; label: string } => {
+    const value = (activity || '').toLowerCase();
+    if (!value) return { icon: '💤', label: 'idle' };
+    if (value.includes('battle') || value.includes('arena') || value.includes('duel')) return { icon: '⚔️', label: 'battling' };
+    if (value.includes('fish') || value.includes('catch')) return { icon: '🎣', label: 'fishing' };
+    if (value.includes('train')) return { icon: '🥊', label: 'training' };
+    if (value.includes('trade') || value.includes('shop') || value.includes('market')) return { icon: '🛒', label: 'trading' };
+    if (value.includes('rest') || value.includes('heal') || value.includes('sleep')) return { icon: '🛌', label: 'resting' };
+    if (value.includes('move') || value.includes('wander') || value.includes('explor') || value.includes('walk')) return { icon: '🚶', label: 'wandering' };
+    return { icon: '🤖', label: activity || 'active' };
+  };
+
+  const currentActivity = details ? activityIndicator(details.agent.currentAction) : { icon: '💤', label: 'idle' };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-auto">
       {/* Backdrop */}
@@ -149,6 +176,40 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
           <div className="p-12 text-center text-red-400">{error}</div>
         ) : details && (
           <div className="overflow-y-auto max-h-[calc(85vh-84px)] sm:max-h-[calc(80vh-100px)]">
+            {/* Health */}
+            <div className="px-3 pt-3 sm:px-6 sm:pt-5">
+              <div className="glass-light rounded-lg sm:rounded-xl p-3 sm:p-4">
+                <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
+                  <span className="text-gray-300">Health</span>
+                  <span className="text-white font-semibold">
+                    {details.agent.health}/{details.agent.maxHealth} ({details.stats.healthPercent}%)
+                  </span>
+                </div>
+                <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full bg-gradient-to-r ${healthTone(details.stats.healthPercent)} transition-all duration-500`}
+                    style={{ width: `${details.stats.healthPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Current Action */}
+            <div className="px-3 pt-3 sm:px-6 sm:pt-4">
+              <div className="glass-light rounded-lg sm:rounded-xl p-3 sm:p-4">
+                <div className="text-[10px] sm:text-xs uppercase tracking-wide text-gray-500 mb-1">Current Action</div>
+                <div className="text-sm sm:text-base text-cyan-300 font-medium">
+                  {currentActivity.icon} {currentActivity.label}
+                </div>
+                {details.agent.currentReason && (
+                  <div className="text-xs sm:text-sm text-gray-400 mt-1">{details.agent.currentReason}</div>
+                )}
+                {details.agent.currentLocation && (
+                  <div className="text-xs text-cyan-400 mt-1.5">📍 {details.agent.currentLocation}</div>
+                )}
+              </div>
+            </div>
+
             {/* Stats Grid */}
             <div className="p-3 sm:p-6 grid grid-cols-3 gap-2 sm:gap-4">
               <div className="glass-light rounded-lg sm:rounded-xl p-2 sm:p-4 text-center">

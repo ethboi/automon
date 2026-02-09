@@ -25,6 +25,19 @@ export async function POST(request: NextRequest) {
       timestamp: new Date(),
     });
 
+    await db.collection('agents').updateOne(
+      { address: address.toLowerCase() },
+      {
+        $set: {
+          currentAction: action,
+          currentReason: reason || '',
+          currentLocation: location || null,
+          lastActionAt: new Date(),
+          lastSeen: new Date(),
+        },
+      }
+    );
+
     // Keep only last 100 actions per agent
     const count = await db.collection('agent_actions').countDocuments({
       address: address.toLowerCase()

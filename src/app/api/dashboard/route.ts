@@ -69,16 +69,37 @@ export async function GET() {
       }
     }
 
+    const latestActionByAgent = new Map<string, { action?: string; reason?: string; location?: string }>();
+    for (const action of recentActions) {
+      const addr = action.address?.toLowerCase?.();
+      if (!addr || latestActionByAgent.has(addr)) continue;
+      latestActionByAgent.set(addr, {
+        action: action.action,
+        reason: action.reason,
+        location: action.location,
+      });
+    }
+
     const enrichedAgents = agents.map(a => {
       const addr = a.address?.toLowerCase();
       const stats = agentStats.get(addr) || { wins: 0, losses: 0, cards: 0 };
+      const maxHealth = typeof a.maxHealth === 'number' && a.maxHealth > 0 ? a.maxHealth : 100;
+      const health = typeof a.health === 'number' ? Math.max(0, Math.min(a.health, maxHealth)) : maxHealth;
+      const latest = latestActionByAgent.get(addr) || {};
+      const isOnline = a.lastSeen >= fiveMinAgo;
+      const currentAction = a.currentAction || latest.action || (isOnline ? 'wandering' : null);
       return {
         address: a.address,
         name: a.name,
         personality: a.personality,
         position: a.position,
+        health,
+        maxHealth,
+        currentAction,
+        currentReason: a.currentReason || latest.reason || null,
+        currentLocation: a.currentLocation || latest.location || null,
         lastSeen: a.lastSeen,
-        online: a.lastSeen >= fiveMinAgo,
+        online: isOnline,
         stats,
       };
     });

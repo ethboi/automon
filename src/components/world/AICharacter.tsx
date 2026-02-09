@@ -9,11 +9,37 @@ interface AICharacterProps {
   address: string;
   name: string;
   targetPosition: { x: number; y: number; z: number };
+  activity?: string | null;
+  onClick?: (address: string) => void;
 }
 
 const SPEED = 6;
 
-export function AICharacter({ address: _address, name, targetPosition }: AICharacterProps) {
+function getActivityIndicator(activity?: string | null): { icon: string; label: string; color: string } {
+  const value = (activity || '').toLowerCase();
+  if (!value) return { icon: '💤', label: 'idle', color: 'text-gray-300 border-gray-500/60' };
+  if (value.includes('battle') || value.includes('arena') || value.includes('duel')) {
+    return { icon: '⚔️', label: 'battling', color: 'text-red-300 border-red-500/60' };
+  }
+  if (value.includes('fish') || value.includes('catch')) {
+    return { icon: '🎣', label: 'fishing', color: 'text-sky-300 border-sky-500/60' };
+  }
+  if (value.includes('train')) {
+    return { icon: '🥊', label: 'training', color: 'text-orange-300 border-orange-500/60' };
+  }
+  if (value.includes('trade') || value.includes('shop') || value.includes('market')) {
+    return { icon: '🛒', label: 'trading', color: 'text-yellow-300 border-yellow-500/60' };
+  }
+  if (value.includes('rest') || value.includes('heal') || value.includes('sleep')) {
+    return { icon: '🛌', label: 'resting', color: 'text-lime-300 border-lime-500/60' };
+  }
+  if (value.includes('move') || value.includes('wander') || value.includes('explor') || value.includes('walk')) {
+    return { icon: '🚶', label: 'wandering', color: 'text-cyan-300 border-cyan-500/60' };
+  }
+  return { icon: '🤖', label: activity || 'active', color: 'text-purple-200 border-purple-500/60' };
+}
+
+export function AICharacter({ address, name, targetPosition, activity, onClick }: AICharacterProps) {
   const groupRef = useRef<THREE.Group>(null);
   const [position, setPosition] = useState(new THREE.Vector3(targetPosition.x, 0, targetPosition.z));
   const [isMoving, setIsMoving] = useState(false);
@@ -51,12 +77,26 @@ export function AICharacter({ address: _address, name, targetPosition }: AIChara
     }
   });
 
+  const indicator = getActivityIndicator(activity);
+
   return (
-    <group ref={groupRef} position={position.toArray()}>
+    <group
+      ref={groupRef}
+      position={position.toArray()}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onClick?.(address);
+      }}
+    >
       {/* Name tag */}
       <Html position={[0, 3.5, 0]} center>
-        <div className="bg-purple-900/80 px-2 py-1 rounded text-xs text-purple-200 whitespace-nowrap border border-purple-500/50">
-          🤖 {name}
+        <div className="flex flex-col items-center gap-1">
+          <div className="bg-purple-900/80 px-2 py-1 rounded text-xs text-purple-200 whitespace-nowrap border border-purple-500/50">
+            🤖 {name}
+          </div>
+          <div className={`bg-black/70 px-2 py-0.5 rounded text-[10px] whitespace-nowrap border ${indicator.color}`}>
+            {indicator.icon} {indicator.label}
+          </div>
         </div>
       </Html>
 

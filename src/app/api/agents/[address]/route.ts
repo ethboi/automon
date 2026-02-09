@@ -63,6 +63,13 @@ export async function GET(
       .toArray();
 
     const cardsCount = cardsData.length;
+    const latestAction = actions[0];
+    const currentAction = agent.currentAction || latestAction?.action || null;
+    const currentReason = agent.currentReason || latestAction?.reason || null;
+    const currentLocation = agent.currentLocation || latestAction?.location || null;
+    const lastActionAt = agent.lastActionAt || latestAction?.timestamp || null;
+    const maxHealth = typeof agent.maxHealth === 'number' && agent.maxHealth > 0 ? agent.maxHealth : 100;
+    const health = typeof agent.health === 'number' ? Math.max(0, Math.min(agent.health, maxHealth)) : maxHealth;
 
     return NextResponse.json({
       agent: {
@@ -71,6 +78,12 @@ export async function GET(
         personality: agent.personality,
         isAI: agent.isAI,
         position: agent.position,
+        health,
+        maxHealth,
+        currentAction,
+        currentReason,
+        currentLocation,
+        lastActionAt,
         lastSeen: agent.lastSeen,
         createdAt: agent.createdAt,
       },
@@ -81,6 +94,7 @@ export async function GET(
         wins,
         losses,
         winRate: battles.length > 0 ? Math.round((wins / battles.length) * 100) : 0,
+        healthPercent: Math.round((health / maxHealth) * 100),
       },
       cards: cardsData.map(c => ({
         id: c.id || c._id?.toString(),

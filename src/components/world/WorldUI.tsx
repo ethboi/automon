@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import AgentProfileModal from '@/components/AgentProfileModal';
+import { useWallet } from '@/context/WalletContext';
 
 interface WorldUIProps {
   nearbyBuilding: string | null;
   onEnterBuilding?: () => void;
+  onSelectAgent?: (address: string) => void;
   onlineAgents?: OnlineAgent[];
   events?: EventData[];
   transactions?: TxData[];
@@ -19,6 +20,9 @@ interface OnlineAgent {
   personality?: string;
   isAI: boolean;
   online?: boolean;
+  currentAction?: string | null;
+  currentReason?: string | null;
+  currentLocation?: string | null;
   stats?: { wins: number; losses: number; cards: number };
 }
 
@@ -58,6 +62,18 @@ function shortHash(hash: string) {
   return `${hash.slice(0, 10)}…${hash.slice(-6)}`;
 }
 
+function activityBadge(activity?: string | null): { icon: string; label: string; cls: string } {
+  const value = (activity || '').toLowerCase();
+  if (!value) return { icon: '💤', label: 'idle', cls: 'text-gray-400 bg-white/5' };
+  if (value.includes('battle') || value.includes('arena') || value.includes('duel')) return { icon: '⚔️', label: 'battling', cls: 'text-red-300 bg-red-500/10' };
+  if (value.includes('fish') || value.includes('catch')) return { icon: '🎣', label: 'fishing', cls: 'text-sky-300 bg-sky-500/10' };
+  if (value.includes('train')) return { icon: '🥊', label: 'training', cls: 'text-orange-300 bg-orange-500/10' };
+  if (value.includes('trade') || value.includes('shop') || value.includes('market')) return { icon: '🛒', label: 'trading', cls: 'text-yellow-300 bg-yellow-500/10' };
+  if (value.includes('rest') || value.includes('heal') || value.includes('sleep')) return { icon: '🛌', label: 'resting', cls: 'text-lime-300 bg-lime-500/10' };
+  if (value.includes('move') || value.includes('wander') || value.includes('explor') || value.includes('walk')) return { icon: '🚶', label: 'wandering', cls: 'text-cyan-300 bg-cyan-500/10' };
+  return { icon: '🤖', label: activity || 'active', cls: 'text-purple-300 bg-purple-500/10' };
+}
+
 const TX_ICONS: Record<string, string> = {
   mint_pack: '📦',
   open_pack: '🎴',
@@ -70,11 +86,11 @@ const TX_ICONS: Record<string, string> = {
 };
 
 export function WorldUI({
-  nearbyBuilding, onEnterBuilding,
+  nearbyBuilding, onEnterBuilding, onSelectAgent,
   onlineAgents = [], events = [], transactions = [],
   totalBattles = 0, totalCards = 0,
 }: WorldUIProps) {
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const { address, isAuthenticated, isConnecting, connect, disconnect } = useWallet();
   const [tab, setTab] = useState<Tab>('feed');
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -117,6 +133,33 @@ export function WorldUI({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {isAuthenticated ? (
+              <button
+                onClick={() => disconnect()}
+                className="flex items-center gap-1 bg-emerald-500/15 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-emerald-500/40 hover:bg-emerald-500/20 transition-colors"
+                title={address || undefined}
+              >
+                <span className="text-[10px] sm:text-xs font-semibold text-emerald-300">
+                  {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : 'Connected'}
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  try {
+                    await connect();
+                  } catch (error) {
+                    console.error('Wallet connect failed:', error);
+                  }
+                }}
+                disabled={isConnecting}
+                className="flex items-center gap-1 bg-purple-500/20 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-purple-500/40 hover:bg-purple-500/30 disabled:opacity-60 transition-colors"
+              >
+                <span className="text-[10px] sm:text-xs font-semibold text-purple-200">
+                  {isConnecting ? 'Connecting...' : 'Connect'}
+                </span>
+              </button>
+            )}
             <div className="flex items-center gap-1 sm:gap-1.5 bg-white/5 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-white/5">
               <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
               <span className="text-[10px] sm:text-xs font-semibold text-green-400">{onlineCount}</span>
@@ -200,10 +243,12 @@ export function WorldUI({
                   <div className="space-y-0.5 sm:space-y-1">
                     {onlineAgents
                       .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
-                      .map(agent => (
+                      .map(agent => {
+                      const activity = activityBadge(agent.currentAction);
+                      return (
                       <button
                         key={agent.address}
-                        onClick={() => setSelectedAgent(agent.address)}
+                        onClick={() => onSelectAgent?.(agent.address)}
                         className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-1.5 py-1.5 sm:px-2 sm:py-2 transition-colors"
                       >
                         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -212,13 +257,16 @@ export function WorldUI({
                           <span className="text-[9px] text-gray-600">{agent.personality}</span>
                         </div>
                         <div className="flex items-center gap-2">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${activity.cls}`}>
+                            {activity.icon} {activity.label}
+                          </span>
                           {agent.stats && (
                             <span className="text-[9px] text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
                           )}
                           <span className="text-[9px] text-gray-700">{shortAddr(agent.address)}</span>
                         </div>
                       </button>
-                    ))}
+                    )})}
                   </div>
                 )
               )}
@@ -336,9 +384,6 @@ export function WorldUI({
         </div>
       )}
 
-      {selectedAgent && (
-        <AgentProfileModal address={selectedAgent} onClose={() => setSelectedAgent(null)} />
-      )}
     </div>
   );
 }

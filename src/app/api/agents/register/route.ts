@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { address, name, personality } = await request.json();
+    const { address, name, personality, isAI } = await request.json();
 
     if (!address) {
       return NextResponse.json({ error: 'Address required' }, { status: 400 });
@@ -17,17 +17,26 @@ export async function POST(request: NextRequest) {
 
     const db = await getDb();
 
+    const normalizedAddress = address.toLowerCase();
+    const existing = await db.collection('agents').findOne({ address: normalizedAddress });
+
     const agent = {
-      address: address.toLowerCase(),
-      name: name || `Agent ${address.slice(0, 6)}`,
-      personality: personality || 'friendly',
-      isAI: true,
-      position: { x: 0, y: 0, z: 8 },
+      address: normalizedAddress,
+      name: name || existing?.name || `Agent ${address.slice(0, 6)}`,
+      personality: personality || existing?.personality || 'friendly',
+      isAI: typeof isAI === 'boolean' ? isAI : (existing?.isAI ?? true),
+      position: existing?.position || { x: 0, y: 0, z: 8 },
+      health: typeof existing?.health === 'number' ? existing.health : 100,
+      maxHealth: typeof existing?.maxHealth === 'number' ? existing.maxHealth : 100,
+      currentAction: existing?.currentAction || 'Came online',
+      currentReason: existing?.currentReason || 'Joined the world',
+      currentLocation: existing?.currentLocation || 'Spawn point',
+      createdAt: existing?.createdAt || new Date(),
       lastSeen: new Date(),
     };
 
     await db.collection('agents').updateOne(
-      { address: address.toLowerCase() },
+      { address: normalizedAddress },
       { $set: agent },
       { upsert: true }
     );

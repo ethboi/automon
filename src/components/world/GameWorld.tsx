@@ -12,6 +12,7 @@ import { AICharacter } from './AICharacter';
 import { WorldUI } from './WorldUI';
 import { LocationMarker } from './locations/LocationMarker';
 import { BattleArena } from './buildings/BattleArena';
+import AgentProfileModal from '@/components/AgentProfileModal';
 
 interface OnlineAgent {
   address: string;
@@ -20,6 +21,9 @@ interface OnlineAgent {
   isAI: boolean;
   position: { x: number; y: number; z: number };
   online: boolean;
+  currentAction?: string | null;
+  currentReason?: string | null;
+  currentLocation?: string | null;
   stats: { wins: number; losses: number; cards: number };
 }
 
@@ -120,6 +124,7 @@ function Scene({
   onCharacterMove,
   onlineAgents,
   cameraFlyTarget,
+  onAgentClick,
 }: {
   onLocationClick: (route: string) => void;
   onGroundClick: (point: THREE.Vector3) => void;
@@ -127,6 +132,7 @@ function Scene({
   onCharacterMove: (position: THREE.Vector3) => void;
   onlineAgents: OnlineAgent[];
   cameraFlyTarget: THREE.Vector3 | null;
+  onAgentClick: (address: string) => void;
 }) {
   const buildingsArray = Object.values(WORLD_LOCATIONS).map((b) => ({
     position: b.position,
@@ -197,6 +203,8 @@ function Scene({
           address={agent.address}
           name={agent.name}
           targetPosition={agent.position}
+          activity={agent.currentAction}
+          onClick={onAgentClick}
         />
       ))}
 
@@ -257,6 +265,7 @@ export function GameWorld() {
   const [totalBattles, setTotalBattles] = useState(0);
   const [totalCards, setTotalCards] = useState(0);
   const [transactions, setTransactions] = useState<{ txHash: string; type: string; from: string; description: string; explorerUrl: string; timestamp: string }[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -305,6 +314,10 @@ export function GameWorld() {
     if (nearbyRoute) router.push(nearbyRoute);
   }, [nearbyRoute, router]);
 
+  const handleSelectAgent = useCallback((address: string) => {
+    setSelectedAgent(address);
+  }, []);
+
   return (
     <div className="relative w-full h-full">
       <Canvas
@@ -321,6 +334,7 @@ export function GameWorld() {
             onCharacterMove={handleCharacterMove}
             onlineAgents={onlineAgents}
             cameraFlyTarget={cameraFlyTarget}
+            onAgentClick={handleSelectAgent}
           />
         </Suspense>
       </Canvas>
@@ -333,7 +347,12 @@ export function GameWorld() {
         totalBattles={totalBattles}
         totalCards={totalCards}
         transactions={transactions}
+        onSelectAgent={handleSelectAgent}
       />
+
+      {selectedAgent && (
+        <AgentProfileModal address={selectedAgent} onClose={() => setSelectedAgent(null)} />
+      )}
     </div>
   );
 }
