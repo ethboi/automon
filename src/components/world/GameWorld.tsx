@@ -48,8 +48,8 @@ const INTERACTION_DISTANCE = 5;
 function CameraSetup() {
   const { camera } = useThree();
   useEffect(() => {
-    camera.position.set(60, 60, 60);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 50, 55);
+    camera.lookAt(0, 0, -5);
     camera.updateProjectionMatrix();
   }, [camera]);
   return null;
@@ -236,7 +236,7 @@ export function GameWorld() {
   return (
     <div className="relative w-full h-[calc(100vh-80px)] bg-gray-900">
       <Canvas
-        camera={{ fov: 45, position: [60, 60, 60], near: 0.1, far: 1000 }}
+        camera={{ fov: 45, position: [0, 50, 55], near: 0.1, far: 1000 }}
         shadows
       >
         <Suspense fallback={null}>
