@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
+import { getAgentAuth } from '@/lib/agentAuth';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getAgentAuth(request);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

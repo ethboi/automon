@@ -106,7 +106,8 @@ export async function authenticate(): Promise<boolean> {
     // 2. Create and sign SIWE message
     const domain = new URL(config.apiUrl).host;
     const origin = config.apiUrl;
-    const siweMessage = new (await import('siwe')).SiweMessage({
+    const { SiweMessage } = await import('siwe');
+    const siweMessage = new SiweMessage({
       domain,
       address,
       statement: 'Sign in to AutoMon',
@@ -114,8 +115,9 @@ export async function authenticate(): Promise<boolean> {
       version: '1',
       chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '10143'),
       nonce,
+      issuedAt: new Date().toISOString(),
     });
-    const message = siweMessage.prepareMessage();
+    const message = siweMessage.toMessage();
     const signature = await w.signMessage(message);
 
     // 3. Verify with server
@@ -167,6 +169,12 @@ async function fetchApi(
     headers['Cookie'] = `auth_token=${authCookie}`;
   } else if (authToken) {
     headers['Cookie'] = `auth_token=${authToken}`;
+  }
+
+  // Also send agent secret for CLI auth fallback
+  const jwtSecret = process.env.JWT_SECRET;
+  if (jwtSecret) {
+    headers['x-agent-secret'] = jwtSecret;
   }
 
   return fetch(url, { ...options, headers });
