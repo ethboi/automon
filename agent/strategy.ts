@@ -507,6 +507,7 @@ export async function decideNextAction(
   cards: Card[],
   recentActions: string[],
   pendingBattles: number,
+  personality?: string,
 ): Promise<LocationDecision> {
   const locationList = Object.entries(LOCATION_INFO)
     .map(([name, desc]) => `- ${name}: ${desc}`)
@@ -516,7 +517,10 @@ export async function decideNextAction(
     ? `${cards.length} cards (${[...new Set(cards.map(c => c.element))].join(', ')}), best: ${cards.slice(0, 3).map(c => `${c.name}(${c.rarity})`).join(', ')}`
     : 'No cards yet';
 
+  const personalityLine = personality ? `\n## YOUR PERSONALITY\n${personality}\nStay in character. Your personality should heavily influence your decisions.\n` : '';
+
   const prompt = `You are an autonomous AI agent in AutoMon, a Pokemon-style game world. Decide your next move.
+${personalityLine}
 
 ## CURRENT STATE
 - Location: ${currentLocation}
