@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+import { explorerUrl } from '@/lib/transactions';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +8,10 @@ export async function GET() {
   try {
     const db = await getDb();
 
-    // Get all agents (seen in last 24h for broader view)
     const oneDayAgo = new Date(Date.now() - 86400000);
     const fiveMinAgo = new Date(Date.now() - 300000);
 
-    const [agents, recentActions, recentBattles, totalCards] = await Promise.all([
+    const [agents, recentActions, recentBattles, totalCards, recentTxs] = await Promise.all([
       db.collection('agents')
         .find({ lastSeen: { $gte: oneDayAgo } })
         .toArray(),
@@ -29,6 +29,12 @@ export async function GET() {
         .toArray(),
 
       db.collection('cards').countDocuments({}),
+
+      db.collection('transactions')
+        .find({})
+        .sort({ timestamp: -1 })
+        .limit(20)
+        .toArray(),
     ]);
 
     // Get battle stats per agent
@@ -97,6 +103,14 @@ export async function GET() {
       })),
       totalCards,
       totalBattles: completeBattles.length,
+      transactions: (recentTxs || []).map(tx => ({
+        txHash: tx.txHash,
+        type: tx.type,
+        from: tx.from,
+        description: tx.description,
+        explorerUrl: explorerUrl(tx.txHash),
+        timestamp: tx.timestamp,
+      })),
     });
   } catch (error) {
     console.error('Dashboard API error:', error);

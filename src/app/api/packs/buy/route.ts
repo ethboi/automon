@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { getSession } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { logTransaction } from '@/lib/transactions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,6 +38,15 @@ export async function POST(request: NextRequest) {
     };
 
     await db.collection('packs').insertOne(pack);
+
+    // Log on-chain transaction
+    await logTransaction({
+      txHash,
+      type: 'mint_pack',
+      from: session.address,
+      description: `Minted card pack for ${price || '0.1'} MON`,
+      metadata: { packId: pack.packId, price },
+    });
 
     return NextResponse.json({ pack });
   } catch (error) {

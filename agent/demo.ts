@@ -45,6 +45,15 @@ const ACTIONS = [
   { action: 'traveling', reasons: ['Heading to a new zone', 'Following a quest marker', 'Shortcut through the mountains', 'Moving to better hunting grounds'] },
 ];
 
+const TX_TYPES: string[] = ['mint_pack', 'battle_create', 'escrow_deposit', 'nft_mint', 'battle_settle'];
+const TX_DESCRIPTIONS: Record<string, string[]> = {
+  mint_pack: ['Minted card pack for 0.1 MON', 'Purchased booster pack'],
+  battle_create: ['Created battle with 0.5 MON wager', 'Opened new arena challenge'],
+  escrow_deposit: ['Deposited 1.0 MON to escrow', 'Locked wager in smart contract'],
+  nft_mint: ['Minted Blazeon #42 NFT', 'Minted Aquaris #17 NFT', 'Minted Terrox #88 NFT'],
+  battle_settle: ['Won battle — claimed 0.95 MON', 'Battle settled on-chain'],
+};
+
 const PERSONALITIES = ['aggressive', 'defensive', 'balanced', 'unpredictable'];
 
 interface AgentState {
@@ -134,6 +143,21 @@ async function tick(db: Db, agent: AgentState): Promise<void> {
     });
 
     console.log(`[${timestamp()}] 🤖 ${agent.name} @ ${target.name}: ${event.action} — "${reason}"`);
+
+    // ~20% chance to log a fake on-chain transaction
+    if (Math.random() < 0.2) {
+      const txType = pick(TX_TYPES);
+      const txDesc = pick(TX_DESCRIPTIONS[txType]);
+      const fakeTxHash = '0x' + crypto.randomBytes(32).toString('hex');
+      await db.collection('transactions').insertOne({
+        txHash: fakeTxHash,
+        type: txType,
+        from: agent.address,
+        description: txDesc,
+        timestamp: new Date(),
+      });
+      console.log(`[${timestamp()}]    ⛓️  ${txDesc} (${fakeTxHash.slice(0, 14)}…)`);
+    }
 
     // Pick new destination (different from current)
     let next: number;

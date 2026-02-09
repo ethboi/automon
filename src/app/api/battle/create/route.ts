@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { getSession } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { logTransaction } from '@/lib/transactions';
 import { Battle } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -42,6 +43,16 @@ export async function POST(request: NextRequest) {
     };
 
     await db.collection('battles').insertOne(battle);
+
+    if (txHash) {
+      await logTransaction({
+        txHash,
+        type: 'escrow_deposit',
+        from: session.address,
+        description: `Battle created with ${wager || '0'} MON wager`,
+        metadata: { battleId: battle.battleId, wager },
+      });
+    }
 
     return NextResponse.json({ battle });
   } catch (error) {

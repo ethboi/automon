@@ -193,6 +193,7 @@ export function GameWorld() {
   const [events, setEvents] = useState<EventData[]>([]);
   const [totalBattles, setTotalBattles] = useState(0);
   const [totalCards, setTotalCards] = useState(0);
+  const [transactions, setTransactions] = useState<{ txHash: string; type: string; from: string; description: string; explorerUrl: string; timestamp: string }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -204,6 +205,7 @@ export function GameWorld() {
           setEvents(data.events || []);
           setTotalBattles(data.totalBattles || 0);
           setTotalCards(data.totalCards || 0);
+          setTransactions(data.transactions || []);
         }
       } catch (error) {
         console.error('Failed to fetch dashboard:', error);
@@ -263,6 +265,7 @@ export function GameWorld() {
         events={events}
         totalBattles={totalBattles}
         totalCards={totalCards}
+        transactions={transactions}
       />
     </div>
   );

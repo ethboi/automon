@@ -8,6 +8,7 @@ interface WorldUIProps {
   onEnterBuilding?: () => void;
   onlineAgents?: OnlineAgent[];
   events?: EventData[];
+  transactions?: TxData[];
   totalBattles?: number;
   totalCards?: number;
 }
@@ -29,7 +30,16 @@ interface EventData {
   timestamp: string;
 }
 
-type Tab = 'agents' | 'feed';
+interface TxData {
+  txHash: string;
+  type: string;
+  from: string;
+  description: string;
+  explorerUrl: string;
+  timestamp: string;
+}
+
+type Tab = 'agents' | 'feed' | 'chain';
 
 function timeAgo(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -38,7 +48,32 @@ function timeAgo(ts: string) {
   return `${Math.floor(diff / 3600000)}h`;
 }
 
-export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], events = [], totalBattles = 0, totalCards = 0 }: WorldUIProps) {
+function shortAddr(addr: string) {
+  if (!addr) return '???';
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+function shortHash(hash: string) {
+  if (!hash) return '???';
+  return `${hash.slice(0, 10)}…${hash.slice(-6)}`;
+}
+
+const TX_ICONS: Record<string, string> = {
+  mint_pack: '📦',
+  open_pack: '🎴',
+  battle_create: '⚔️',
+  battle_settle: '🏆',
+  battle_join: '🤝',
+  nft_mint: '💎',
+  escrow_deposit: '🔒',
+  escrow_settle: '🔓',
+};
+
+export function WorldUI({
+  nearbyBuilding, onEnterBuilding,
+  onlineAgents = [], events = [], transactions = [],
+  totalBattles = 0, totalCards = 0,
+}: WorldUIProps) {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('feed');
   const [panelOpen, setPanelOpen] = useState(false);
@@ -58,12 +93,10 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
   return (
     <div className="absolute inset-0 pointer-events-none">
 
-      {/* ─── Top Bar: Logo + Stats ─── */}
+      {/* ─── Top Bar ─── */}
       <div className="absolute top-0 left-0 right-0 pointer-events-auto">
         <div className="flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3"
           style={{ background: 'linear-gradient(180deg, rgba(8,12,24,0.9) 0%, rgba(8,12,24,0) 100%)' }}>
-
-          {/* Logo */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
               <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-6 sm:h-6" fill="none">
@@ -77,14 +110,12 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
             </div>
             <div>
               <div className="font-[var(--font-orbitron)] text-sm sm:text-lg font-black tracking-wide">
-                <span className="text-white">AUTO</span>
-                <span className="text-purple-400">MON</span>
+                <span className="text-white">AUTO</span><span className="text-purple-400">MON</span>
               </div>
               <div className="text-[9px] sm:text-[10px] text-gray-500 -mt-0.5 hidden sm:block">Autonomous AI Battles</div>
             </div>
           </div>
 
-          {/* Stats pills */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="flex items-center gap-1 sm:gap-1.5 bg-white/5 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 border border-white/5">
               <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
@@ -103,107 +134,103 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
         </div>
       </div>
 
-      {/* ─── Controls hint (desktop only) ─── */}
+      {/* ─── Controls (desktop) ─── */}
       <div className="absolute top-16 right-4 pointer-events-auto hidden lg:block">
         <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/5 text-[10px] text-gray-500">
-          <div className="flex gap-0.5">
-            {['W', 'A', 'S', 'D'].map((key) => (
-              <kbd key={key} className="w-4 h-4 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold text-gray-400 border border-white/10">
-                {key}
-              </kbd>
-            ))}
-          </div>
+          {['W','A','S','D'].map(k => (
+            <kbd key={k} className="w-4 h-4 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold text-gray-400 border border-white/10">{k}</kbd>
+          ))}
           <span>Move</span>
           <span className="mx-1 text-gray-700">|</span>
-          <span>🖱️ Click to walk</span>
+          <span>🖱️ Click</span>
         </div>
       </div>
 
-      {/* ─── Activity Panel Toggle (bottom right) ─── */}
-      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 pointer-events-auto">
-        {/* Collapsed: just the toggle button */}
-        {!panelOpen && (
+      {/* ─── Unified Panel (bottom right) ─── */}
+      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 pointer-events-auto" style={{ zIndex: 50 }}>
+        {!panelOpen ? (
           <button
             onClick={() => setPanelOpen(true)}
-            className="flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 border border-white/10 hover:border-purple-500/30 transition-all shadow-xl"
+            className="flex items-center gap-2 bg-black/70 backdrop-blur-md rounded-full px-3 py-2 sm:px-4 sm:py-2.5 border border-white/10 hover:border-purple-500/30 transition-all shadow-xl hover:shadow-purple-500/10 active:scale-95"
           >
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs sm:text-sm font-medium text-gray-300">
-              {onlineCount} agent{onlineCount !== 1 ? 's' : ''}
-            </span>
-            <span className="text-gray-600">|</span>
-            <span className="text-[10px] sm:text-xs text-gray-500">📡 Feed</span>
+            <span className="text-[10px] sm:text-xs font-medium text-gray-300">{onlineCount}</span>
+            <span className="text-gray-700">·</span>
+            <span className="text-[10px] sm:text-xs text-gray-500">📡</span>
+            <span className="text-gray-700">·</span>
+            <span className="text-[10px] sm:text-xs text-gray-500">⛓️</span>
           </button>
-        )}
-
-        {/* Expanded panel */}
-        {panelOpen && (
-          <div className="w-[280px] sm:w-[320px] bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in">
-            {/* Tabs + close */}
-            <div className="flex items-center border-b border-white/5">
-              <button
-                onClick={() => setTab('agents')}
-                className={`flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider transition-colors ${
-                  tab === 'agents' ? 'text-cyan-400 bg-white/5' : 'text-gray-600 hover:text-gray-400'
-                }`}
-              >
-                🤖 Agents ({onlineCount})
-              </button>
-              <button
-                onClick={() => setTab('feed')}
-                className={`flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider transition-colors ${
-                  tab === 'feed' ? 'text-cyan-400 bg-white/5' : 'text-gray-600 hover:text-gray-400'
-                }`}
-              >
-                📡 Live Feed
-              </button>
+        ) : (
+          <div className="w-[calc(100vw-24px)] sm:w-[340px] max-h-[60vh] sm:max-h-[70vh] bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in flex flex-col">
+            {/* Tabs */}
+            <div className="flex items-center border-b border-white/5 flex-shrink-0">
+              {([
+                { id: 'agents' as Tab, label: '🤖', count: onlineCount },
+                { id: 'feed' as Tab, label: '📡', count: events.length },
+                { id: 'chain' as Tab, label: '⛓️', count: transactions.length },
+              ]).map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[10px] sm:text-xs font-semibold transition-colors ${
+                    tab === t.id ? 'text-white bg-white/5 border-b-2 border-purple-500' : 'text-gray-600 hover:text-gray-400'
+                  }`}
+                >
+                  <span>{t.label}</span>
+                  {t.count > 0 && (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                      tab === t.id ? 'bg-purple-500/20 text-purple-300' : 'bg-white/5 text-gray-500'
+                    }`}>{t.count}</span>
+                  )}
+                </button>
+              ))}
               <button
                 onClick={() => setPanelOpen(false)}
-                className="px-3 py-2.5 text-gray-600 hover:text-gray-400 transition-colors"
-              >
-                ✕
-              </button>
+                className="px-3 py-2.5 text-gray-600 hover:text-gray-400 transition-colors text-xs"
+              >✕</button>
             </div>
 
             {/* Content */}
-            <div className="p-2.5 sm:p-3 max-h-48 sm:max-h-64 overflow-y-auto">
-              {tab === 'agents' ? (
+            <div className="p-2.5 sm:p-3 overflow-y-auto flex-1">
+              {/* Agents Tab */}
+              {tab === 'agents' && (
                 onlineAgents.length === 0 ? (
-                  <div className="text-[10px] sm:text-xs text-gray-600 italic py-6 text-center">
-                    No agents online<br />
-                    <code className="text-[9px] bg-white/5 px-1.5 py-0.5 rounded mt-1 inline-block">npm run agent:demo</code>
-                  </div>
+                  <Empty text="No agents online" hint="npm run agent:demo" />
                 ) : (
                   <div className="space-y-1">
                     {onlineAgents
                       .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
-                      .map((agent) => (
+                      .map(agent => (
                       <button
                         key={agent.address}
                         onClick={() => setSelectedAgent(agent.address)}
-                        className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-2 py-1.5 transition-colors"
+                        className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-2 py-2 transition-colors"
                       >
                         <div className="flex items-center gap-2">
                           <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${agent.online ? 'bg-green-500 shadow-sm shadow-green-500/50' : 'bg-gray-700'}`} />
                           <span className="text-xs sm:text-sm text-cyan-400 font-medium">{agent.name}</span>
                           <span className="text-[9px] text-gray-600">{agent.personality}</span>
                         </div>
-                        {agent.stats && (
-                          <span className="text-[9px] text-gray-600">
-                            {agent.stats.wins}W {agent.stats.losses}L
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {agent.stats && (
+                            <span className="text-[9px] text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
+                          )}
+                          <span className="text-[9px] text-gray-700">{shortAddr(agent.address)}</span>
+                        </div>
                       </button>
                     ))}
                   </div>
                 )
-              ) : (
+              )}
+
+              {/* Feed Tab */}
+              {tab === 'feed' && (
                 events.length === 0 ? (
-                  <div className="text-[10px] sm:text-xs text-gray-600 italic py-6 text-center">Waiting for activity…</div>
+                  <Empty text="Waiting for activity…" />
                 ) : (
                   <div className="space-y-0.5">
-                    {events.slice(0, 20).map((e, i) => {
-                      const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || e.agent?.slice(0, 8);
+                    {events.slice(0, 25).map((e, i) => {
+                      const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || shortAddr(e.agent);
                       return (
                         <div key={i} className="text-[10px] sm:text-xs leading-relaxed py-0.5">
                           <span className="text-gray-700 mr-1">{timeAgo(e.timestamp)}</span>
@@ -211,8 +238,44 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
                           <span className="text-gray-500"> {e.action}</span>
                           {e.location && <span className="text-gray-700"> @ {e.location}</span>}
                           {e.reason && (
-                            <div className="text-gray-700 italic pl-3 truncate" title={e.reason}>💭 {e.reason}</div>
+                            <div className="text-gray-600 italic pl-3 truncate" title={e.reason}>💭 {e.reason}</div>
                           )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              )}
+
+              {/* Chain Tab */}
+              {tab === 'chain' && (
+                transactions.length === 0 ? (
+                  <Empty text="No on-chain activity yet" />
+                ) : (
+                  <div className="space-y-1">
+                    {transactions.slice(0, 20).map((tx, i) => {
+                      const agentName = onlineAgents.find(a => a.address?.toLowerCase() === tx.from?.toLowerCase())?.name || shortAddr(tx.from);
+                      return (
+                        <div key={i} className="bg-white/[0.02] rounded-lg px-2.5 py-2 hover:bg-white/[0.04] transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs">{TX_ICONS[tx.type] || '📝'}</span>
+                              <span className="text-[10px] sm:text-xs text-gray-300">{tx.description}</span>
+                            </div>
+                            <span className="text-[9px] text-gray-700">{timeAgo(tx.timestamp)}</span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[9px] text-cyan-600">{agentName}</span>
+                            <a
+                              href={tx.explorerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[9px] text-purple-500 hover:text-purple-400 font-mono transition-colors"
+                              onClick={e => e.stopPropagation()}
+                            >
+                              {shortHash(tx.txHash)} ↗
+                            </a>
+                          </div>
                         </div>
                       );
                     })}
@@ -224,7 +287,7 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
         )}
       </div>
 
-      {/* ─── Minimap (desktop only) ─── */}
+      {/* ─── Minimap (desktop) ─── */}
       <div className="absolute bottom-4 left-4 pointer-events-auto hidden md:block">
         <div className="bg-black/50 backdrop-blur-sm rounded-xl p-2 border border-white/5">
           <div className="relative w-28 h-28 rounded-lg overflow-hidden">
@@ -233,7 +296,6 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
               backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
               backgroundSize: '14px 14px'
             }} />
-            {/* Location dots on minimap */}
             {Object.entries(WORLD_LOCATIONS).map(([key, loc]) => {
               const mx = 50 + (loc.position[0] / 30) * 40;
               const mz = 50 + (loc.position[2] / 30) * 40;
@@ -246,7 +308,6 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
                 }} title={loc.label} />
               );
             })}
-            {/* Player dot */}
             <div className="absolute w-2.5 h-2.5 rounded-full" style={{ left: '50%', top: '60%', transform: 'translate(-50%, -50%)' }}>
               <div className="absolute inset-0 bg-purple-500 rounded-full animate-ping opacity-60" />
               <div className="relative w-full h-full bg-purple-400 rounded-full border border-white/50" />
@@ -255,7 +316,7 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
         </div>
       </div>
 
-      {/* ─── "Powered by" badge (bottom center on mobile) ─── */}
+      {/* ─── Branding ─── */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 sm:bottom-3 pointer-events-none">
         <div className="text-[8px] sm:text-[9px] text-gray-700 tracking-wider uppercase">
           On-chain AI Battles • <span className="text-purple-800">Monad</span>
@@ -275,7 +336,6 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
         </div>
       )}
 
-      {/* Agent Profile Modal */}
       {selectedAgent && (
         <AgentProfileModal address={selectedAgent} onClose={() => setSelectedAgent(null)} />
       )}
@@ -283,7 +343,15 @@ export function WorldUI({ nearbyBuilding, onEnterBuilding, onlineAgents = [], ev
   );
 }
 
-// Re-export for minimap
+function Empty({ text, hint }: { text: string; hint?: string }) {
+  return (
+    <div className="text-[10px] sm:text-xs text-gray-600 italic py-6 text-center">
+      {text}
+      {hint && <><br /><code className="text-[9px] bg-white/5 px-1.5 py-0.5 rounded mt-1 inline-block">{hint}</code></>}
+    </div>
+  );
+}
+
 const WORLD_LOCATIONS = {
   starter_town:   { position: [0, 0, 0],      color: '#f59e0b', label: 'Starter Town' },
   town_arena:     { position: [0, 0, -20],     color: '#ef4444', label: 'Town Arena' },
