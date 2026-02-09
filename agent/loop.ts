@@ -132,42 +132,62 @@ async function checkAndJoinBattles(): Promise<void> {
 
     stats.battlesConsidered++;
 
-    const decision = await strategy.decideToJoinBattle(battle, cards, balance);
+    // Strong bias to join battles when we have enough cards and safe balance reserve.
+    const numericBalance = parseFloat(balance);
+    const numericWager = parseFloat(battle.wager);
+    const canAfford = Number.isFinite(numericBalance) && Number.isFinite(numericWager)
+      && numericWager > 0
+      && numericBalance - numericWager >= config.minBalanceReserve;
+    const hasMinimumCards = cards.length >= config.minCardsForBattle;
 
-    if (decision.decision) {
-      log(`DECISION: Join battle ${battle.battleId.slice(0, 8)}... (${decision.confidence}% confidence)`);
-      log(`REASONING: ${decision.reasoning}`);
+    let shouldJoin = hasMinimumCards && canAfford;
+    let decisionReason = 'Battle-priority mode: eligible and affordable.';
+    let decisionConfidence = 90;
 
-      const cardSelection = await strategy.selectBattleCards(cards);
-      log(`Selected cards: ${cardSelection.indices.map(i => cards[i]?.name).join(', ')}`);
-
-      const joinedBattle = await actions.joinBattle(battle.battleId);
-
-      if (joinedBattle) {
-        log(`Joined battle! Now selecting cards...`);
-
-        const cardIds = cardSelection.indices.map(i => cards[i]._id);
-        const result = await actions.selectBattleCards(battle.battleId, cardIds);
-
-        if (result?.simulationComplete) {
-          log(`Battle simulation complete!`);
-          stats.battlesJoined++;
-
-          const battleLog = result.battleLog as { winner?: string };
-          if (battleLog?.winner === config.agentWalletAddress.toLowerCase()) {
-            log(`VICTORY! Won ${parseFloat(battle.wager) * 2 * 0.95} MON`);
-            stats.battlesWon++;
-            stats.totalEarnings += parseFloat(battle.wager) * 2 * 0.95;
-          } else {
-            log(`DEFEAT. Lost ${battle.wager} MON`);
-            stats.battlesLost++;
-            stats.totalLosses += parseFloat(battle.wager);
-          }
-        }
-      }
-    } else {
-      verbose(`Battle ${battle.battleId.slice(0, 8)}... skipped: ${decision.reasoning}`);
+    if (!shouldJoin) {
+      const decision = await strategy.decideToJoinBattle(battle, cards, balance);
+      shouldJoin = decision.decision;
+      decisionReason = decision.reasoning;
+      decisionConfidence = decision.confidence;
     }
+
+    if (!shouldJoin) {
+      verbose(`Battle ${battle.battleId.slice(0, 8)}... skipped: ${decisionReason}`);
+      continue;
+    }
+
+    log(`DECISION: Join battle ${battle.battleId.slice(0, 8)}... (${decisionConfidence}% confidence)`);
+    log(`REASONING: ${decisionReason}`);
+
+    const cardSelection = await strategy.selectBattleCards(cards);
+    log(`Selected cards: ${cardSelection.indices.map(i => cards[i]?.name).join(', ')}`);
+
+    const joinedBattle = await actions.joinBattle(battle.battleId);
+    if (!joinedBattle) continue;
+
+    log(`Joined battle! Now selecting cards...`);
+
+    const cardIds = cardSelection.indices.map(i => cards[i]._id);
+    const result = await actions.selectBattleCards(battle.battleId, cardIds);
+
+    if (result?.simulationComplete) {
+      log(`Battle simulation complete!`);
+      stats.battlesJoined++;
+
+      const battleLog = result.battleLog as { winner?: string };
+      if (battleLog?.winner === config.agentWalletAddress.toLowerCase()) {
+        log(`VICTORY! Won ${parseFloat(battle.wager) * 2 * 0.95} MON`);
+        stats.battlesWon++;
+        stats.totalEarnings += parseFloat(battle.wager) * 2 * 0.95;
+      } else {
+        log(`DEFEAT. Lost ${battle.wager} MON`);
+        stats.battlesLost++;
+        stats.totalLosses += parseFloat(battle.wager);
+      }
+    }
+
+    // Join at most one battle per iteration.
+    break;
   }
 }
 
@@ -228,9 +248,13 @@ async function runIteration(): Promise<void> {
   log(`--- Iteration ${iterationCount} ---`);
 
   try {
-    await checkAndBuyPacks();
+    const battlesJoinedBefore = stats.battlesJoined;
     await checkAndJoinBattles();
-    await checkTournaments();
+    // If no battle was joined this cycle, continue with secondary actions.
+    if (stats.battlesJoined === battlesJoinedBefore) {
+      await checkAndBuyPacks();
+      await checkTournaments();
+    }
 
     consecutiveErrors = 0;
   } catch (error) {
