@@ -6,7 +6,7 @@ import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-const RPC = 'https://testnet-rpc.monadchain.com';
+const RPC = process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz';
 const MAIN_AGENT_KEY = process.env.AGENT_PRIVATE_KEY!;
 
 const NEW_AGENTS = [
