@@ -458,6 +458,7 @@ export function WorldUI({
                           <div className="flex items-center gap-1.5 shrink-0 ml-1">
                             {tx.amount && <span className={`text-[10px] font-mono ${isSettle ? 'text-emerald-400 font-bold' : 'text-yellow-400'}`}>{tx.amount} MON</span>}
                             <span className="text-[10px] text-gray-700">{timeAgo(tx.timestamp)}</span>
+                            <span className="text-[10px] text-purple-400 underline">view ↗</span>
                           </div>
                         </a>
                       );

@@ -252,7 +252,7 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                         <div className="flex items-center gap-1 shrink-0 ml-1">
                           {tx.amount && <span className="text-[9px] sm:text-xs font-mono text-emerald-400">{tx.amount}</span>}
                           <span className="text-[9px] sm:text-xs text-gray-600">{timeAgo(tx.timestamp)}</span>
-                          <span className="text-[9px] sm:text-xs text-purple-500">↗</span>
+                          <span className="text-[9px] text-purple-400 underline">view ↗</span>
                         </div>
                       </a>
                     ))}
