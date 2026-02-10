@@ -290,6 +290,59 @@ export function WorldUI({
         )}
       </div>
 
+      {/* ─── AI Activity Log (bottom left, always open) ─── */}
+      <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 pointer-events-auto" style={{ zIndex: 50 }}>
+        <div className="bg-black/75 backdrop-blur-md rounded-xl border border-purple-500/20 shadow-xl overflow-hidden"
+          style={{ width: 'min(380px, calc(100vw - 24px))', maxWidth: '380px' }}>
+          {/* Header */}
+          <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2">
+            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-purple-300 uppercase tracking-wider">🧠 AI Agent Log</span>
+            <span className="text-[10px] text-gray-500 ml-auto">{onlineCount} active</span>
+          </div>
+          {/* Events */}
+          <div className="overflow-y-auto" style={{ maxHeight: '220px' }}>
+            {events.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs text-gray-600 italic">Waiting for agent actions...</div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {events.slice(0, 15).map((e, i) => {
+                  const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || shortAddr(e.agent);
+                  const badge = activityBadge(e.action);
+                  return (
+                    <div key={i} className="px-3 py-2 hover:bg-white/5 transition-colors">
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm flex-shrink-0 mt-0.5">{badge.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-cyan-400">{agentName}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${badge.cls}`}>{e.action}</span>
+                            {e.healthDelta != null && e.healthDelta !== 0 && (
+                              <span className={`text-[10px] font-mono ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {e.healthDelta > 0 ? '+' : ''}{e.healthDelta}HP
+                              </span>
+                            )}
+                            <span className="text-[10px] text-gray-600 ml-auto flex-shrink-0">{timeAgo(e.timestamp)}</span>
+                          </div>
+                          {(e.reasoning || e.reason) && (
+                            <div className="text-[11px] text-gray-400 mt-0.5 leading-tight">
+                              💭 {e.reasoning || e.reason}
+                            </div>
+                          )}
+                          {e.location && (
+                            <div className="text-[10px] text-purple-400/60 mt-0.5">📍 {e.location}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* ─── Branding ─── */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 sm:bottom-3 pointer-events-none">
         <div className="text-[8px] sm:text-[9px] text-gray-700 tracking-wider uppercase">
