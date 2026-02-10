@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { address, position, name } = await request.json();
+    const { address, position, name, activity } = await request.json();
 
     if (!address || !position) {
       return NextResponse.json({ error: 'Address and position required' }, { status: 400 });
@@ -23,10 +23,8 @@ export async function POST(request: NextRequest) {
       lastSeen: new Date(),
     };
 
-    // Also update name if provided
-    if (name) {
-      updateFields.name = name;
-    }
+    if (name) updateFields.name = name;
+    if (activity) updateFields.currentAction = activity;
 
     await db.collection('agents').updateOne(
       { address: address.toLowerCase() },
