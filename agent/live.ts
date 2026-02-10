@@ -259,26 +259,8 @@ async function buyPack(): Promise<void> {
       cardCount += minted.length;
     }
 
-    // Register cards in MongoDB via API (so battle system can see them)
-    try {
-      const buyRes = await api('/api/packs/buy', {
-        method: 'POST',
-        body: JSON.stringify({ txHash: tx.hash, price: PACK_PRICE, address: ADDRESS }),
-      });
-      if (buyRes.ok) {
-        const { pack } = await buyRes.json();
-        if (pack?.packId) {
-          const openRes = await api('/api/packs/open', {
-            method: 'POST',
-            body: JSON.stringify({ packId: pack.packId, address: ADDRESS }),
-          });
-          if (openRes.ok) {
-            const { cards } = await openRes.json();
-            console.log(`[${ts()}]    📦 Registered ${cards?.length || 0} cards in DB`);
-          }
-        }
-      }
-    } catch { /* silent — on-chain mint succeeded, DB registration is best-effort */ }
+    // Sync on-chain cards to MongoDB (reads contract data for proper stats)
+    await syncCards();
 
     await logTransaction(tx.hash, 'mint_pack', `Minted ${minted.length} cards for ${PACK_PRICE} MON`);
     await logAction('minting', `Bought pack — got ${minted.join(', ')}`, target.name);
