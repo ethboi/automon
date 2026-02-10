@@ -184,13 +184,13 @@ async function updatePosition(): Promise<void> {
   } catch { /* silent */ }
 }
 
-async function logAction(action: string, reason: string, location: string, reasoning?: string): Promise<void> {
+async function logAction(action: string, reason: string, location: string): Promise<void> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     await api('/api/agents/action', {
       method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, action, reason, location, reasoning: reasoning || reason }),
+      body: JSON.stringify({ address: ADDRESS, action, reason, location, reasoning: reason }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
