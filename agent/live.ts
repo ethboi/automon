@@ -15,6 +15,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 import { ethers } from 'ethers';
+import { decideNextAction } from './strategy';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -126,6 +127,11 @@ let target = pick(LOCATIONS);
 let cardCount = 0;
 let totalMinted = 0;
 let isRunning = true;
+let agentHealth = 100;
+let agentMaxHealth = 100;
+const recentActions: string[] = [];
+const AI_PERSONALITY = process.env.AI_PERSONALITY || 'Curious explorer who loves discovering new areas and collecting rare cards';
+const USE_AI = !!process.env.ANTHROPIC_API_KEY;
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
@@ -171,13 +177,13 @@ async function updatePosition(): Promise<void> {
   } catch { /* silent */ }
 }
 
-async function logAction(action: string, reason: string, location: string): Promise<void> {
+async function logAction(action: string, reason: string, location: string, reasoning?: string): Promise<void> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     await api('/api/agents/action', {
       method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, action, reason, location }),
+      body: JSON.stringify({ address: ADDRESS, action, reason, location, reasoning: reasoning || reason }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -331,13 +337,78 @@ async function tick(): Promise<void> {
     posZ += (dz / dist) * speed;
     // silently moving
   } else {
-    // Arrived — do an action appropriate for this location
-    const locationActions = LOCATION_ACTIONS[target.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
-    const event = pick(locationActions);
-    const reason = pick(event.reasons);
+    // Arrived — decide what to do
+    let action: string;
+    let reason: string;
+    let nextLocationName: string | undefined;
 
-    console.log(`[${ts()}] 📍 ${target.name}: ${event.action} — "${reason}"`);
-    await logAction(event.action, reason, target.name);
+    if (USE_AI) {
+      try {
+        // Fetch current health from server
+        const agentRes = await api(`/api/agents/${ADDRESS}`);
+        if (agentRes.ok) {
+          const data = await agentRes.json();
+          agentHealth = data.agent?.health ?? agentHealth;
+          agentMaxHealth = data.agent?.maxHealth ?? agentMaxHealth;
+        }
+
+        // Get pending battle count
+        let pendingBattles = 0;
+        try {
+          const bRes = await api('/api/battle/list');
+          if (bRes.ok) {
+            const bData = await bRes.json();
+            pendingBattles = (bData.battles || []).filter(
+              (b: { status: string; player1: { address: string } }) =>
+                b.status === 'pending' && b.player1.address.toLowerCase() !== ADDRESS.toLowerCase()
+            ).length;
+          }
+        } catch { /* ignore */ }
+
+        // Get cards for context
+        const cardsRes = await api(`/api/cards?address=${ADDRESS}`);
+        const cardsData = cardsRes.ok ? await cardsRes.json() : { cards: [] };
+
+        const balance = ethers.formatEther(await provider.getBalance(wallet.address));
+
+        const decision = await decideNextAction(
+          target.name,
+          agentHealth,
+          agentMaxHealth,
+          balance,
+          cardsData.cards || [],
+          recentActions,
+          pendingBattles,
+          AI_PERSONALITY,
+        );
+
+        action = decision.action;
+        reason = decision.reasoning || decision.action;
+        nextLocationName = decision.location;
+
+        console.log(`[${ts()}] 🧠 AI: ${target.name} → ${action} — "${reason}"`);
+        if (nextLocationName && nextLocationName !== target.name) {
+          console.log(`[${ts()}]    💭 Next: ${nextLocationName}`);
+        }
+      } catch (err) {
+        console.error(`[${ts()}] ⚠ AI error, falling back:`, (err as Error).message?.slice(0, 60));
+        const locationActions = LOCATION_ACTIONS[target.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
+        const event = pick(locationActions);
+        action = event.action;
+        reason = pick(event.reasons);
+      }
+    } else {
+      const locationActions = LOCATION_ACTIONS[target.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
+      const event = pick(locationActions);
+      action = event.action;
+      reason = pick(event.reasons);
+      console.log(`[${ts()}] 📍 ${target.name}: ${action} — "${reason}"`);
+    }
+
+    // Log the action with reasoning
+    await logAction(action, reason, target.name);
+    recentActions.push(`${action}@${target.name}`);
+    if (recentActions.length > 10) recentActions.shift();
 
     // ~25% chance to buy a pack if we have < 10 cards
     if (cardCount < 10 && Math.random() < 0.25 && NFT_ADDRESS) {
@@ -349,10 +420,16 @@ async function tick(): Promise<void> {
       await tryJoinBattle();
     }
 
-    // Pick new destination (different from current)
-    let next;
-    do { next = pick(LOCATIONS); } while (next.name === target.name);
-    target = next;
+    // Pick next destination — AI-chosen or random
+    if (nextLocationName) {
+      const aiTarget = LOCATIONS.find(l => l.name === nextLocationName);
+      if (aiTarget) { target = aiTarget; }
+      else { let next; do { next = pick(LOCATIONS); } while (next.name === target.name); target = next; }
+    } else {
+      let next;
+      do { next = pick(LOCATIONS); } while (next.name === target.name);
+      target = next;
+    }
     console.log(`[${ts()}]    → heading to ${target.name}`);
   }
 
@@ -370,6 +447,7 @@ async function main() {
   console.log(`  API:      ${API_URL}`);
   console.log(`  NFT:      ${NFT_ADDRESS || 'not set'}`);
   console.log(`  RPC:      ${RPC_URL}`);
+  console.log(`  AI:       ${USE_AI ? '✅ Claude (Anthropic)' : '❌ Random (no API key)'}`);
 
   const balance = ethers.formatEther(await provider.getBalance(wallet.address));
   console.log(`  Balance:  ${parseFloat(balance).toFixed(4)} MON`);
