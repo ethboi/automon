@@ -172,7 +172,14 @@ export function BattleArena({ position, onClick }: BattleArenaProps) {
         </mesh>
       )}
 
-      <LocationLabel icon="⚔️" label="Town Arena" color="#ef4444" />
+      <LocationLabel
+        icon="⚔️"
+        label="Town Arena"
+        color="#ef4444"
+        clickable={!!onClick}
+        hovered={hovered}
+        hint="Click to enter"
+      />
     </group>
   );
 }
