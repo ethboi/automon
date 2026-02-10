@@ -222,9 +222,14 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
                 </div>
 
                 <div className="text-center mb-4">
-                  <img src={getCardImage(currentTurn.player1.activeCard)} alt={currentTurn.player1.activeCard} className="w-20 h-20 mx-auto rounded-lg object-cover mb-2" />
+                  <div className="relative w-28 h-28 mx-auto mb-2">
+                    <img src={getCardImage(currentTurn.player1.activeCard)} alt={currentTurn.player1.activeCard} className="w-full h-full rounded-xl object-cover border-2 border-blue-500/50 shadow-lg shadow-blue-500/20" />
+                  </div>
                   <div className="text-lg font-bold">{currentTurn.player1.activeCard}</div>
-                  <div className="text-sm text-gray-400">
+                  <div className="w-full bg-gray-700 rounded-full h-3 mt-1">
+                    <div className="bg-green-500 h-3 rounded-full transition-all duration-500" style={{ width: `${Math.max(0, Math.min(100, (currentTurn.player1.cardHp / 150) * 100))}%` }} />
+                  </div>
+                  <div className="text-sm text-gray-400 mt-1">
                     HP: {currentTurn.player1.cardHp}
                   </div>
                 </div>
@@ -255,9 +260,14 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
                 </div>
 
                 <div className="text-center mb-4">
-                  <img src={getCardImage(currentTurn.player2.activeCard)} alt={currentTurn.player2.activeCard} className="w-20 h-20 mx-auto rounded-lg object-cover mb-2" />
+                  <div className="relative w-28 h-28 mx-auto mb-2">
+                    <img src={getCardImage(currentTurn.player2.activeCard)} alt={currentTurn.player2.activeCard} className="w-full h-full rounded-xl object-cover border-2 border-green-500/50 shadow-lg shadow-green-500/20" />
+                  </div>
                   <div className="text-lg font-bold">{currentTurn.player2.activeCard}</div>
-                  <div className="text-sm text-gray-400">
+                  <div className="w-full bg-gray-700 rounded-full h-3 mt-1">
+                    <div className="bg-green-500 h-3 rounded-full transition-all duration-500" style={{ width: `${Math.max(0, Math.min(100, (currentTurn.player2.cardHp / 150) * 100))}%` }} />
+                  </div>
+                  <div className="text-sm text-gray-400 mt-1">
                     HP: {currentTurn.player2.cardHp}
                   </div>
                 </div>
