@@ -92,16 +92,20 @@ export default function CollectionPage() {
     <div className="page-container page-transition">
       {/* Page header */}
       <div className="mb-4 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-400/20 rounded-full px-3 py-1 mb-3">
+          <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+          <span className="text-xs font-semibold tracking-wide text-emerald-200 uppercase">Vault</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-2 bg-gradient-to-r from-white via-emerald-100 to-cyan-100 bg-clip-text text-transparent">
           My Collection
         </h1>
-        <p className="text-sm sm:text-base text-gray-400">
+        <p className="text-sm sm:text-base lg:text-lg text-gray-300">
           {cards.length} {cards.length === 1 ? 'card' : 'cards'} collected
         </p>
       </div>
 
       {/* Filters section */}
-      <div className="section-card mb-4 sm:mb-8">
+      <div className="section-card mb-4 sm:mb-8 border border-cyan-400/15 bg-gradient-to-br from-cyan-950/20 via-transparent to-emerald-950/20">
         <div className="flex flex-col lg:flex-row gap-3 sm:gap-6 items-start lg:items-end justify-between">
           <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2 sm:gap-4 items-end w-full sm:w-auto">
             {/* Element filter */}
@@ -153,7 +157,7 @@ export default function CollectionPage() {
           </div>
 
           {/* Results count */}
-          <div className="flex items-center gap-2 glass-light rounded-xl px-3 sm:px-4 py-2">
+          <div className="flex items-center gap-2 glass-light border border-white/10 rounded-xl px-3 sm:px-4 py-2">
             <span className="text-lg sm:text-2xl">🎴</span>
             <div>
               <div className="text-sm sm:text-base text-white font-semibold">{filteredCards.length}</div>
@@ -189,7 +193,7 @@ export default function CollectionPage() {
           {filteredCards.map((card, index) => (
             <div
               key={card._id?.toString() || card.id || index}
-              className="animate-fade-in-up opacity-0"
+              className="animate-fade-in-up opacity-0 rounded-xl p-1 bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 hover:border-cyan-300/40 transition-colors"
               style={{ animationDelay: `${Math.min(index * 0.05, 0.5)}s` }}
             >
               <Card card={card} size="md" />
@@ -200,7 +204,7 @@ export default function CollectionPage() {
 
       {/* Collection stats */}
       {cards.length > 0 && (
-        <div className="section-card mt-4 sm:mt-8">
+        <div className="section-card mt-4 sm:mt-8 border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent">
           <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center gap-2">
             <span className="text-xl sm:text-2xl">📊</span>
             <span>Collection Stats</span>
