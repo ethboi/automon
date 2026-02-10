@@ -124,7 +124,24 @@ export async function GET() {
         status: b.status,
         player1: b.player1?.address,
         player2: b.player2?.address,
+        player1Cards: (b.player1?.cards || []).map((c: { name: string }) => c.name),
+        player2Cards: (b.player2?.cards || []).map((c: { name: string }) => c.name),
         winner: b.winner,
+        wager: b.wager,
+        lastRound: b.rounds?.length
+          ? (() => {
+              const r = b.rounds[b.rounds.length - 1];
+              return {
+                turn: r.turn,
+                player1Move: r.player1Move
+                  ? { action: r.player1Move.action, reasoning: r.player1Move.reasoning || null }
+                  : null,
+                player2Move: r.player2Move
+                  ? { action: r.player2Move.action, reasoning: r.player2Move.reasoning || null }
+                  : null,
+              };
+            })()
+          : null,
         rounds: b.rounds?.length || 0,
         createdAt: b.createdAt,
       })),

@@ -43,7 +43,15 @@ interface BattleData {
   status: string;
   player1: string;
   player2: string | null;
+  player1Cards?: string[];
+  player2Cards?: string[];
   winner: string | null;
+  wager?: string;
+  lastRound?: {
+    turn: number;
+    player1Move?: { action: string; reasoning?: string | null } | null;
+    player2Move?: { action: string; reasoning?: string | null } | null;
+  } | null;
   rounds: number;
   createdAt: string;
 }
@@ -300,6 +308,22 @@ export function WorldUI({
                               <span className="text-xs text-gray-500 italic">waiting for opponent...</span>
                             )}
                           </div>
+                          <div className="text-xs text-gray-500 mt-1">💰 {b.wager || '0'} MON</div>
+                          {(b.player1Cards?.length || b.player2Cards?.length) ? (
+                            <div className="text-xs text-gray-400 mt-0.5 truncate">
+                              🎴 {b.player1Cards?.slice(0, 3).join(', ') || 'No cards'} vs {b.player2Cards?.slice(0, 3).join(', ') || 'No cards'}
+                            </div>
+                          ) : null}
+                          {b.lastRound && (
+                            <div className="text-xs text-gray-400 mt-1 leading-tight">
+                              <div>Turn {b.lastRound.turn}: {p1Name} {b.lastRound.player1Move?.action || '—'} / {p2Name || 'Opponent'} {b.lastRound.player2Move?.action || '—'}</div>
+                              {(b.lastRound.player1Move?.reasoning || b.lastRound.player2Move?.reasoning) && (
+                                <div className="text-gray-500">
+                                  💭 {b.lastRound.player1Move?.reasoning || b.lastRound.player2Move?.reasoning}
+                                </div>
+                              )}
+                            </div>
+                          )}
                           {winnerName && (
                             <div className="text-xs text-yellow-400/80 mt-0.5">🏆 {winnerName} wins!</div>
                           )}
