@@ -106,7 +106,7 @@ function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
       enablePan={true}
       enableZoom={true}
       minDistance={15}
-      maxDistance={120}
+      maxDistance={200}
       maxPolarAngle={Math.PI / 2.5}
       minPolarAngle={Math.PI / 8}
       panSpeed={1.2}
@@ -467,7 +467,7 @@ export function GameWorld() {
   return (
     <div className="relative w-full h-full">
       <Canvas
-        camera={{ fov: 45, position: [0, 40, 45], near: 0.1, far: 1000 }}
+        camera={{ fov: 45, position: [0, 40, 45], near: 0.1, far: 500 }}
         shadows
         style={{ background: '#87CEEB' }}
         gl={{ antialias: true, alpha: false }}

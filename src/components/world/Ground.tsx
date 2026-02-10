@@ -8,7 +8,7 @@ interface GroundProps {
   onClick?: (point: THREE.Vector3) => void;
 }
 
-export function Ground({ size = 80, onClick }: GroundProps) {
+export function Ground({ size = 200, onClick }: GroundProps) {
   const handleContextMenu = (event: { point: THREE.Vector3; stopPropagation: () => void; nativeEvent?: { preventDefault?: () => void } }) => {
     event.stopPropagation();
     event.nativeEvent?.preventDefault?.();
@@ -261,9 +261,114 @@ export function Ground({ size = 80, onClick }: GroundProps) {
         </mesh>
       ))}
 
+      {/* ─── Outer terrain: mountains ─── */}
+      {[
+        // Back mountain range (north)
+        [-60, 0, -75, 18, 14, 16], [-35, 0, -80, 22, 18, 20], [-10, 0, -85, 25, 22, 24],
+        [15, 0, -82, 20, 16, 18], [40, 0, -78, 24, 20, 22], [65, 0, -72, 16, 12, 14],
+        // Right mountain range (east)
+        [80, 0, -50, 14, 11, 13], [85, 0, -25, 18, 15, 16], [82, 0, 0, 16, 13, 14],
+        [78, 0, 25, 12, 10, 11], [84, 0, 50, 15, 12, 14],
+        // Left mountains (west)  
+        [-80, 0, -40, 16, 13, 15], [-85, 0, -15, 20, 16, 18], [-82, 0, 10, 14, 11, 13],
+        [-78, 0, 35, 18, 14, 16],
+        // Far south hills
+        [-50, 0, 75, 12, 9, 11], [-20, 0, 80, 14, 10, 13], [10, 0, 78, 10, 8, 9],
+        [40, 0, 82, 16, 12, 14], [70, 0, 70, 13, 10, 12],
+      ].map(([x, _y, z, r, h, rz], i) => (
+        <group key={`mt-${i}`} position={[x, 0, z]}>
+          {/* Main peak */}
+          <mesh castShadow receiveShadow>
+            <coneGeometry args={[r, h, 8]} />
+            <meshStandardMaterial color={h > 15 ? '#6b7280' : '#7a8a6a'} roughness={0.9} />
+          </mesh>
+          {/* Snow cap on tall peaks */}
+          {h > 14 && (
+            <mesh position={[0, h * 0.38, 0]}>
+              <coneGeometry args={[r * 0.35, h * 0.25, 8]} />
+              <meshStandardMaterial color="#e8e8f0" roughness={0.7} />
+            </mesh>
+          )}
+          {/* Foothills */}
+          <mesh position={[r * 0.6, 0, r * 0.3]} castShadow>
+            <coneGeometry args={[r * 0.5, h * 0.4, 6]} />
+            <meshStandardMaterial color="#5a7a4a" roughness={0.9} />
+          </mesh>
+          <mesh position={[-r * 0.4, 0, -r * 0.5]} castShadow>
+            <coneGeometry args={[rz * 0.4, h * 0.35, 6]} />
+            <meshStandardMaterial color="#4a6a3a" roughness={0.9} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* ─── River winding through outer area ─── */}
+      {[
+        [-70, -50, 4, 0], [-62, -42, 3.5, 0.3], [-54, -35, 4, 0.1],
+        [-46, -28, 3.5, -0.2], [-42, -20, 4, -0.4], [-44, -12, 3.5, -0.3],
+        [-48, -4, 4, -0.1], [-52, 6, 3.5, 0.2], [-56, 14, 4, 0.4],
+        [-58, 22, 3.5, 0.3], [-55, 30, 4, 0.1], [-50, 38, 3.5, -0.2],
+        [-44, 45, 4, -0.4], [-36, 50, 3.5, -0.3], [-28, 54, 4, -0.1],
+      ].map(([x, z, w, _r], i) => (
+        <mesh key={`river-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.02, z]}>
+          <circleGeometry args={[w, 16]} />
+          <meshStandardMaterial color="#2a6db8" transparent opacity={0.7} roughness={0.1} metalness={0.3} />
+        </mesh>
+      ))}
+
+      {/* ─── Outer forest clusters ─── */}
+      {[
+        [55, -45], [60, -40], [58, -48], [52, -42], [65, -35],
+        [-55, -50], [-60, -45], [-50, -55], [-58, -38],
+        [50, 40], [55, 45], [48, 48], [60, 38], [53, 52],
+        [-65, 40], [-60, 45], [-70, 35], [-55, 48],
+        [70, -10], [72, -5], [68, -15], [75, 0],
+        [-70, -25], [-68, -30], [-72, -20],
+      ].map(([x, z], i) => {
+        const h = 2.5 + (i % 3) * 0.8;
+        return (
+          <group key={`oforest-${i}`} position={[x, 0, z]}>
+            <mesh position={[0, h * 0.4, 0]} castShadow>
+              <cylinderGeometry args={[0.15, 0.25, h * 0.8, 5]} />
+              <meshStandardMaterial color="#4a3018" roughness={0.9} />
+            </mesh>
+            <mesh position={[0, h * 0.95, 0]} castShadow>
+              <coneGeometry args={[1.1, h * 0.8, 7]} />
+              <meshStandardMaterial color={i % 2 === 0 ? '#1a5c2a' : '#256b35'} roughness={0.85} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* ─── Scattered boulders in outer area ─── */}
+      {[
+        [55, 0, 8, 1.2], [-60, 0, -20, 1.5], [48, 0, -55, 1.0], [-50, 0, 55, 1.3],
+        [70, 0, 20, 1.8], [-75, 0, 0, 1.4], [30, 0, 60, 1.1], [-40, 0, -60, 1.6],
+        [60, 0, -60, 2.0], [-65, 0, 55, 1.7], [75, 0, -40, 1.3], [-80, 0, 20, 1.5],
+      ].map(([x, _y, z, s], i) => (
+        <group key={`oboulder-${i}`} position={[x, (s as number) * 0.35, z]}>
+          <mesh castShadow>
+            <dodecahedronGeometry args={[s, 1]} />
+            <meshStandardMaterial color={['#7a7e85', '#6a6e75', '#8a8e95'][i % 3]} roughness={0.9} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* ─── Distant grass color variation ─── */}
+      {[
+        [50, 50, 20], [-50, -50, 18], [60, -30, 15], [-40, 60, 22],
+        [0, 70, 25], [0, -70, 20], [70, 0, 18], [-70, 0, 22],
+        [40, -65, 16], [-45, -65, 18], [45, 65, 20], [-55, 60, 16],
+      ].map(([x, z, r], i) => (
+        <mesh key={`outer-grass-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.003, z]}>
+          <circleGeometry args={[r, 16]} />
+          <meshStandardMaterial color={['#2d7528', '#4a9e42', '#358030', '#2a6a22'][i % 4]} transparent opacity={0.5} />
+        </mesh>
+      ))}
+
+      {/* ─── Edge fade ring ─── */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-        <ringGeometry args={[size / 2 - 6, size / 2 + 2, 64]} />
-        <meshStandardMaterial color="#90c090" transparent opacity={0.6} />
+        <ringGeometry args={[size / 2 - 15, size / 2 + 2, 64]} />
+        <meshStandardMaterial color="#5a8a50" transparent opacity={0.7} />
       </mesh>
     </group>
   );
