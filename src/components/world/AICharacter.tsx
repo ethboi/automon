@@ -113,7 +113,7 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
       }}
     >
       {/* Name tag */}
-      <Html position={[0, 3.5, 0]} center>
+      <Html position={[0, 3.5, 0]} center zIndexRange={[1, 0]}>
         <div className={`bg-purple-900/85 px-2.5 py-1 rounded text-xs whitespace-nowrap border border-purple-500/50 ${indicator.color}`}>
           {name} • {indicator.label}
         </div>

@@ -38,6 +38,7 @@ export function LocationLabel({
       center
       distanceFactor={isMobile ? 10 : 14}
       style={{ pointerEvents: 'none' }}
+      zIndexRange={[1, 0]}
     >
       <div
         style={{
