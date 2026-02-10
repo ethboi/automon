@@ -20,12 +20,14 @@ import {
 
 export function initializeBattleCard(card: Card): BattleCard {
   // Handle both formats: nested stats object or flat fields
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const c = card as any;
   const stats = card.stats || {
-    hp: (card as Record<string, unknown>).hp as number || ((card as Record<string, unknown>).attack as number || 30) + ((card as Record<string, unknown>).defense as number || 30),
-    maxHp: (card as Record<string, unknown>).maxHp as number || ((card as Record<string, unknown>).attack as number || 30) + ((card as Record<string, unknown>).defense as number || 30),
-    attack: (card as Record<string, unknown>).attack as number || 30,
-    defense: (card as Record<string, unknown>).defense as number || 30,
-    speed: (card as Record<string, unknown>).speed as number || 20,
+    hp: c.hp || (c.attack || 30) + (c.defense || 30),
+    maxHp: c.maxHp || (c.attack || 30) + (c.defense || 30),
+    attack: c.attack || 30,
+    defense: c.defense || 30,
+    speed: c.speed || 20,
   };
   const ability = card.ability || {
     name: 'Strike',
