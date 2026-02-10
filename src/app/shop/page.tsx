@@ -9,7 +9,7 @@ import { ethers } from 'ethers';
 const PACK_PRICE = process.env.NEXT_PUBLIC_PACK_PRICE || '100000000000000000'; // 0.1 MON
 
 export default function ShopPage() {
-  const { refreshBalance, isAuthenticated, authenticate } = useWallet();
+  const { refreshBalance, address } = useWallet();
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
@@ -34,14 +34,9 @@ export default function ShopPage() {
 
   const buyPack = async () => {
     if (buying) return;
-    if (!isAuthenticated) {
-      try {
-        await authenticate();
-      } catch {
-        setError('Please authenticate your wallet from the header before buying packs.');
-        return;
-      }
-      setError(null);
+    if (!address) {
+      setError('Please connect your wallet first.');
+      return;
     }
     setError(null);
     setBuying(true);
@@ -56,6 +51,7 @@ export default function ShopPage() {
         body: JSON.stringify({
           txHash,
           price: PACK_PRICE,
+          address,
         }),
       });
 
@@ -76,13 +72,9 @@ export default function ShopPage() {
   };
 
   const openPack = async (packId: string) => {
-    if (!isAuthenticated) {
-      try {
-        await authenticate();
-      } catch {
-        setError('Please authenticate your wallet from the header before opening packs.');
-        return;
-      }
+    if (!address) {
+      setError('Please connect your wallet first.');
+      return;
     }
     setError(null);
     try {
@@ -90,7 +82,7 @@ export default function ShopPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ packId }),
+        body: JSON.stringify({ packId, address }),
       });
 
       if (!res.ok) {
