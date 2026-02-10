@@ -230,6 +230,7 @@ export default function Header() {
         {/* Mobile Navigation */}
         {address && mobileMenuOpen && (
           <nav className="lg:hidden py-4 border-t border-white/5 animate-fade-in-up">
+            <p className="text-center text-[10px] font-semibold tracking-[0.16em] uppercase text-cyan-300/60 pb-3">gotta mint em all</p>
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <Link
