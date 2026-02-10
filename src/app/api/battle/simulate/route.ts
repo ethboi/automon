@@ -127,6 +127,9 @@ export async function POST(request: NextRequest) {
       if (battleLog.winner && battleLog.winner !== 'draw') {
         try {
           console.log('Settling battle on-chain...');
+          console.log('ADMIN_PRIVATE_KEY set:', !!process.env.ADMIN_PRIVATE_KEY);
+          console.log('ESCROW_CONTRACT_ADDRESS:', process.env.ESCROW_CONTRACT_ADDRESS);
+          console.log('Winner:', battleLog.winner, 'BattleId:', battleId);
           settleTxHash = await settleBattleOnChain(battleId, battleLog.winner);
           console.log(`Settlement tx: ${settleTxHash}`);
 
