@@ -64,6 +64,7 @@ interface TxData {
   description: string;
   explorerUrl: string;
   timestamp: string;
+  amount?: string | null;
 }
 
 type Tab = 'agents' | 'feed' | 'battles' | 'chain';
@@ -351,7 +352,10 @@ export function WorldUI({
                               <span className="text-sm">{TX_ICONS[tx.type] || '📝'}</span>
                               <span className="text-xs sm:text-sm text-gray-300">{tx.description}</span>
                             </div>
-                            <span className="text-xs text-gray-700">{timeAgo(tx.timestamp)}</span>
+                            <div className="flex items-center gap-2">
+                              {tx.amount && <span className="text-xs font-mono text-emerald-400">{tx.amount} MON</span>}
+                              <span className="text-xs text-gray-700">{timeAgo(tx.timestamp)}</span>
+                            </div>
                           </div>
                           <div className="flex items-center justify-between mt-0.5 sm:mt-1">
                             <span className="text-xs text-cyan-600">{agentName}</span>
