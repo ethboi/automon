@@ -67,7 +67,7 @@ export async function GET(
     const txs = await db.collection('transactions')
       .find({ from: address.toLowerCase() })
       .sort({ timestamp: -1 })
-      .limit(30)
+      .limit(100)
       .toArray();
 
     const cardsCount = cardsData.length;
