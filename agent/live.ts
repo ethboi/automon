@@ -61,14 +61,47 @@ const LOCATIONS = [
   { name: 'Crystal Caves',   x:  20, z:  16 },
 ];
 
-const ACTIONS = [
-  { action: 'exploring', reasons: ['Searching for wild AutoMon', 'Scouting the area', 'Looking for rare spawns'] },
-  { action: 'training', reasons: ['Grinding XP for the team', 'Practicing type matchups', 'Building team synergy'] },
-  { action: 'resting', reasons: ['Team needs to recover', 'Taking a breather', 'Healing up at camp'] },
-  { action: 'battling', reasons: ['Challenged a wild AutoMon!', 'Spotted a rival trainer', 'Arena match started'] },
-  { action: 'catching', reasons: ['Found a rare spawn!', 'Attempting capture', 'Tracking footprints'] },
-  { action: 'trading', reasons: ['Looking for good deals', 'Checking the marketplace', 'Swapping duplicates'] },
-];
+// Actions mapped to appropriate locations
+const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> = {
+  'Starter Town': [
+    { action: 'resting', reasons: ['Taking a breather at home', 'Healing up at camp', 'Reorganizing the team'] },
+    { action: 'exploring', reasons: ['Checking the notice board', 'Looking for quests', 'Chatting with locals'] },
+  ],
+  'Town Arena': [
+    { action: 'battling', reasons: ['Challenged a rival trainer!', 'Arena match started', 'Testing new strategy'] },
+    { action: 'training', reasons: ['Sparring at the arena', 'Practicing type matchups', 'Grinding XP'] },
+  ],
+  'Town Market': [
+    { action: 'trading', reasons: ['Looking for good deals', 'Checking the marketplace', 'Swapping duplicates'] },
+    { action: 'shopping', reasons: ['Buying potions', 'Browsing rare cards', 'Stocking up supplies'] },
+  ],
+  'Community Farm': [
+    { action: 'farming', reasons: ['Tending the crops', 'Harvesting berries', 'Helping at the farm'] },
+    { action: 'resting', reasons: ['Relaxing in the fields', 'Enjoying the countryside', 'Picnic break'] },
+  ],
+  'Green Meadows': [
+    { action: 'catching', reasons: ['Found a rare spawn!', 'Tracking footprints', 'Setting a lure'] },
+    { action: 'exploring', reasons: ['Searching for wild AutoMon', 'Scouting the meadows', 'Looking for rare spawns'] },
+  ],
+  'Old Pond': [
+    { action: 'fishing', reasons: ['Cast a line at the pond', 'Waiting for a bite', 'Caught something shiny!'] },
+    { action: 'catching', reasons: ['Water-type spotted!', 'Something surfaced!', 'Attempting capture'] },
+  ],
+  'Dark Forest': [
+    { action: 'exploring', reasons: ['Venturing into the shadows', 'Following strange sounds', 'Mapping the dark paths'] },
+    { action: 'catching', reasons: ['Dark-type hiding in the trees!', 'Found rare shadow spawn', 'Tracking a Shadewisp'] },
+    { action: 'training', reasons: ['Shadow training session', 'Building courage in the dark', 'Endurance training'] },
+  ],
+  'River Delta': [
+    { action: 'fishing', reasons: ['Fishing at the delta', 'Great spot for water-types', 'River fishing session'] },
+    { action: 'exploring', reasons: ['Following the river upstream', 'Checking the delta banks', 'Searching the shallows'] },
+  ],
+  'Crystal Caves': [
+    { action: 'exploring', reasons: ['Mining for crystals', 'Deep cave expedition', 'Following the glow'] },
+    { action: 'catching', reasons: ['Rare cave spawn detected!', 'Crystal creature spotted', 'Something gleaming ahead'] },
+    { action: 'training', reasons: ['Cave endurance training', 'Meditating by the crystals', 'Power training in the caves'] },
+  ],
+};
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -238,8 +271,9 @@ async function tick(): Promise<void> {
     posZ += (dz / dist) * speed;
     // silently moving
   } else {
-    // Arrived — do something
-    const event = pick(ACTIONS);
+    // Arrived — do an action appropriate for this location
+    const locationActions = LOCATION_ACTIONS[target.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
+    const event = pick(locationActions);
     const reason = pick(event.reasons);
 
     console.log(`[${ts()}] 📍 ${target.name}: ${event.action} — "${reason}"`);
@@ -250,7 +284,7 @@ async function tick(): Promise<void> {
       await buyPack();
     }
 
-    // Pick new destination
+    // Pick new destination (different from current)
     let next;
     do { next = pick(LOCATIONS); } while (next.name === target.name);
     target = next;
