@@ -121,20 +121,24 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-700 p-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">Battle Replay</h2>
-            <p className="text-sm text-gray-400">
-              {battleLog.player1.address.slice(0, 8)}... vs {battleLog.player2.address.slice(0, 8)}...
+      <div className="bg-gray-900/95 backdrop-blur border-b border-gray-700/50 px-3 py-2 sm:p-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
+          {/* Title — hidden on mobile, just show turn counter */}
+          <div className="hidden sm:block min-w-0">
+            <h2 className="text-lg font-bold truncate">Battle Replay</h2>
+            <p className="text-xs text-gray-400 truncate">
+              {battleLog.player1.address.slice(0, 8)}… vs {battleLog.player2.address.slice(0, 8)}…
             </p>
           </div>
+          <span className="sm:hidden text-xs text-gray-400 font-medium shrink-0">
+            Turn {Math.max(0, currentTurnIndex + 1)}/{battleLog.turns.length}
+          </span>
 
-          {/* Playback controls */}
-          <div className="flex items-center gap-4">
+          {/* Playback controls — compact strip */}
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <button
               onClick={restart}
-              className="p-2 hover:bg-gray-700 rounded-lg transition"
+              className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition text-sm sm:text-base"
               title="Restart"
             >
               ⏮️
@@ -142,25 +146,25 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
 
             <button
               onClick={togglePlay}
-              className="px-4 py-1.5 sm:px-6 sm:py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm sm:text-base font-medium transition"
+              className="px-3 py-1.5 sm:px-5 sm:py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition"
             >
               {isPlaying ? '⏸️' : '▶️'}
             </button>
 
             <button
               onClick={skipToEnd}
-              className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition"
+              className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition text-sm sm:text-base"
               title="Skip to end"
             >
               ⏭️
             </button>
 
-            <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-0.5 sm:p-1">
+            <div className="flex items-center bg-gray-800 rounded-lg p-0.5">
               {([1, 2, 4] as PlaybackSpeed[]).map(speed => (
                 <button
                   key={speed}
                   onClick={() => setPlaybackSpeed(speed)}
-                  className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded text-xs sm:text-sm transition ${
+                  className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded text-[10px] sm:text-xs font-medium transition ${
                     playbackSpeed === speed
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-400 hover:text-white'
@@ -171,12 +175,12 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
               ))}
             </div>
 
-            <label className="hidden sm:flex items-center gap-2 text-sm">
+            <label className="hidden sm:flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showReasoning}
                 onChange={e => setShowReasoning(e.target.checked)}
-                className="rounded"
+                className="rounded w-3.5 h-3.5"
               />
               AI
             </label>
@@ -184,7 +188,7 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition"
+                className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition text-sm"
               >
                 ✕
               </button>
