@@ -219,12 +219,13 @@ export default function Card({ card, selected, onClick, showStats = true, size =
         )}
 
         {/* Ability section */}
+        {card.ability && (
         <div className={`border-t ${isLightElement ? 'border-black/10' : 'border-white/10'} pt-2`}>
           <div className={`${s.ability} font-semibold ${isLightElement ? 'text-gray-900' : 'text-white'} mb-0.5`}>
             {card.ability.name}
           </div>
           <div className={`${s.ability} ${isLightElement ? 'text-gray-700' : 'text-white/70'} line-clamp-2`}>
-            {card.ability.description}
+            {(card.ability as unknown as Record<string, string>).description || card.ability.effect}
           </div>
           {isBattleCard && card.ability.currentCooldown !== undefined && card.ability.currentCooldown > 0 && (
             <div className="mt-1 flex items-center gap-1">
@@ -235,6 +236,7 @@ export default function Card({ card, selected, onClick, showStats = true, size =
             </div>
           )}
         </div>
+        )}
 
         {/* Buffs/Debuffs (for battle cards) */}
         {isBattleCard && ((card as BattleCard).buffs.length > 0 || (card as BattleCard).debuffs.length > 0) && (
