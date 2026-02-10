@@ -102,11 +102,19 @@ function WildCreature({ id, species, spawnPosition, onCreatureClick, playerPosit
     <group
       ref={groupRef}
       position={[spawnPosition[0], 0, spawnPosition[1]]}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        onCreatureClick(id);
-      }}
     >
+      {/* Invisible click hitbox — large and easy to click */}
+      <mesh
+        position={[0, 1, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          onCreatureClick(id);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <boxGeometry args={[2, 3, 2]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
       {/* Name label */}
       <Html position={[0, 2.8, 0]} center>
         <div
@@ -205,17 +213,6 @@ export function WildAutoMons({ playerPosition, walletAddress }: WildAutoMonsProp
     if (tameState) return; // busy
     const creature = creatures.find(c => c.id === id && c.alive);
     if (!creature) return;
-
-    // Check if player is close enough
-    if (playerPosition) {
-      const dx = playerPosition.x - creature.spawn[0];
-      const dz = playerPosition.z - creature.spawn[1];
-      const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist > 20) {
-        // Too far — just show a quick hint in the creature label area
-        return;
-      }
-    }
 
     setTameState({ phase: 'confirm', creatureId: id, species: creature.species });
   }, [tameState, creatures, playerPosition]);
