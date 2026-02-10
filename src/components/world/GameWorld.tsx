@@ -37,14 +37,14 @@ interface EventData {
 
 export const WORLD_LOCATIONS = {
   starter_town:   { position: [0, 0, 0] as [number, number, number],      label: 'Starter Town',    icon: '🏠', color: '#f59e0b', variant: 'building' as const, route: '/collection' },
-  town_arena:     { position: [0, 0, -20] as [number, number, number],     label: 'Town Arena',      icon: '⚔️', color: '#ef4444', variant: 'building' as const, route: '/battle' },
-  town_market:    { position: [18, 0, 0] as [number, number, number],      label: 'Town Market',     icon: '🏪', color: '#f97316', variant: 'building' as const, route: '/shop' },
-  community_farm: { position: [-18, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
-  green_meadows:  { position: [-14, 0, -18] as [number, number, number],   label: 'Green Meadows',   icon: '🌿', color: '#22c55e', variant: 'nature' as const,   route: null },
-  old_pond:       { position: [-22, 0, -18] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
-  dark_forest:    { position: [-24, 0, 14] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'dark' as const,     route: null },
-  river_delta:    { position: [22, 0, -16] as [number, number, number],    label: 'River Delta',     icon: '🏞️', color: '#06b6d4', variant: 'water' as const,    route: null },
-  crystal_caves:  { position: [20, 0, 16] as [number, number, number],     label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'dark' as const,     route: null },
+  town_arena:     { position: [0, 0, -30] as [number, number, number],     label: 'Town Arena',      icon: '⚔️', color: '#ef4444', variant: 'building' as const, route: '/battle' },
+  town_market:    { position: [28, 0, 0] as [number, number, number],      label: 'Town Market',     icon: '🏪', color: '#f97316', variant: 'building' as const, route: '/shop' },
+  community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
+  green_meadows:  { position: [-20, 0, -26] as [number, number, number],   label: 'Green Meadows',   icon: '🌿', color: '#22c55e', variant: 'nature' as const,   route: null },
+  old_pond:       { position: [-34, 0, -26] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
+  dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'dark' as const,     route: null },
+  river_delta:    { position: [34, 0, -24] as [number, number, number],    label: 'River Delta',     icon: '🏞️', color: '#06b6d4', variant: 'water' as const,    route: null },
+  crystal_caves:  { position: [32, 0, 24] as [number, number, number],     label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'dark' as const,     route: null },
 };
 
 const INTERACTION_DISTANCE = 5;
@@ -60,9 +60,9 @@ function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
   useEffect(() => {
     const isMobile = size.width < 768;
     if (isMobile) {
-      camera.position.set(0, 65, 50);
+      camera.position.set(0, 90, 70);
     } else {
-      camera.position.set(0, 50, 55);
+      camera.position.set(0, 75, 80);
     }
     currentLookAt.current.set(0, 0, -5);
     camera.lookAt(0, 0, -5);
@@ -141,13 +141,13 @@ function Scene({
 
   return (
     <>
-      <color attach="background" args={['#1a2540']} />
+      <color attach="background" args={['#2a3a5c']} />
       <CameraController flyTarget={cameraFlyTarget} />
 
       {/* Fog for depth */}
-      <fog attach="fog" args={['#1a2540', 80, 150]} />
+      <fog attach="fog" args={['#2a3a5c', 120, 220]} />
 
-      <ambientLight intensity={0.8} />
+      <ambientLight intensity={1.1} />
       <hemisphereLight args={['#c8e8ff', '#2a4a30', 0.6]} />
       <directionalLight
         position={[15, 25, 15]}
@@ -167,7 +167,7 @@ function Scene({
       <pointLight position={[-18, 5, 0]} intensity={0.8} color="#84cc16" distance={30} />
       <pointLight position={[20, 5, 16]} intensity={0.8} color="#a78bfa" distance={30} />
 
-      <Ground size={80} onClick={onGroundClick} />
+      <Ground size={140} onClick={onGroundClick} />
 
       <BattleArena
         position={WORLD_LOCATIONS.town_arena.position}
