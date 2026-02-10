@@ -9,8 +9,9 @@ interface GroundProps {
 }
 
 export function Ground({ size = 80, onClick }: GroundProps) {
-  const handleClick = (event: { point: THREE.Vector3; stopPropagation: () => void }) => {
+  const handleContextMenu = (event: { point: THREE.Vector3; stopPropagation: () => void; nativeEvent?: { preventDefault?: () => void } }) => {
     event.stopPropagation();
+    event.nativeEvent?.preventDefault?.();
     if (onClick) onClick(event.point);
   };
 
@@ -27,7 +28,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
   return (
     <group>
       {/* Main ground — dark rich green */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow onClick={handleClick}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow onContextMenu={handleContextMenu}>
         <planeGeometry args={[size, size]} />
         <meshStandardMaterial color="#2a4a30" roughness={0.9} />
       </mesh>

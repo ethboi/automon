@@ -122,6 +122,7 @@ function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
 function Scene({
   onLocationClick,
   onGroundClick,
+  onCameraFly,
   targetPosition,
   onCharacterMove,
   onlineAgents,
@@ -132,6 +133,7 @@ function Scene({
 }: {
   onLocationClick: (route: string) => void;
   onGroundClick: (point: THREE.Vector3) => void;
+  onCameraFly: (point: THREE.Vector3) => void;
   targetPosition: THREE.Vector3 | null;
   onCharacterMove: (position: THREE.Vector3) => void;
   onlineAgents: OnlineAgent[];
@@ -192,7 +194,7 @@ function Scene({
             variant={loc.variant}
             onClick={() => {
               // Fly camera to this location
-              onGroundClick(new THREE.Vector3(...loc.position));
+              onCameraFly(new THREE.Vector3(...loc.position));
               // If it has a route, navigate after a brief delay
               if (loc.route) {
                 setTimeout(() => onLocationClick(loc.route!), 800);
@@ -305,8 +307,12 @@ export function GameWorld() {
   }, []);
 
   const handleLocationClick = useCallback((route: string) => { router.push(route); }, [router]);
+  // Right-click on ground moves the character
   const handleGroundClick = useCallback((point: THREE.Vector3) => {
     setTargetPosition(point);
+  }, []);
+
+  const handleCameraFly = useCallback((point: THREE.Vector3) => {
     setCameraFlyTarget(point.clone());
   }, []);
 
@@ -341,11 +347,13 @@ export function GameWorld() {
         shadows
         style={{ background: '#1a2540' }}
         gl={{ antialias: true, alpha: false }}
+        onContextMenu={(e) => e.preventDefault()}
       >
         <Suspense fallback={null}>
           <Scene
             onLocationClick={handleLocationClick}
             onGroundClick={handleGroundClick}
+            onCameraFly={handleCameraFly}
             targetPosition={targetPosition}
             onCharacterMove={handleCharacterMove}
             onlineAgents={onlineAgents}
