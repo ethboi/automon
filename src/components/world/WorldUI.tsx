@@ -346,14 +346,16 @@ export function WorldUI({
                     {transactions.slice(0, 20).map((tx, i) => {
                       const agentName = onlineAgents.find(a => a.address?.toLowerCase() === tx.from?.toLowerCase())?.name || shortAddr(tx.from);
                       return (
-                        <div key={i} className="bg-white/[0.02] rounded-lg px-2 py-1.5 sm:px-2.5 sm:py-2 hover:bg-white/[0.04] transition-colors">
+                        <div key={i} className={`rounded-lg px-2 py-1.5 sm:px-2.5 sm:py-2 transition-colors ${
+                          tx.type === 'battle_settle' ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-white/[0.02] hover:bg-white/[0.04]'
+                        }`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 sm:gap-1.5">
                               <span className="text-sm">{TX_ICONS[tx.type] || '📝'}</span>
-                              <span className="text-xs sm:text-sm text-gray-300">{tx.description}</span>
+                              <span className={`text-xs sm:text-sm ${tx.type === 'battle_settle' ? 'text-emerald-300 font-medium' : 'text-gray-300'}`}>{tx.description}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              {tx.amount && <span className="text-xs font-mono text-emerald-400">{tx.amount} MON</span>}
+                              {tx.amount && <span className={`text-xs font-mono ${tx.type === 'battle_settle' ? 'text-emerald-400 font-bold' : 'text-emerald-400'}`}>{tx.amount} MON</span>}
                               <span className="text-xs text-gray-700">{timeAgo(tx.timestamp)}</span>
                             </div>
                           </div>
