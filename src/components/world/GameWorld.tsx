@@ -44,7 +44,7 @@ export const WORLD_LOCATIONS = {
   community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
   old_pond:       { position: [-36, 0, -14] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
   dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'dark' as const,     route: null },
-  crystal_caves:  { position: [32, 0, 24] as [number, number, number],     label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'nature' as const,     route: null },
+  crystal_caves:  { position: [32, -0.6, 24] as [number, number, number],  label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'dark' as const,       route: null },
 };
 
 const INTERACTION_DISTANCE = 5;
@@ -817,6 +817,7 @@ export function GameWorld() {
       <WorldUI
         nearbyBuilding={nearbyBuilding}
         onEnterBuilding={handleEnterBuilding}
+        walletAddress={address}
         onlineAgents={onlineAgents}
         events={events}
         totalBattles={totalBattles}
