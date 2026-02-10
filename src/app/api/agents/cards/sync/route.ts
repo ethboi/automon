@@ -55,69 +55,74 @@ export async function POST(request: NextRequest) {
     const db = await getDb();
     const cards: Card[] = [];
 
-    for (const tokenId of tokenIds) {
-      // Check if card already exists in DB
-      const existing = await db.collection('cards').findOne({ tokenId: Number(tokenId) });
-      if (existing) {
-        cards.push(existing as unknown as Card);
-        continue;
+    // Check which tokens already exist in DB
+    const existingCards = await db.collection('cards').find({
+      tokenId: { $in: tokenIds.map(Number) }
+    }).toArray();
+    const existingTokenIds = new Set(existingCards.map(c => c.tokenId));
+    cards.push(...existingCards as unknown as Card[]);
+
+    // Filter to only new tokens
+    const newTokenIds = tokenIds.filter((id: number) => !existingTokenIds.has(Number(id)));
+
+    if (newTokenIds.length > 0) {
+      // Fetch all new cards from chain in parallel (batch of 10)
+      const ownerAddress = session.address.toLowerCase();
+      const BATCH = 10;
+      for (let i = 0; i < newTokenIds.length; i += BATCH) {
+        const batch = newTokenIds.slice(i, i + BATCH);
+        const results = await Promise.all(
+          batch.map(async (tokenId: number) => {
+            try {
+              const [automonId, rarityIndex] = await contract.getCard(tokenId);
+              return { tokenId: Number(tokenId), automonId: Number(automonId), rarityNum: Number(rarityIndex) };
+            } catch { return null; }
+          })
+        );
+
+        const newCards: Card[] = [];
+        for (const r of results) {
+          if (!r) continue;
+          const automon = AUTOMONS.find(a => a.id === r.automonId);
+          if (!automon) continue;
+
+          const rarity = RARITY_NAMES[r.rarityNum] || 'common';
+          const multiplier = RARITY_MULTIPLIERS[rarity];
+          const hp = Math.floor(automon.baseHp * multiplier);
+          const abilityDef = ABILITY_DEFINITIONS[automon.ability] || {
+            effect: 'damage' as const, power: 30, cooldown: 3,
+            description: `${automon.name}'s special ability`,
+          };
+
+          newCards.push({
+            id: uuidv4(),
+            tokenId: r.tokenId,
+            automonId: r.automonId,
+            owner: ownerAddress,
+            name: automon.name,
+            element: automon.element,
+            rarity,
+            stats: {
+              attack: Math.floor(automon.baseAttack * multiplier),
+              defense: Math.floor(automon.baseDefense * multiplier),
+              speed: Math.floor(automon.baseSpeed * multiplier),
+              hp, maxHp: hp,
+            },
+            ability: {
+              name: automon.ability, effect: abilityDef.effect,
+              power: Math.floor(abilityDef.power * multiplier),
+              cooldown: abilityDef.cooldown, description: abilityDef.description,
+              currentCooldown: 0,
+            },
+            level: 1, xp: 0, packId: `nft-${r.tokenId}`, createdAt: new Date(),
+          });
+        }
+
+        if (newCards.length > 0) {
+          await db.collection('cards').insertMany(newCards);
+          cards.push(...newCards);
+        }
       }
-
-      // Fetch from contract
-      const [automonId, rarityIndex] = await contract.getCard(tokenId);
-      const owner = await contract.ownerOf(tokenId);
-
-      const automonIdNum = Number(automonId);
-      const rarityNum = Number(rarityIndex);
-
-      const automon = AUTOMONS.find(a => a.id === automonIdNum);
-      if (!automon) {
-        console.error(`AutoMon ID ${automonIdNum} not found`);
-        continue;
-      }
-
-      const rarity = RARITY_NAMES[rarityNum] || 'common';
-      const multiplier = RARITY_MULTIPLIERS[rarity];
-
-      const hp = Math.floor(automon.baseHp * multiplier);
-      const abilityDef = ABILITY_DEFINITIONS[automon.ability] || {
-        effect: 'damage' as const,
-        power: 30,
-        cooldown: 3,
-        description: `${automon.name}'s special ability`,
-      };
-
-      const card: Card = {
-        id: uuidv4(),
-        tokenId: Number(tokenId),
-        automonId: automonIdNum,
-        owner: owner.toLowerCase(),
-        name: automon.name,
-        element: automon.element,
-        rarity,
-        stats: {
-          attack: Math.floor(automon.baseAttack * multiplier),
-          defense: Math.floor(automon.baseDefense * multiplier),
-          speed: Math.floor(automon.baseSpeed * multiplier),
-          hp,
-          maxHp: hp,
-        },
-        ability: {
-          name: automon.ability,
-          effect: abilityDef.effect,
-          power: Math.floor(abilityDef.power * multiplier),
-          cooldown: abilityDef.cooldown,
-          description: abilityDef.description,
-          currentCooldown: 0,
-        },
-        level: 1,
-        xp: 0,
-        packId: `nft-${tokenId}`,
-        createdAt: new Date(),
-      };
-
-      await db.collection('cards').insertOne(card);
-      cards.push(card);
     }
 
     return NextResponse.json({ cards, synced: cards.length });
