@@ -111,15 +111,27 @@ export function WorldUI({
   return (
     <div className="absolute inset-0 pointer-events-none">
 
-      {/* ─── Controls (desktop) ─── */}
-      <div className="absolute top-16 right-4 pointer-events-auto hidden lg:block">
-        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/5 text-[10px] text-gray-500">
-          {['W','A','S','D'].map(k => (
-            <kbd key={k} className="w-4 h-4 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold text-gray-400 border border-white/10">{k}</kbd>
-          ))}
-          <span>Move</span>
-          <span className="mx-1 text-gray-700">|</span>
-          <span>🖱️ Click</span>
+      {/* ─── Controls Legend ─── */}
+      <div className="absolute top-16 right-4 pointer-events-auto hidden sm:block">
+        <div className="bg-black/60 backdrop-blur-md rounded-xl px-4 py-3 border border-white/10 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <span className="text-gray-500 w-20">🖱️ Left</span>
+            <span>Pan / Rotate</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <span className="text-gray-500 w-20">🖱️ Right</span>
+            <span>Move Character</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <span className="text-gray-500 w-20">🖱️ Scroll</span>
+            <span>Zoom</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <span className="text-gray-500 w-20">
+              <kbd className="px-1 py-0.5 bg-white/10 rounded text-[10px] font-bold border border-white/10">E</kbd>
+            </span>
+            <span>Enter Building</span>
+          </div>
         </div>
       </div>
 
@@ -128,17 +140,17 @@ export function WorldUI({
         {!panelOpen ? (
           <button
             onClick={() => setPanelOpen(true)}
-            className="flex items-center gap-1.5 sm:gap-2 bg-black/70 backdrop-blur-md rounded-full px-2.5 py-1.5 sm:px-4 sm:py-2.5 border border-white/10 hover:border-purple-500/30 transition-all shadow-xl hover:shadow-purple-500/10 active:scale-95"
+            className="flex items-center gap-2.5 bg-black/70 backdrop-blur-md rounded-full px-5 py-3 border border-white/10 hover:border-purple-500/30 transition-all shadow-xl hover:shadow-purple-500/10 active:scale-95"
           >
-            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-[10px] sm:text-xs font-medium text-gray-300">{onlineCount}</span>
-            <span className="text-gray-700">·</span>
-            <span className="text-[10px] sm:text-xs text-gray-500">📡</span>
-            <span className="text-gray-700">·</span>
-            <span className="text-[10px] sm:text-xs text-gray-500">⛓️</span>
+            <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-sm font-medium text-gray-300">{onlineCount} online</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-sm text-gray-400">📡 Live</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-sm text-gray-400">⛓️ Chain</span>
           </button>
         ) : (
-          <div className="w-[calc(100vw-24px)] sm:w-[340px] max-h-[60vh] sm:max-h-[70vh] bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in flex flex-col">
+          <div className="w-[calc(100vw-24px)] sm:w-[420px] max-h-[70vh] sm:max-h-[75vh] bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in flex flex-col">
             {/* Tabs */}
             <div className="flex items-center border-b border-white/5 flex-shrink-0">
               {([
@@ -149,7 +161,7 @@ export function WorldUI({
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[10px] sm:text-xs font-semibold transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-xs sm:text-sm font-semibold transition-colors ${
                     tab === t.id ? 'text-white bg-white/5 border-b-2 border-purple-500' : 'text-gray-600 hover:text-gray-400'
                   }`}
                 >
@@ -276,35 +288,6 @@ export function WorldUI({
         )}
       </div>
 
-      {/* ─── Minimap (desktop) ─── */}
-      <div className="absolute bottom-4 left-4 pointer-events-auto hidden md:block">
-        <div className="bg-black/50 backdrop-blur-sm rounded-xl p-2 border border-white/5">
-          <div className="relative w-28 h-28 rounded-lg overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-green-900/40" />
-            <div className="absolute inset-0 opacity-15" style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-              backgroundSize: '14px 14px'
-            }} />
-            {Object.entries(WORLD_LOCATIONS).map(([key, loc]) => {
-              const mx = 50 + (loc.position[0] / 30) * 40;
-              const mz = 50 + (loc.position[2] / 30) * 40;
-              return (
-                <div key={key} className="absolute w-2 h-2 rounded-full" style={{
-                  left: `${mx}%`, top: `${mz}%`,
-                  transform: 'translate(-50%, -50%)',
-                  backgroundColor: loc.color,
-                  boxShadow: `0 0 4px ${loc.color}60`,
-                }} title={loc.label} />
-              );
-            })}
-            <div className="absolute w-2.5 h-2.5 rounded-full" style={{ left: '50%', top: '60%', transform: 'translate(-50%, -50%)' }}>
-              <div className="absolute inset-0 bg-purple-500 rounded-full animate-ping opacity-60" />
-              <div className="relative w-full h-full bg-purple-400 rounded-full border border-white/50" />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ─── Branding ─── */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 sm:bottom-3 pointer-events-none">
         <div className="text-[8px] sm:text-[9px] text-gray-700 tracking-wider uppercase">
@@ -338,14 +321,4 @@ function Empty({ text, hint }: { text: string; hint?: string }) {
   );
 }
 
-const WORLD_LOCATIONS = {
-  starter_town:   { position: [0, 0, 0],      color: '#f59e0b', label: 'Starter Town' },
-  town_arena:     { position: [0, 0, -20],     color: '#ef4444', label: 'Town Arena' },
-  town_market:    { position: [18, 0, 0],      color: '#f97316', label: 'Town Market' },
-  community_farm: { position: [-18, 0, 0],     color: '#84cc16', label: 'Community Farm' },
-  green_meadows:  { position: [-14, 0, -18],   color: '#22c55e', label: 'Green Meadows' },
-  old_pond:       { position: [-22, 0, -18],   color: '#3b82f6', label: 'Old Pond' },
-  dark_forest:    { position: [-24, 0, 14],    color: '#7c3aed', label: 'Dark Forest' },
-  river_delta:    { position: [22, 0, -16],    color: '#06b6d4', label: 'River Delta' },
-  crystal_caves:  { position: [20, 0, 16],     color: '#a78bfa', label: 'Crystal Caves' },
-};
+// Minimap removed
