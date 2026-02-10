@@ -59,7 +59,7 @@ export function LocationLabel({ icon, label, color }: { icon: string; label: str
 
 export function LocationMarker({ position, label, icon, color, onClick, variant = 'nature' }: LocationMarkerProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const glowRef = useRef<THREE.Mesh>(null);
+  // glowRef removed
   const waterRef = useRef<THREE.Mesh>(null);
   const orbRefs = useRef<(THREE.Mesh | null)[]>([]);
   const smokeRefs = useRef<(THREE.Mesh | null)[]>([]);
