@@ -12,6 +12,7 @@ interface WorldUIProps {
   transactions?: TxData[];
   totalBattles?: number;
   totalCards?: number;
+  battles?: BattleData[];
 }
 
 interface OnlineAgent {
@@ -37,6 +38,16 @@ interface EventData {
   timestamp: string;
 }
 
+interface BattleData {
+  id: string;
+  status: string;
+  player1: string;
+  player2: string | null;
+  winner: string | null;
+  rounds: number;
+  createdAt: string;
+}
+
 interface TxData {
   txHash: string;
   type: string;
@@ -46,7 +57,7 @@ interface TxData {
   timestamp: string;
 }
 
-type Tab = 'agents' | 'feed' | 'chain' | 'chat';
+type Tab = 'agents' | 'feed' | 'battles' | 'chain';
 
 function timeAgo(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -91,7 +102,7 @@ const TX_ICONS: Record<string, string> = {
 
 export function WorldUI({
   nearbyBuilding, onEnterBuilding, onSelectAgent, onFlyToAgent,
-  onlineAgents = [], events = [], transactions = [],
+  onlineAgents = [], events = [], transactions = [], battles = [],
   totalBattles: _totalBattles = 0, totalCards: _totalCards = 0,
 }: WorldUIProps) {
   const [tab, setTab] = useState<Tab>('agents');
@@ -147,7 +158,7 @@ export function WorldUI({
             <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
             <span className="text-sm font-medium text-gray-300">{onlineCount} online</span>
             <span className="text-gray-600">|</span>
-            <span className="text-sm text-gray-400">📡 💬 ⛓️</span>
+            <span className="text-sm text-gray-400">📡 ⚔️ ⛓️</span>
           </button>
         ) : (
           <div className="w-[calc(100vw-24px)] sm:w-[420px] max-h-[70vh] sm:max-h-[75vh] bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in flex flex-col">
@@ -156,7 +167,7 @@ export function WorldUI({
               {([
                 { id: 'agents' as Tab, label: '🤖', count: onlineCount },
                 { id: 'feed' as Tab, label: '📡', count: events.length },
-                { id: 'chat' as Tab, label: '💬', count: 0 },
+                { id: 'battles' as Tab, label: '⚔️', count: battles.length },
                 { id: 'chain' as Tab, label: '⛓️', count: transactions.length },
               ]).map(t => (
                 <button
@@ -258,9 +269,45 @@ export function WorldUI({
                 )
               )}
 
-              {/* Chat Tab */}
-              {tab === 'chat' && (
-                <Empty text="Agent chat coming soon..." hint="Agents will chat here" />
+              {/* Battles Tab */}
+              {tab === 'battles' && (
+                battles.length === 0 ? (
+                  <Empty text="No battles yet" />
+                ) : (
+                  <div className="space-y-1">
+                    {battles.slice(0, 15).map((b) => {
+                      const p1Name = onlineAgents.find(a => a.address?.toLowerCase() === b.player1?.toLowerCase())?.name || shortAddr(b.player1);
+                      const p2Name = b.player2 ? (onlineAgents.find(a => a.address?.toLowerCase() === b.player2?.toLowerCase())?.name || shortAddr(b.player2)) : null;
+                      const winnerName = b.winner ? (onlineAgents.find(a => a.address?.toLowerCase() === b.winner?.toLowerCase())?.name || shortAddr(b.winner)) : null;
+                      const statusColor = b.status === 'complete' ? 'text-green-400' : b.status === 'active' ? 'text-yellow-400 animate-pulse' : 'text-gray-400';
+                      const statusIcon = b.status === 'complete' ? '✅' : b.status === 'active' ? '⚡' : '⏳';
+                      return (
+                        <div key={b.id} className="bg-white/[0.02] rounded-lg px-2 py-2 hover:bg-white/[0.04] transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm">{statusIcon}</span>
+                              <span className={`text-[10px] font-semibold ${statusColor}`}>{b.status.toUpperCase()}</span>
+                              {b.rounds > 0 && <span className="text-[9px] text-gray-600">{b.rounds} rounds</span>}
+                            </div>
+                            <span className="text-[9px] text-gray-700">{timeAgo(b.createdAt)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className={`text-xs font-semibold ${b.winner?.toLowerCase() === b.player1?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
+                            <span className="text-[10px] text-gray-600">vs</span>
+                            {p2Name ? (
+                              <span className={`text-xs font-semibold ${b.winner?.toLowerCase() === b.player2?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p2Name}</span>
+                            ) : (
+                              <span className="text-[10px] text-gray-500 italic">waiting for opponent...</span>
+                            )}
+                          </div>
+                          {winnerName && (
+                            <div className="text-[10px] text-yellow-400/80 mt-0.5">🏆 {winnerName} wins!</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
               )}
 
               {/* Chain Tab */}
