@@ -547,11 +547,12 @@ ${locationList}
 - Crystal Caves: exploring, foraging
 
 ## DECISION GUIDELINES
-- Below 30 HP: prioritize healing (farm or fish)
-- If no cards: go to Town Market or buy packs
-- If battles are pending and health is good: consider the Arena
-- Vary your behavior — don't repeat the same action endlessly
-- Sometimes create battles at the Arena (pick a wager 0.01-0.05 MON based on confidence)
+- PRIORITY: If health > 50 HP and you have 3+ cards, go to Town Arena and battle! Battles are the main activity.
+- Try to battle at LEAST every 2-3 actions. Don't just explore endlessly.
+- Below 30 HP: heal first (farm or fish), then get back to battling
+- If no cards: go to Town Market or buy packs, then battle
+- Pick wagers between 0.01-0.05 MON based on confidence
+- Vary non-battle actions — explore, fish, farm between fights
 - Show personality — be curious, strategic, sometimes bold
 
 Respond with JSON only:
