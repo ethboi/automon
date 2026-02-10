@@ -251,7 +251,7 @@ async function logTransaction(txHash: string, type: string, description: string)
   } catch { /* silent */ }
 }
 
-async function buyPack(): Promise<void> {
+async function buyPack(aiReason?: string): Promise<void> {
   if (!NFT_ADDRESS) {
     console.log(`[${ts()}]    ⚠ No NFT contract address configured`);
     return;
@@ -292,7 +292,7 @@ async function buyPack(): Promise<void> {
     await syncCards();
 
     await logTransaction(tx.hash, 'mint_pack', `Minted ${minted.length} cards for ${PACK_PRICE} MON`);
-    await logAction('minting', `Bought pack — got ${minted.join(', ')}`, target.name, pendingAction?.reason);
+    await logAction('minting', `Bought pack — got ${minted.join(', ')}`, target.name, aiReason);
   } catch (err) {
     console.error(`[${ts()}]    ❌ Pack buy failed:`, (err as Error).message?.slice(0, 80));
   }
@@ -434,7 +434,7 @@ async function trySettleBattle(battleId: string, winner: string): Promise<void> 
   }
 }
 
-async function tryJoinBattle(): Promise<boolean> {
+async function tryJoinBattle(aiReason?: string): Promise<boolean> {
   try {
     // Check for pending battles we can join
     const res = await api('/api/battle/list');
@@ -519,10 +519,10 @@ async function tryJoinBattle(): Promise<boolean> {
         console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
         lastBattleTime = Date.now();
         await trySettleBattle(openBattle.battleId, data.winner);
-        await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', pendingAction?.reason);
+        await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
       } else {
         console.log(`[${ts()}]   ✅ Cards selected, waiting for simulation`);
-        await logAction('battling', `Joined battle vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', pendingAction?.reason);
+        await logAction('battling', `Joined battle vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
       }
       return true;
     }
@@ -533,7 +533,7 @@ async function tryJoinBattle(): Promise<boolean> {
   }
 }
 
-async function createAndWaitForBattle(aiWager?: string): Promise<void> {
+async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Promise<void> {
   try {
     // Check if we already have a pending/active battle
     const myBattlesRes = await api(`/api/battle/list?address=${ADDRESS}&status=pending,active`);
@@ -573,7 +573,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
     const { battle } = await res.json();
     const battleId = battle.battleId;
 
-    await logAction('battling', `Created battle (${wager} MON wager) — waiting for opponent...`, 'Town Arena', pendingAction?.reason);
+    await logAction('battling', `Created battle (${wager} MON wager) — waiting for opponent...`, 'Town Arena', aiReason);
 
     // Select our cards immediately
     const cardsRes = await api(`/api/cards?address=${ADDRESS}`);
@@ -626,7 +626,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
             console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
         lastBattleTime = Date.now();
             await trySettleBattle(battleId, data.battle.winner);
-            await logAction('battling', `Battle ${result}!`, 'Town Arena', pendingAction?.reason);
+            await logAction('battling', `Battle ${result}!`, 'Town Arena', aiReason);
             return;
           }
           if (data.battle?.status === 'active') {
@@ -641,7 +641,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
                 console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
         lastBattleTime = Date.now();
                 await trySettleBattle(battleId, finalData.battle.winner);
-                await logAction('battling', `Battle ${result}!`, 'Town Arena', pendingAction?.reason);
+                await logAction('battling', `Battle ${result}!`, 'Town Arena', aiReason);
               }
             }
             return;
@@ -652,7 +652,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
       }
     }
     console.log(`[${ts()}]   ⏰ No opponent joined after 2 min — moving on`);
-    await logAction('battling', 'Battle expired — no opponent joined', 'Town Arena', pendingAction?.reason);
+    await logAction('battling', 'Battle expired — no opponent joined', 'Town Arena', aiReason);
     lastBattleTime = Date.now();
   } catch (err) {
     console.error(`[${ts()}] Create battle error:`, (err as Error).message?.slice(0, 80));
@@ -684,11 +684,12 @@ async function tick(): Promise<void> {
 
     // If shopping at market, buy a pack
     if ((pendingAction.action === 'shopping' || pendingAction.action === 'trading') && target.name === 'Shop') {
-      await logAction(pendingAction.action, pendingAction.reason, target.name);
+      const shopReason = pendingAction.reason;
+      await logAction(pendingAction.action, pendingAction.reason, target.name, pendingAction.reason);
       recentActions.push(`${pendingAction.action}@${target.name}`);
       if (recentActions.length > 10) recentActions.shift();
       pendingAction = null;
-      await buyPack();
+      await buyPack(shopReason);
       dwellTicks = DWELL_MIN + Math.floor(Math.random() * (DWELL_MAX - DWELL_MIN));
       return;
     }
@@ -707,21 +708,22 @@ async function tick(): Promise<void> {
         return;
       }
       const battleWager = pendingAction.wager;
-      await logAction(pendingAction.action, pendingAction.reason, target.name);
+      const battleReason = pendingAction.reason;
+      await logAction(pendingAction.action, pendingAction.reason, target.name, pendingAction.reason);
       recentActions.push(`${pendingAction.action}@${target.name}`);
       if (recentActions.length > 10) recentActions.shift();
       pendingAction = null;
       // Try joining an existing battle first
-      const joined = await tryJoinBattle();
+      const joined = await tryJoinBattle(battleReason);
       if (!joined) {
         // Random delay 2-6s so agents don't all create at once
         const delay = 2000 + Math.random() * 4000;
         console.log(`[${ts()}] ⏳ No open battles, waiting ${(delay/1000).toFixed(1)}s before creating...`);
         await new Promise(r => setTimeout(r, delay));
         // Check again after delay — someone else might have created
-        const joined2 = await tryJoinBattle();
+        const joined2 = await tryJoinBattle(battleReason);
         if (!joined2) {
-          await createAndWaitForBattle(battleWager);
+          await createAndWaitForBattle(battleWager, battleReason);
         }
       }
       // After battle (or timeout), continue normally — no extra dwell
@@ -768,7 +770,7 @@ async function tick(): Promise<void> {
 
     // Always check for open battles if we have enough cards
     if (cardCount >= 3) {
-      await tryJoinBattle();
+      await tryJoinBattle('Spotted an open battle and jumped in to test my deck');
     }
 
     // Now decide NEXT move — where to go and what to do there
