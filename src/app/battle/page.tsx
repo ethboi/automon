@@ -78,13 +78,12 @@ export default function BattlePage() {
         body: JSON.stringify({ wager: wagerAmount, txHash, address }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || 'Failed to create battle');
       }
 
-      const { battle } = await res.json();
-      setCurrentBattle(battle);
+      setCurrentBattle(data.battle);
       setView('select-cards');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
@@ -102,13 +101,12 @@ export default function BattlePage() {
         body: JSON.stringify({ battleId, txHash, address }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || 'Failed to join battle');
       }
 
-      const { battle } = await res.json();
-      setCurrentBattle(battle);
+      setCurrentBattle(data.battle);
       setView('select-cards');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
@@ -133,12 +131,10 @@ export default function BattlePage() {
         }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || 'Failed to select cards');
       }
-
-      const data = await res.json();
       setCurrentBattle(data.battle);
 
       // If simulation completed, show the replay
@@ -186,12 +182,12 @@ export default function BattlePage() {
       }),
     });
 
+    const data = await res.json();
     if (!res.ok) {
-      const data = await res.json();
       throw new Error(data.error || 'Failed to submit move');
     }
 
-    const { battle } = await res.json();
+    const { battle } = data;
     setCurrentBattle(battle);
 
     if (battle.status === 'complete') {
