@@ -52,14 +52,14 @@ type CameraMode = 'isometric' | 'shoulder';
 
 function CameraController({
   flyTarget,
-  cameraMode,
+  cameraMode = 'isometric',
   playerPositionRef,
-  moveTarget,
+  moveTarget = null,
 }: {
   flyTarget: THREE.Vector3 | null;
-  cameraMode: CameraMode;
-  playerPositionRef: React.MutableRefObject<THREE.Vector3 | null>;
-  moveTarget: THREE.Vector3 | null;
+  cameraMode?: CameraMode;
+  playerPositionRef?: React.MutableRefObject<THREE.Vector3 | null>;
+  moveTarget?: THREE.Vector3 | null;
 }) {
   const { camera, size } = useThree();
   const controlsRef = useRef<any>(null);
@@ -98,7 +98,7 @@ function CameraController({
   useFrame(() => {
     if (cameraMode === 'shoulder') {
       flyingRef.current = false;
-      const playerPos = playerPositionRef.current;
+      const playerPos = playerPositionRef?.current;
       if (!playerPos) return;
 
       if (moveTarget) {
@@ -283,12 +283,12 @@ function Scene({
         buildings={buildingsArray}
         onPositionChange={(pos: THREE.Vector3) => {
           onCharacterMove(pos);
-          playerPositionRef.current = pos.clone();
+          if (playerPositionRef) { playerPositionRef.current = pos.clone(); }
         }}
       />
 
       <WildAutoMons
-        playerPosition={playerPositionRef.current}
+        playerPosition={playerPositionRef?.current ?? null}
         walletAddress={walletAddress}
       />
     </>
