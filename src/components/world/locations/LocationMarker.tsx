@@ -647,11 +647,17 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
 
       {variant === 'dark' && (
         <>
-          {[
-            [-1.3, 0, -1.1],
-            [0.9, 0, -0.3],
-            [0.1, 0, 1.25],
-          ].map((tree, i) => (
+          {(isCrystalCave
+            ? [
+                [-0.9, 0, -0.8],
+                [0.9, 0, -0.2],
+              ]
+            : [
+                [-1.3, 0, -1.1],
+                [0.9, 0, -0.3],
+                [0.1, 0, 1.25],
+              ]
+          ).map((tree, i) => (
             <group key={`tree-${i}`} position={tree as [number, number, number]}>
               <mesh position={[0, 2.05, 0]} castShadow rotation={[0.13, 0, 0.11 * (i - 1)]}>
                 <cylinderGeometry args={[0.24, 0.42, 4.1, 7]} />
@@ -687,7 +693,7 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
             </group>
           ))}
 
-          {[
+          {!isCrystalCave && [
             [-0.4, 3.25, -0.75, 1.9, 0.32],
             [0.75, 3.0, 0.52, 2.1, -0.35],
             [0.05, 2.85, 1.1, 1.7, 0.1],
@@ -708,7 +714,7 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
             </group>
           ))}
 
-          {[
+          {!isCrystalCave && [
             [-1.65, 0.1, 0.9],
             [1.4, 0.1, -1.05],
             [0.45, 0.1, 1.85],
@@ -721,8 +727,8 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
               <mesh position={[0, 0.46, 0]} castShadow>
                 <coneGeometry args={[0.2, 0.22, 8]} />
                 <meshStandardMaterial
-                  color={isCrystalCave ? '#67e8f9' : '#a78bfa'}
-                  emissive={isCrystalCave ? '#0891b2' : '#6d28d9'}
+                  color="#a78bfa"
+                  emissive="#6d28d9"
                   emissiveIntensity={0.8}
                   roughness={0.35}
                 />
@@ -730,7 +736,7 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
             </group>
           ))}
 
-          {[
+          {!isCrystalCave && [
             [-0.8, 1.0, -0.4],
             [1.2, 1.2, 0.9],
             [0.1, 1.3, -1.2],
@@ -744,8 +750,8 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
             >
               <sphereGeometry args={[0.12, 8, 8]} />
               <meshStandardMaterial
-                color={isCrystalCave ? '#7dd3fc' : '#c4b5fd'}
-                emissive={isCrystalCave ? '#0284c7' : '#7c3aed'}
+                color="#c4b5fd"
+                emissive="#7c3aed"
                 emissiveIntensity={0.95}
                 transparent
                 opacity={0.8}
