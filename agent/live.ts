@@ -132,6 +132,10 @@ const AI_PERSONALITY = process.env.AI_PERSONALITY || 'Curious explorer who loves
 const USE_AI = !!process.env.ANTHROPIC_API_KEY;
 // Pending action to perform on arrival
 let pendingAction: { action: string; reason: string } | null = null;
+// Dwell at location after performing action (in ticks)
+let dwellTicks = 0;
+const DWELL_MIN = 12; // ~48s minimum dwell
+const DWELL_MAX = 20; // ~80s maximum dwell
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
@@ -337,15 +341,19 @@ async function tick(): Promise<void> {
     posX += (dx / dist) * speed;
     posZ += (dz / dist) * speed;
     if (Math.random() < 0.1) console.log(`[${ts()}] 🚶 Walking to ${target.name} (${dist.toFixed(0)}m away)`);
+  } else if (pendingAction) {
+    // Just arrived — log the action and start dwelling
+    console.log(`[${ts()}] 📍 ${target.name}: ${pendingAction.action} — "${pendingAction.reason}"`);
+    await logAction(pendingAction.action, pendingAction.reason, target.name);
+    recentActions.push(`${pendingAction.action}@${target.name}`);
+    if (recentActions.length > 10) recentActions.shift();
+    pendingAction = null;
+    dwellTicks = DWELL_MIN + Math.floor(Math.random() * (DWELL_MAX - DWELL_MIN));
+    console.log(`[${ts()}] ⏳ Staying at ${target.name} for ~${(dwellTicks * TICK_MS / 1000).toFixed(0)}s`);
+  } else if (dwellTicks > 0) {
+    // Dwelling at location — performing the action
+    dwellTicks--;
   } else {
-    // Arrived — perform pending action (decided before walking here)
-    if (pendingAction) {
-      console.log(`[${ts()}] 📍 ${target.name}: ${pendingAction.action} — "${pendingAction.reason}"`);
-      await logAction(pendingAction.action, pendingAction.reason, target.name);
-      recentActions.push(`${pendingAction.action}@${target.name}`);
-      if (recentActions.length > 10) recentActions.shift();
-      pendingAction = null;
-    }
 
     // ~25% chance to buy a pack if we have < 10 cards
     if (cardCount < 10 && Math.random() < 0.25 && NFT_ADDRESS) {
