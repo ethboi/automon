@@ -320,39 +320,48 @@ async function syncCards(): Promise<void> {
 
     if (cardCount === 0) return;
 
-    // Read on-chain data locally (fast — direct RPC) and build full card objects
-    const cards = await Promise.all(tokenIds.map(async (tid: bigint) => {
-      const tokenId = Number(tid);
-      const [automonId, rarityIndex] = await contract.getCard(tokenId);
-      const aId = Number(automonId);
-      const automon = AUTOMON_DATA[aId];
-      if (!automon) return null;
+    // Read on-chain data locally — batch 5 at a time to avoid RPC overload
+    const validCards: Record<string, unknown>[] = [];
+    const BATCH = 5;
+    for (let i = 0; i < tokenIds.length; i += BATCH) {
+      const batch = tokenIds.slice(i, i + BATCH);
+      const results = await Promise.all(batch.map(async (tid: bigint) => {
+        try {
+          const tokenId = Number(tid);
+          const [automonId, rarityIndex] = await contract.getCard(tokenId);
+          const aId = Number(automonId);
+          const automon = AUTOMON_DATA[aId];
+          if (!automon) return null;
 
-      const rarity = RARITY_NAMES[Number(rarityIndex)] || 'common';
-      const mult = RARITY_MULT[rarity] || 1.0;
-      const hp = Math.floor(automon.baseHp * mult);
-      const abil = ABILITY_DEFS[automon.ability] || { effect: 'damage', power: 30, cooldown: 3, description: 'Attack' };
+          const rarity = RARITY_NAMES[Number(rarityIndex)] || 'common';
+          const mult = RARITY_MULT[rarity] || 1.0;
+          const hp = Math.floor(automon.baseHp * mult);
+          const abil = ABILITY_DEFS[automon.ability] || { effect: 'damage', power: 30, cooldown: 3, description: 'Attack' };
 
-      return {
-        tokenId, automonId: aId, owner: ADDRESS.toLowerCase(),
-        name: automon.name, element: automon.element, rarity,
-        stats: {
-          attack: Math.floor(automon.baseAttack * mult),
-          defense: Math.floor(automon.baseDefense * mult),
-          speed: Math.floor(automon.baseSpeed * mult),
-          hp, maxHp: hp,
-        },
-        ability: {
-          name: automon.ability, effect: abil.effect,
-          power: Math.floor(abil.power * mult),
-          cooldown: abil.cooldown, description: abil.description,
-          currentCooldown: 0,
-        },
-        level: 1, xp: 0,
-      };
-    }));
-
-    const validCards = cards.filter(Boolean);
+          return {
+            tokenId, automonId: aId, owner: ADDRESS.toLowerCase(),
+            name: automon.name, element: automon.element, rarity,
+            stats: {
+              attack: Math.floor(automon.baseAttack * mult),
+              defense: Math.floor(automon.baseDefense * mult),
+              speed: Math.floor(automon.baseSpeed * mult),
+              hp, maxHp: hp,
+            },
+            ability: {
+              name: automon.ability, effect: abil.effect,
+              power: Math.floor(abil.power * mult),
+              cooldown: abil.cooldown, description: abil.description,
+              currentCooldown: 0,
+            },
+            level: 1, xp: 0,
+          };
+        } catch (e) {
+          console.log(`[${ts()}] ⚠️ Failed to read token ${Number(tid)}: ${(e as Error).message?.slice(0, 60)}`);
+          return null;
+        }
+      }));
+      validCards.push(...results.filter(Boolean) as Record<string, unknown>[]);
+    }
 
     // Send to server for upsert into MongoDB
     const syncRes = await api('/api/agents/cards/sync', {
