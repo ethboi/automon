@@ -62,9 +62,9 @@ function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
   useEffect(() => {
     const isMobile = size.width < 768;
     if (isMobile) {
-      camera.position.set(0, 90, 70);
+      camera.position.set(0, 50, 40);
     } else {
-      camera.position.set(0, 75, 80);
+      camera.position.set(0, 40, 45);
     }
     currentLookAt.current.set(0, 0, -5);
     camera.lookAt(0, 0, -5);
@@ -337,7 +337,7 @@ export function GameWorld() {
   return (
     <div className="relative w-full h-full">
       <Canvas
-        camera={{ fov: 45, position: [0, 50, 55], near: 0.1, far: 1000 }}
+        camera={{ fov: 45, position: [0, 40, 45], near: 0.1, far: 1000 }}
         shadows
         style={{ background: '#1a2540' }}
         gl={{ antialias: true, alpha: false }}
