@@ -407,11 +407,12 @@ async function trySettleBattle(battleId: string, winner: string): Promise<void> 
     const tx = await escrowSettle.settleBattle(battleIdBytes, winner, { gasLimit: 200000 });
     const receipt = await tx.wait();
     console.log(`[${ts()}]   💰 Settled on-chain: ${receipt.hash}`);
-    // Update DB
+    // Update DB + log transaction for Chain tab
+    const wagerMon = ethers.formatEther(onChain[2]);
     await api('/api/battle/settle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ battleId, settleTxHash: receipt.hash }),
+      body: JSON.stringify({ battleId, settleTxHash: receipt.hash, winner, wager: wagerMon }),
     }).catch(() => {});
   } catch (err) {
     console.error(`[${ts()}]   ⚠️ Settlement failed:`, (err as Error).message?.slice(0, 80));
