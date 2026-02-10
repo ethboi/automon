@@ -52,6 +52,7 @@ interface AgentDetails {
 const ACTIVITY_ICONS: Record<string, string> = {
   battle: '⚔️', fish: '🎣', train: '🥊', trade: '🛒', shop: '🛒',
   rest: '🛌', heal: '🛌', farm: '🌾', walk: '🚶', move: '🚶', explor: '🚶',
+  mint: '🎴',
 };
 const TX_ICONS: Record<string, string> = {
   escrow_deposit: '🔒', battle_join: '⚔️', battle_settle: '🏆', mint_pack: '🎴', settlement: '💸',
@@ -65,9 +66,9 @@ function getIcon(action?: string | null): string {
 
 function timeAgo(ts: string): string {
   const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-  if (s < 60) return `${s}s`;
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  return `${Math.floor(s / 3600)}h`;
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  return `${Math.floor(s / 3600)}h ago`;
 }
 
 export default function AgentProfileModal({ address, onClose }: { address: string; onClose: () => void }) {
@@ -86,133 +87,134 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
   const hpColor = hp > 60 ? 'bg-emerald-500' : hp > 30 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
-    <div className="fixed inset-0 z-[60] pointer-events-auto" onClick={onClose}>
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60" />
+    <div className="fixed inset-0 z-[60]" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70" />
 
-      {/* Sheet — sits below header on mobile, centered on desktop */}
+      {/* Bottom sheet on mobile, centered card on desktop */}
       <div
-        className="absolute bottom-0 left-0 right-0 top-16 sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(980px,94vw)] sm:rounded-2xl sm:max-h-[84vh]
-          bg-gray-950 border-t sm:border border-white/10 rounded-t-2xl overflow-hidden"
+        className="absolute bottom-0 left-0 right-0 top-16 sm:top-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[420px] sm:max-h-[85vh] sm:rounded-2xl
+          bg-gray-950 border-t sm:border border-white/10 rounded-t-2xl overflow-hidden flex flex-col"
         style={{ zIndex: 61 }}
         onClick={e => e.stopPropagation()}
       >
         {loading ? (
           <div className="flex items-center justify-center py-20"><div className="animate-spin text-2xl">🔄</div></div>
         ) : !d ? (
-          <div className="text-center py-12 text-gray-500 text-sm">Failed to load</div>
+          <div className="text-center py-12 text-gray-500">Failed to load</div>
         ) : (
-          <div className="flex flex-col h-full overflow-hidden">
-            {/* ── Drag handle (mobile) ── */}
-            <div className="flex justify-center pt-2 pb-1 sm:hidden">
+          <>
+            {/* Drag handle */}
+            <div className="flex justify-center pt-2 pb-1 sm:hidden shrink-0">
               <div className="w-10 h-1 bg-white/20 rounded-full" />
             </div>
 
-            {/* ── Header ── */}
-            <div className="px-3 pt-1 pb-2 sm:px-6 sm:pt-4 sm:pb-4 shrink-0">
-              {/* Close btn desktop */}
+            {/* Header */}
+            <div className="px-4 pt-2 pb-3 shrink-0">
               <button onClick={onClose} className="hidden sm:flex absolute top-3 right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center">
                 <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
-              <div className="flex items-center gap-2.5 sm:gap-4">
-                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-base sm:text-xl shadow-lg shadow-cyan-500/20 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-lg shadow-lg shadow-cyan-500/20 shrink-0">
                   🤖
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <h2 className="text-sm sm:text-xl font-bold text-white truncate">{d.agent.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-white truncate">{d.agent.name}</h2>
                     {d.agent.model && (
-                      <span className="text-[9px] sm:text-xs text-violet-400 bg-violet-500/15 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full shrink-0">🧠 {d.agent.model}</span>
+                      <span className="text-[10px] text-violet-400 bg-violet-500/15 px-2 py-0.5 rounded-full shrink-0">🧠 {d.agent.model}</span>
                     )}
                   </div>
-                  <span className="text-[10px] sm:text-xs text-gray-500 font-mono">{address.slice(0, 6)}…{address.slice(-4)}</span>
+                  <span className="text-xs text-gray-500 font-mono">{address.slice(0, 6)}…{address.slice(-4)}</span>
                 </div>
-                {/* MON balance */}
                 <div className="text-right shrink-0">
-                  <div className="text-sm sm:text-lg font-bold text-yellow-400">{parseFloat(d.stats.balance).toFixed(2)}</div>
-                  <div className="text-[9px] sm:text-[10px] text-gray-600">MON</div>
+                  <div className="text-base font-bold text-yellow-400">{parseFloat(d.stats.balance).toFixed(2)}</div>
+                  <div className="text-[10px] text-gray-500">MON</div>
                 </div>
               </div>
 
               {/* HP bar */}
-              <div className="flex items-center gap-2 mt-2 sm:mt-3">
-                <div className="flex-1 h-1.5 sm:h-2 bg-white/10 rounded-full overflow-hidden">
+              <div className="flex items-center gap-2 mt-2.5">
+                <span className="text-xs text-gray-500">HP</span>
+                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                   <div className={`h-full ${hpColor} transition-all`} style={{ width: `${hp}%` }} />
                 </div>
-                <span className="text-[10px] sm:text-xs text-gray-400 font-mono w-16 text-right">{d.agent.health}/{d.agent.maxHealth}</span>
+                <span className="text-xs text-gray-400 font-mono">{d.agent.health}/{d.agent.maxHealth}</span>
               </div>
 
-              {/* Status line */}
-              <div className="flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs">
-                <span>{getIcon(d.agent.currentAction)}</span>
-                <span className="text-cyan-300 font-medium capitalize">{d.agent.currentAction || 'idle'}</span>
-                {d.agent.currentLocation && <span className="text-gray-600">@ {d.agent.currentLocation}</span>}
+              {/* Current status */}
+              <div className="mt-2 bg-white/[0.03] rounded-lg px-3 py-2">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span>{getIcon(d.agent.currentAction)}</span>
+                  <span className="text-cyan-300 font-semibold capitalize">{d.agent.currentAction || 'idle'}</span>
+                  {d.agent.currentLocation && <span className="text-gray-500">@ {d.agent.currentLocation}</span>}
+                </div>
+                {(d.agent.currentReasoning || d.agent.currentReason) && (
+                  <p className="text-xs text-gray-400 mt-1 italic leading-relaxed line-clamp-2">💭 {d.agent.currentReasoning || d.agent.currentReason}</p>
+                )}
               </div>
-              {(d.agent.currentReasoning || d.agent.currentReason) && (
-                <p className="text-[9px] sm:text-xs text-gray-500 mt-0.5 italic line-clamp-2">💭 {d.agent.currentReasoning || d.agent.currentReason}</p>
-              )}
             </div>
 
-            {/* ── Stats strip ── */}
-            <div className="grid grid-cols-4 border-y border-white/5 shrink-0 sm:mx-6 sm:rounded-xl sm:border sm:border-white/10 sm:mb-3">
+            {/* Stats strip */}
+            <div className="grid grid-cols-4 border-y border-white/5 shrink-0">
               {[
                 { v: d.stats.cards, l: 'Cards', c: 'text-purple-400' },
                 { v: d.stats.battles, l: 'Battles', c: 'text-gray-300' },
                 { v: `${d.stats.wins}/${d.stats.losses}`, l: 'W/L', c: 'text-emerald-400' },
-                { v: `${d.stats.winRate}%`, l: 'Win', c: 'text-cyan-400' },
+                { v: `${d.stats.winRate}%`, l: 'Win Rate', c: 'text-cyan-400' },
               ].map((s, i) => (
-                <div key={i} className="py-1.5 sm:py-2.5 text-center border-r border-white/5 last:border-r-0">
-                  <div className={`text-xs sm:text-sm font-bold ${s.c}`}>{s.v}</div>
-                  <div className="text-[8px] sm:text-[10px] text-gray-600 uppercase">{s.l}</div>
+                <div key={i} className="py-2 text-center border-r border-white/5 last:border-r-0">
+                  <div className={`text-sm font-bold ${s.c}`}>{s.v}</div>
+                  <div className="text-[10px] text-gray-600 uppercase tracking-wide">{s.l}</div>
                 </div>
               ))}
             </div>
 
-            {/* ── Tabs ── */}
-            <div className="flex border-b border-white/5 shrink-0 sm:px-6">
+            {/* Tabs */}
+            <div className="flex border-b border-white/5 shrink-0">
               {([
-                { id: 'log' as const, l: `📝 Log` },
-                { id: 'cards' as const, l: `🎴 ${d.cards.length}` },
-                { id: 'txs' as const, l: `⛓️ ${d.transactions?.length || 0}` },
+                { id: 'log' as const, l: '📝 Activity' },
+                { id: 'cards' as const, l: `🎴 Cards (${d.cards.length})` },
+                { id: 'txs' as const, l: `⛓️ Txns (${d.transactions?.length || 0})` },
               ]).map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className={`flex-1 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition-colors ${
-                    tab === t.id ? 'text-white border-b-2 border-purple-500 bg-white/[0.03]' : 'text-gray-600 hover:text-gray-400'
+                  className={`flex-1 py-2 text-xs font-semibold transition-colors ${
+                    tab === t.id ? 'text-white border-b-2 border-purple-500 bg-white/[0.03]' : 'text-gray-500 hover:text-gray-300'
                   }`}>
                   {t.l}
                 </button>
               ))}
             </div>
 
-            {/* ── Content ── */}
-            <div className="overflow-y-auto flex-1 sm:px-6 sm:pb-4">
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 min-h-0">
 
-              {/* Log */}
               {tab === 'log' && (
                 d.actions.length === 0 ? (
-                  <div className="text-center py-8 text-gray-700 text-[10px]">No activity yet</div>
+                  <div className="text-center py-10 text-gray-600 text-sm">No activity yet</div>
                 ) : (
-                  <div className="divide-y divide-white/[0.03] sm:rounded-xl sm:border sm:border-white/5 sm:overflow-hidden">
+                  <div className="divide-y divide-white/[0.04]">
                     {d.actions.map((a, i) => (
-                      <div key={i} className="px-3 py-1.5 sm:px-4 sm:py-2">
+                      <div key={i} className="px-4 py-2.5">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 min-w-0">
-                            <span className="text-[10px] sm:text-xs">{getIcon(a.action)}</span>
-                            <span className="text-[10px] sm:text-sm text-white font-medium truncate">{a.action}</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-sm">{getIcon(a.action)}</span>
+                            <span className="text-sm text-white font-medium capitalize">{a.action}</span>
                             {a.healthDelta != null && a.healthDelta !== 0 && (
-                              <span className={`text-[9px] sm:text-xs font-mono ${a.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {a.healthDelta > 0 ? '+' : ''}{a.healthDelta}
+                              <span className={`text-xs font-mono ${a.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {a.healthDelta > 0 ? '+' : ''}{a.healthDelta} HP
                               </span>
                             )}
-                            {a.location && <span className="text-[9px] sm:text-xs text-gray-600">@ {a.location}</span>}
                           </div>
-                          <span className="text-[9px] sm:text-xs text-gray-600 shrink-0 ml-1">{timeAgo(a.timestamp)}</span>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            {a.location && <span className="text-[10px] text-purple-400">📍 {a.location}</span>}
+                            <span className="text-[10px] text-gray-600">{timeAgo(a.timestamp)}</span>
+                          </div>
                         </div>
                         {(a.reasoning || a.reason) && (
-                          <p className="text-[9px] sm:text-xs text-gray-500 mt-0.5 italic line-clamp-2">💭 {a.reasoning || a.reason}</p>
+                          <p className="text-xs text-gray-400 mt-1 italic leading-relaxed line-clamp-2">💭 {a.reasoning || a.reason}</p>
                         )}
                       </div>
                     ))}
@@ -220,12 +222,11 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                 )
               )}
 
-              {/* Cards */}
               {tab === 'cards' && (
                 d.cards.length === 0 ? (
-                  <div className="text-center py-8 text-gray-700 text-[10px]">No cards yet</div>
+                  <div className="text-center py-10 text-gray-600 text-sm">No cards yet</div>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 p-3 sm:p-4">
+                  <div className="grid grid-cols-3 gap-2.5 p-4">
                     {d.cards.map(card => (
                       <div key={card.id || card._id?.toString()}>
                         <CardComponent card={card} size="sm" showStats={false} />
@@ -235,24 +236,23 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                 )
               )}
 
-              {/* Txs */}
               {tab === 'txs' && (
                 !d.transactions?.length ? (
-                  <div className="text-center py-8 text-gray-700 text-[10px]">No transactions yet</div>
+                  <div className="text-center py-10 text-gray-600 text-sm">No transactions yet</div>
                 ) : (
-                  <div className="divide-y divide-white/[0.03] sm:rounded-xl sm:border sm:border-white/5 sm:overflow-hidden">
+                  <div className="divide-y divide-white/[0.04]">
                     {d.transactions.map((tx, i) => (
                       <a key={i} href={`https://testnet.monadexplorer.com/tx/${tx.txHash}`}
                         target="_blank" rel="noopener noreferrer"
-                        className="flex items-center justify-between px-3 py-1.5 sm:px-4 sm:py-2 hover:bg-white/[0.02] transition-colors">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-[10px] sm:text-xs">{TX_ICONS[tx.type] || '📝'}</span>
-                          <span className="text-[10px] sm:text-sm text-gray-300 truncate">{tx.description}</span>
+                        className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-sm">{TX_ICONS[tx.type] || '📝'}</span>
+                          <span className="text-sm text-gray-300 truncate group-hover:text-white transition-colors">{tx.description}</span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0 ml-1">
-                          {tx.amount && <span className="text-[9px] sm:text-xs font-mono text-emerald-400">{tx.amount}</span>}
-                          <span className="text-[9px] sm:text-xs text-gray-600">{timeAgo(tx.timestamp)}</span>
-                          <span className="text-[9px] text-purple-400 underline">view ↗</span>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          {tx.amount && <span className="text-xs font-mono text-emerald-400 font-semibold">{tx.amount}</span>}
+                          <span className="text-[10px] text-gray-600">{timeAgo(tx.timestamp)}</span>
+                          <span className="text-xs text-purple-400 group-hover:text-purple-300 underline">view ↗</span>
                         </div>
                       </a>
                     ))}
@@ -263,11 +263,11 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
 
             {/* Personality footer */}
             {d.agent.personality && (
-              <div className="border-t border-white/5 px-3 py-1.5 sm:px-6 sm:py-2 shrink-0">
-                <p className="text-[9px] sm:text-xs text-gray-600 italic text-center">&ldquo;{d.agent.personality}&rdquo;</p>
+              <div className="border-t border-white/5 px-4 py-2 shrink-0">
+                <p className="text-xs text-gray-500 italic text-center">&ldquo;{d.agent.personality}&rdquo;</p>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
