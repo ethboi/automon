@@ -103,6 +103,7 @@ export async function GET() {
         currentLocation: a.currentLocation || latest.location || null,
         lastSeen: a.lastSeen,
         online: isOnline,
+        balance: a.balance || null,
         stats,
       };
     });

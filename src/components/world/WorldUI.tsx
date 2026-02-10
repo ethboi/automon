@@ -25,6 +25,7 @@ interface OnlineAgent {
   currentReason?: string | null;
   currentLocation?: string | null;
   stats?: { wins: number; losses: number; cards: number };
+  balance?: string | null;
   model?: string;
 }
 
@@ -211,29 +212,31 @@ export function WorldUI({
                 return online.length === 0 ? (
                   <Empty text="No agents online" />
                 ) : (
-                  <div className="space-y-0.5 sm:space-y-1">
+                  <div className="space-y-0.5">
                     {online.map(agent => {
                       const activity = activityBadge(agent.currentAction);
-                      const shortPersonality = (agent.personality || '').split(/[\s,]/)[0] || 'AI';
                       return (
                       <button
                         key={agent.address}
                         onClick={() => { onFlyToAgent?.(agent.address); onSelectAgent?.(agent.address); }}
-                        className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-2 py-2.5 transition-colors"
+                        className="w-full hover:bg-white/5 rounded-lg px-2 py-1.5 sm:py-2 transition-colors"
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0 bg-green-500 shadow-sm shadow-green-500/50" />
-                          <span className="text-base text-cyan-400 font-semibold">{agent.name}</span>
-                          {agent.model && <span className="text-[10px] text-violet-400/70 bg-violet-500/10 px-1 py-0.5 rounded">🧠 {agent.model}</span>}
-                          <span className="text-xs sm:text-sm text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">{shortPersonality}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm px-2 py-0.5 rounded-full ${activity.cls}`}>
-                            {activity.icon} {activity.label}
-                          </span>
-                          {agent.stats && (
-                            <span className="text-sm text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
-                          )}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-green-500 shadow-sm shadow-green-500/50" />
+                            <span className="text-xs sm:text-sm text-cyan-400 font-semibold truncate">{agent.name}</span>
+                            <span className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full shrink-0 ${activity.cls}`}>
+                              {activity.icon} {activity.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                            {agent.balance && (
+                              <span className="text-[10px] sm:text-xs font-mono text-yellow-400">{parseFloat(agent.balance).toFixed(2)} <span className="text-yellow-600">MON</span></span>
+                            )}
+                            {agent.stats && (
+                              <span className="text-[10px] sm:text-xs text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
+                            )}
+                          </div>
                         </div>
                       </button>
                     )})}
