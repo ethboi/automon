@@ -3,6 +3,7 @@ import { getDb } from '@/lib/mongodb';
 import { resolveTurn, validateMove } from '@/lib/battle';
 import { settleBattleOnChain } from '@/lib/blockchain';
 import { Battle } from '@/lib/types';
+import { logTransaction } from '@/lib/transactions';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -84,6 +85,13 @@ export async function POST(request: NextRequest) {
           try {
             const settleTxHash = await settleBattleOnChain(battleId, winner);
             battle.settleTxHash = settleTxHash;
+            await logTransaction({
+              txHash: settleTxHash,
+              type: 'battle_settle',
+              from: winner,
+              description: `Battle settled. Winner: ${winner.slice(0, 6)}...${winner.slice(-4)}`,
+              metadata: { battleId, winner, wager: battle.wager },
+            });
           } catch (err) {
             console.error('Failed to settle on-chain:', err);
             // Continue anyway, can be settled manually

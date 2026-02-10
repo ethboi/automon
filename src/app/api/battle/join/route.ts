@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+import { logTransaction } from '@/lib/transactions';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { battleId, address } = await request.json();
+    const { battleId, address, txHash } = await request.json();
 
     if (!address) {
       return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
@@ -54,6 +55,16 @@ export async function POST(request: NextRequest) {
     }
 
     const updatedBattle = await db.collection('battles').findOne({ battleId });
+
+    if (txHash) {
+      await logTransaction({
+        txHash,
+        type: 'battle_join',
+        from: address,
+        description: `Joined battle with ${updatedBattle?.wager || '0'} MON wager`,
+        metadata: { battleId, wager: updatedBattle?.wager || '0' },
+      });
+    }
 
     return NextResponse.json({ battle: updatedBattle });
   } catch (error) {

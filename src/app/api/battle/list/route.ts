@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
           { 'player2.address': address.toLowerCase() },
         ],
       };
+    } else if (type === 'all') {
+      query = {};
     } else if (status) {
       query.status = status;
     } else {
@@ -42,12 +44,43 @@ export async function GET(request: NextRequest) {
         address: battle.player1.address,
         ready: battle.player1.ready,
         cardCount: battle.player1.cards?.length || 0,
+        selectedCards: (battle.player1.cards || []).map((c: { name: string; element: string; rarity?: string }) => ({
+          name: c.name,
+          element: c.element,
+          rarity: c.rarity,
+        })),
       },
       player2: battle.player2 ? {
         address: battle.player2.address,
         ready: battle.player2.ready,
         cardCount: battle.player2.cards?.length || 0,
+        selectedCards: (battle.player2.cards || []).map((c: { name: string; element: string; rarity?: string }) => ({
+          name: c.name,
+          element: c.element,
+          rarity: c.rarity,
+        })),
       } : null,
+      lastRound: (battle.rounds || []).length > 0
+        ? (() => {
+            const r = battle.rounds[battle.rounds.length - 1];
+            return {
+              turn: r.turn,
+              player1Move: r.player1Move
+                ? {
+                    action: r.player1Move.action,
+                    reasoning: r.player1Move.reasoning || null,
+                  }
+                : null,
+              player2Move: r.player2Move
+                ? {
+                    action: r.player2Move.action,
+                    reasoning: r.player2Move.reasoning || null,
+                  }
+                : null,
+              timestamp: r.timestamp,
+            };
+          })()
+        : null,
     }));
 
     return NextResponse.json({ battles: sanitizedBattles });

@@ -38,7 +38,7 @@ export default function BattlePage() {
     if (!address) return;
     try {
       const [battlesRes, cardsRes] = await Promise.all([
-        fetch('/api/battle/list'),
+        fetch('/api/battle/list?type=all'),
         fetch(`/api/cards?address=${address}`),
       ]);
 
@@ -70,12 +70,10 @@ export default function BattlePage() {
   const createBattle = async () => {
     setError(null);
     try {
-      const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-
       const res = await fetch('/api/battle/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wager: wagerAmount, txHash, address }),
+        body: JSON.stringify({ wager: wagerAmount, address }),
       });
 
       const data = await res.json();
@@ -93,12 +91,10 @@ export default function BattlePage() {
   const joinBattle = async (battleId: string) => {
     setError(null);
     try {
-      const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-
       const res = await fetch('/api/battle/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ battleId, txHash, address }),
+        body: JSON.stringify({ battleId, address }),
       });
 
       const data = await res.json();
@@ -179,6 +175,7 @@ export default function BattlePage() {
       body: JSON.stringify({
         battleId: currentBattle.battleId,
         move,
+        address,
       }),
     });
 
@@ -580,6 +577,15 @@ export default function BattlePage() {
               const p1Short = `${p1.slice(0, 6)}...${p1.slice(-4)}`;
               const p2Short = p2 ? `${p2.slice(0, 6)}...${p2.slice(-4)}` : 'waiting...';
               const isActive = battle.status === 'active';
+              const p1Cards = (battle.player1 as Battle['player1'] & { selectedCards?: { name: string }[] }).selectedCards || [];
+              const p2Cards = (battle.player2 as (NonNullable<Battle['player2']> & { selectedCards?: { name: string }[] }) | null)?.selectedCards || [];
+              const lastRound = (battle as Battle & {
+                lastRound?: {
+                  turn: number;
+                  player1Move?: { action: string; reasoning?: string | null } | null;
+                  player2Move?: { action: string; reasoning?: string | null } | null;
+                } | null;
+              }).lastRound;
 
               return (
                 <div
@@ -604,6 +610,19 @@ export default function BattlePage() {
                           <span className="text-xs text-emerald-400">🏆 {battle.winner.slice(0, 6)}...{battle.winner.slice(-4)}</span>
                         )}
                       </div>
+                      {(p1Cards.length > 0 || p2Cards.length > 0) && (
+                        <div className="text-xs text-gray-400 mt-1 truncate">
+                          🎴 {p1Cards.slice(0, 3).map(c => c.name).join(', ') || 'No cards'} vs {p2Cards.slice(0, 3).map(c => c.name).join(', ') || 'No cards'}
+                        </div>
+                      )}
+                      {lastRound && (
+                        <div className="text-xs text-gray-500 mt-1 leading-tight">
+                          <div>Turn {lastRound.turn}: {lastRound.player1Move?.action || '—'} / {lastRound.player2Move?.action || '—'}</div>
+                          {(lastRound.player1Move?.reasoning || lastRound.player2Move?.reasoning) && (
+                            <div>💭 {lastRound.player1Move?.reasoning || lastRound.player2Move?.reasoning}</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {battle.status === 'complete' && (
