@@ -266,22 +266,29 @@ function Roads() {
   const renderRoad = (from: string, to: string, width: number, color: string, opacity: number, yOffset: number, key: string) => {
     const a = WORLD_LOCATIONS[from as keyof typeof WORLD_LOCATIONS].position;
     const b = WORLD_LOCATIONS[to as keyof typeof WORLD_LOCATIONS].position;
+    const midX = (a[0] + b[0]) / 2;
+    const midZ = (a[2] + b[2]) / 2;
     const dx = b[0] - a[0];
     const dz = b[2] - a[2];
     const len = Math.sqrt(dx * dx + dz * dz);
     const angle = Math.atan2(dx, dz);
 
     return (
-      <group key={key}>
+      <group key={key} position={[midX, yOffset, midZ]} rotation={[0, -angle, 0]}>
+        {/* Road edge (wider, underneath) */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[width + 0.6, len]} />
+          <meshStandardMaterial color="#5a4a3a" transparent opacity={opacity * 0.4} roughness={1} />
+        </mesh>
         {/* Road surface */}
-        <mesh rotation={[-Math.PI / 2, 0, -angle]} position={[(a[0] + b[0]) / 2, yOffset, (a[2] + b[2]) / 2]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
           <planeGeometry args={[width, len]} />
           <meshStandardMaterial color={color} transparent opacity={opacity} roughness={0.95} />
         </mesh>
-        {/* Road edge lines */}
-        <mesh rotation={[-Math.PI / 2, 0, -angle]} position={[(a[0] + b[0]) / 2, yOffset + 0.005, (a[2] + b[2]) / 2]}>
-          <planeGeometry args={[width + 0.4, len]} />
-          <meshStandardMaterial color="#5a4a3a" transparent opacity={opacity * 0.4} roughness={1} />
+        {/* Center line (dashed effect via thin strip) */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 0]}>
+          <planeGeometry args={[0.15, len]} />
+          <meshStandardMaterial color="#b8a88a" transparent opacity={opacity * 0.3} roughness={0.9} />
         </mesh>
       </group>
     );
