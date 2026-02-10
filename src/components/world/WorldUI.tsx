@@ -25,6 +25,7 @@ interface OnlineAgent {
   currentReason?: string | null;
   currentLocation?: string | null;
   stats?: { wins: number; losses: number; cards: number };
+  model?: string;
 }
 
 interface EventData {
@@ -220,6 +221,7 @@ export function WorldUI({
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full flex-shrink-0 bg-green-500 shadow-sm shadow-green-500/50" />
                           <span className="text-base text-cyan-400 font-semibold">{agent.name}</span>
+                          {agent.model && <span className="text-[10px] text-violet-400/70 bg-violet-500/10 px-1 py-0.5 rounded">🧠 {agent.model}</span>}
                           <span className="text-xs sm:text-sm text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">{shortPersonality}</span>
                         </div>
                         <div className="flex items-center gap-2">

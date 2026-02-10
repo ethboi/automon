@@ -551,7 +551,9 @@ ${locationList}
 - Try to battle at LEAST every 2-3 actions. Don't just explore endlessly.
 - Below 30 HP: heal first (farm or fish), then get back to battling
 - If no cards: go to Town Market or buy packs, then battle
-- Pick wagers between 0.01-0.05 MON based on confidence
+- When battling, choose a wager between 0.005-0.05 MON. Consider your balance, confidence in your cards, and risk tolerance
+- Higher wagers when you have strong cards, high HP, and are feeling confident
+- Lower wagers when low HP, weak cards, or being cautious
 - Vary non-battle actions — explore, fish, farm between fights
 - Show personality — be curious, strategic, sometimes bold
 
@@ -559,8 +561,8 @@ Respond with JSON only:
 {
   "location": "<where to go next (exact location name)>",
   "action": "<what to do there>",
-  "reasoning": "<1-2 sentences explaining your thinking, written in first person as the agent>",
-  "wager": "<optional: MON amount if creating a battle, e.g. '0.03'>"
+  "reasoning": "<1-2 sentences explaining your thinking AND wager justification if battling, written in first person as the agent>",
+  "wager": "<MON amount if battling, e.g. '0.03'. Required when action is 'battling'>"
 }`;
 
   try {

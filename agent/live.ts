@@ -145,7 +145,7 @@ const recentActions: string[] = [];
 const AI_PERSONALITY = process.env.AI_PERSONALITY || 'Curious explorer who loves discovering new areas and collecting rare cards';
 const USE_AI = !!process.env.ANTHROPIC_API_KEY;
 // Pending action to perform on arrival
-let pendingAction: { action: string; reason: string } | null = null;
+let pendingAction: { action: string; reason: string; wager?: string } | null = null;
 // Dwell at location after performing action (in ticks)
 let dwellTicks = 0;
 const DWELL_MIN = 12; // ~48s minimum dwell
@@ -176,7 +176,7 @@ async function register(): Promise<boolean> {
     AGENT_NAME = AGENT_NAME || 'Wanderer';
     const res = await api('/api/agents/register', {
       method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, name: AGENT_NAME, personality: 'balanced' }),
+      body: JSON.stringify({ address: ADDRESS, name: AGENT_NAME, personality: 'balanced', model: 'claude-sonnet-4' }),
     });
     return res.ok;
   } catch { return false; }
@@ -485,9 +485,9 @@ async function tryJoinBattle(): Promise<boolean> {
   }
 }
 
-async function createAndWaitForBattle(): Promise<void> {
+async function createAndWaitForBattle(aiWager?: string): Promise<void> {
   try {
-    const wager = (0.005 + Math.random() * 0.015).toFixed(4);
+    const wager = aiWager || (0.005 + Math.random() * 0.015).toFixed(4);
 
     // Create on-chain escrow first
     let txHash: string;
@@ -613,6 +613,7 @@ async function tick(): Promise<void> {
 
     // If battling at arena, try joining first, then create
     if (pendingAction.action === 'battling' && target.name === 'Town Arena' && cardCount >= 3) {
+      const battleWager = pendingAction.wager;
       await logAction(pendingAction.action, pendingAction.reason, target.name);
       recentActions.push(`${pendingAction.action}@${target.name}`);
       if (recentActions.length > 10) recentActions.shift();
@@ -627,7 +628,7 @@ async function tick(): Promise<void> {
         // Check again after delay — someone else might have created
         const joined2 = await tryJoinBattle();
         if (!joined2) {
-          await createAndWaitForBattle();
+          await createAndWaitForBattle(battleWager);
         }
       }
       // After battle (or timeout), continue normally — no extra dwell
@@ -658,6 +659,7 @@ async function tick(): Promise<void> {
     let nextLocationName: string | undefined;
     let nextAction: string;
     let nextReason: string;
+    let nextWager: string | undefined;
 
     if (USE_AI) {
       try {
@@ -702,8 +704,9 @@ async function tick(): Promise<void> {
         nextAction = decision.action;
         nextReason = decision.reasoning || decision.action;
         nextLocationName = decision.location;
+        nextWager = decision.wager;
 
-        console.log(`[${ts()}] 🧠 AI decided: ${nextAction} @ ${nextLocationName || target.name} — "${nextReason}"`);
+        console.log(`[${ts()}] 🧠 AI decided: ${nextAction} @ ${nextLocationName || target.name}${nextWager ? ` (wager: ${nextWager} MON)` : ''} — "${nextReason}"`);
       } catch (err) {
         console.error(`[${ts()}] ⚠ AI error, falling back:`, (err as Error).message?.slice(0, 60));
         const locationActions = LOCATION_ACTIONS[target.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
@@ -722,7 +725,7 @@ async function tick(): Promise<void> {
     }
 
     // Store the action to perform on arrival
-    pendingAction = { action: nextAction, reason: nextReason };
+    pendingAction = { action: nextAction, reason: nextReason, wager: nextWager };
 
     // Set next destination
     if (nextLocationName) {

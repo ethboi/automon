@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { address, name, personality, isAI } = await request.json();
+    const { address, name, personality, isAI, model } = await request.json();
 
     if (!address) {
       return NextResponse.json({ error: 'Address required' }, { status: 400 });
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       currentLocation: existing?.currentLocation || 'Starter Town',
       createdAt: existing?.createdAt || new Date(),
       lastSeen: new Date(),
+      model: model || existing?.model || null,
     };
 
     await db.collection('agents').updateOne(
