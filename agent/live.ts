@@ -154,7 +154,7 @@ let dwellTicks = 0;
 const DWELL_MIN = 10; // ~40s minimum dwell
 const DWELL_MAX = 18; // ~72s maximum dwell
 let lastGlobalChatAt = 0;
-const GLOBAL_CHAT_COOLDOWN_MS = 90_000;
+const GLOBAL_CHAT_COOLDOWN_MS = 180_000; // 3 min between chats
 const GLOBAL_CHAT_FALLBACK_LINES = [
   'gas fees are literally eating my winnings alive 💀',
   'just pulled a common Pebblit and I want to throw my wallet into the pond',
@@ -740,7 +740,7 @@ async function tick(): Promise<void> {
     dwellTicks--;
 
     // Occasionally post global entertaining chatter (not proximity-based).
-    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.08) {
+    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.05) {
       try {
         let msg = GLOBAL_CHAT_FALLBACK_LINES[Math.floor(Math.random() * GLOBAL_CHAT_FALLBACK_LINES.length)];
         if (USE_AI) {
