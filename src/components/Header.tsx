@@ -6,7 +6,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useState } from 'react';
 
 export default function Header() {
-  const { address, balance, isConnecting, isAuthenticated, connect, authenticate, disconnect } = useWallet();
+  const { address, balance, isConnecting, connect, disconnect } = useWallet();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -104,27 +104,11 @@ export default function Header() {
 
                 {/* Address pill */}
                 <div className="glass rounded-full px-4 py-2 flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full animate-pulse ${isAuthenticated ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-400" />
                   <span className="text-purple-300 font-mono text-sm">
                     {formatAddress(address)}
                   </span>
                 </div>
-
-                {!isAuthenticated && (
-                  <button
-                    onClick={async () => {
-                      try {
-                        await authenticate();
-                      } catch (error) {
-                        console.error('Authenticate failed:', error);
-                      }
-                    }}
-                    disabled={isConnecting}
-                    className="hidden sm:block text-xs text-amber-300/90 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-60"
-                  >
-                    {isConnecting ? 'Authenticating...' : 'Authenticate'}
-                  </button>
-                )}
 
                 {/* Disconnect button */}
                 <button
@@ -201,22 +185,6 @@ export default function Header() {
                 <span className="text-gray-400 text-sm">Balance</span>
                 <span className="text-white font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
               </div>
-
-              {!isAuthenticated && (
-                <button
-                  onClick={async () => {
-                    try {
-                      await authenticate();
-                    } finally {
-                      setMobileMenuOpen(false);
-                    }
-                  }}
-                  disabled={isConnecting}
-                  className="px-4 py-3 text-left text-amber-300 hover:text-amber-200 text-sm font-medium transition-colors"
-                >
-                  {isConnecting ? 'Authenticating...' : 'Authenticate Wallet'}
-                </button>
-              )}
 
               {/* Mobile disconnect */}
               <button
