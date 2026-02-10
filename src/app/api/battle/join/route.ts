@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const { battleId, address } = await request.json();
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!address) {
+      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
     }
-
-    const { battleId } = await request.json();
 
     if (!battleId) {
       return NextResponse.json({ error: 'Battle ID required' }, { status: 400 });
@@ -27,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Battle not available' }, { status: 400 });
     }
 
-    if (battle.player1.address.toLowerCase() === session.address.toLowerCase()) {
+    if (battle.player1.address.toLowerCase() === address.toLowerCase()) {
       return NextResponse.json({ error: 'Cannot join your own battle' }, { status: 400 });
     }
 
@@ -40,7 +37,7 @@ export async function POST(request: NextRequest) {
       {
         $set: {
           player2: {
-            address: session.address.toLowerCase(),
+            address: address.toLowerCase(),
             cards: [],
             activeCardIndex: 0,
             ready: false,

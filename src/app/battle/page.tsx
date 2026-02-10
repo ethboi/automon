@@ -75,7 +75,7 @@ export default function BattlePage() {
       const res = await fetch('/api/battle/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wager: wagerAmount, txHash }),
+        body: JSON.stringify({ wager: wagerAmount, txHash, address }),
       });
 
       if (!res.ok) {
@@ -99,7 +99,7 @@ export default function BattlePage() {
       const res = await fetch('/api/battle/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ battleId, txHash }),
+        body: JSON.stringify({ battleId, txHash, address }),
       });
 
       if (!res.ok) {
@@ -129,6 +129,7 @@ export default function BattlePage() {
         body: JSON.stringify({
           battleId: currentBattle?.battleId,
           cardIds: selectedCards,
+          address,
         }),
       });
 
