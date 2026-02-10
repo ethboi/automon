@@ -116,7 +116,7 @@ function WildCreature({ id, species, spawnPosition, onCreatureClick, playerPosit
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
       {/* Name label */}
-      <Html position={[0, 2.8, 0]} center>
+      <Html position={[0, 2.8, 0]} center zIndexRange={[1, 0]}>
         <div
           className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap border transition-all cursor-pointer ${
             nearby
@@ -271,7 +271,7 @@ export function WildAutoMons({ playerPosition, walletAddress }: WildAutoMonsProp
 
       {/* Tame Dialog — rendered as HTML overlay via drei */}
       {tameState && (
-        <Html position={[0, 30, 0]} center zIndexRange={[100, 0]} style={{ pointerEvents: 'auto' }}>
+        <Html position={[0, 30, 0]} center zIndexRange={[1, 0]} style={{ pointerEvents: 'auto' }}>
           <div className="fixed inset-0 flex items-center justify-center" style={{ pointerEvents: 'auto' }}>
             {/* Backdrop */}
             {tameState.phase === 'confirm' && (
