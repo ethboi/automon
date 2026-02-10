@@ -1,18 +1,16 @@
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { getBalance } from '@/lib/blockchain';
+import { NextRequest, NextResponse } from 'next/server';
+import { getBalance } from '@/lib/wallet';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const address = request.nextUrl.searchParams.get('address');
+    if (!address) {
+      return NextResponse.json({ error: 'Address required' }, { status: 400 });
     }
-
-    const balance = await getBalance(session.address);
+    const balance = await getBalance(address);
     return NextResponse.json({ balance });
   } catch (error) {
-    console.error('Get balance error:', error);
-    return NextResponse.json({ error: 'Failed to get balance' }, { status: 500 });
+    console.error('Balance error:', error);
+    return NextResponse.json({ error: 'Failed to fetch balance' }, { status: 500 });
   }
 }

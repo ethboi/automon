@@ -6,19 +6,19 @@ import { Tournament } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 export default function TournamentPage() {
-  const { address, isAuthenticated } = useWallet();
+  const { address } = useWallet();
   const router = useRouter();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!address) {
       router.push('/');
       return;
     }
     fetchTournaments();
-  }, [isAuthenticated, router]);
+  }, [address, router]);
 
   const fetchTournaments = async () => {
     try {

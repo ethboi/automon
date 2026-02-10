@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
+
 import { getAgentDecision } from '@/lib/agent';
 import { Battle } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { battleId } = await request.json();
+    const { battleId, address } = await request.json();
 
     if (!battleId) {
       return NextResponse.json({ error: 'Battle ID required' }, { status: 400 });
@@ -26,8 +20,8 @@ export async function POST(request: NextRequest) {
     }
 
     const isParticipant =
-      battle.player1.address.toLowerCase() === session.address.toLowerCase() ||
-      battle.player2?.address.toLowerCase() === session.address.toLowerCase();
+      battle.player1.address.toLowerCase() === address.toLowerCase() ||
+      battle.player2?.address.toLowerCase() === address.toLowerCase();
 
     if (!isParticipant) {
       return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
@@ -37,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Battle not active' }, { status: 400 });
     }
 
-    const decision = await getAgentDecision(battle, session.address);
+    const decision = await getAgentDecision(battle, address);
 
     return NextResponse.json({ decision });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
+
 import { getAgentDecision } from '@/lib/agent';
 import { resolveTurn, validateMove } from '@/lib/battle';
 import { settleBattleOnChain } from '@/lib/blockchain';
@@ -8,13 +8,11 @@ import { Battle, BattleEvent } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const { battleId, maxTurns = 50, address } = await request.json();
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!address) {
+      return NextResponse.json({ error: 'Address required' }, { status: 400 });
     }
-
-    const { battleId, maxTurns = 50 } = await request.json();
 
     if (!battleId) {
       return NextResponse.json({ error: 'Battle ID required' }, { status: 400 });
@@ -27,8 +25,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Battle not found' }, { status: 404 });
     }
 
-    const isPlayer1 = initialBattle.player1.address.toLowerCase() === session.address.toLowerCase();
-    const isPlayer2 = initialBattle.player2?.address.toLowerCase() === session.address.toLowerCase();
+    const isPlayer1 = initialBattle.player1.address.toLowerCase() === address.toLowerCase();
+    const isPlayer2 = initialBattle.player2?.address.toLowerCase() === address.toLowerCase();
 
     if (!isPlayer1 && !isPlayer2) {
       return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
@@ -49,10 +47,10 @@ export async function POST(request: NextRequest) {
       turnCount++;
 
       // Get AI decisions for both players (in a real scenario, opponent would be human)
-      const decision = await getAgentDecision(battle, session.address);
-      decisions.push({ turn: battle.currentTurn, player: session.address, decision });
+      const decision = await getAgentDecision(battle, address);
+      decisions.push({ turn: battle.currentTurn, player: address, decision });
 
-      const validation = validateMove(battle, session.address, decision);
+      const validation = validateMove(battle, address, decision);
       if (!validation.valid) {
         // Fallback to basic strike if decision is invalid
         decision.action = 'strike';
