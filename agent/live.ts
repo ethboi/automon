@@ -170,11 +170,24 @@ async function register(): Promise<boolean> {
 
 async function updatePosition(): Promise<void> {
   try {
+    // Build activity string for display
+    let activity = 'wandering';
+    if (dwellTicks > 0) {
+      // Dwelling at location — show what we're doing
+      const lastAction = recentActions.length > 0 ? recentActions[recentActions.length - 1] : '';
+      const actionName = lastAction.split('@')[0] || 'resting';
+      activity = `${actionName} at ${target.name}`;
+    } else if (pendingAction) {
+      activity = `heading to ${target.name}`;
+    } else {
+      activity = `walking to ${target.name}`;
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     await api('/api/agents/move', {
       method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME }),
+      body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME, activity }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
