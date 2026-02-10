@@ -48,6 +48,8 @@ interface BattleData {
   player2Cards?: string[];
   winner: string | null;
   wager?: string;
+  payout?: string | null;
+  settleTxHash?: string | null;
   lastRound?: {
     turn: number;
     player1Move?: { action: string; reasoning?: string | null } | null;
@@ -285,50 +287,80 @@ export function WorldUI({
                 battles.length === 0 ? (
                   <Empty text="No battles yet" />
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {battles.slice(0, 15).map((b) => {
                       const p1Name = onlineAgents.find(a => a.address?.toLowerCase() === b.player1?.toLowerCase())?.name || shortAddr(b.player1);
                       const p2Name = b.player2 ? (onlineAgents.find(a => a.address?.toLowerCase() === b.player2?.toLowerCase())?.name || shortAddr(b.player2)) : null;
                       const winnerName = b.winner ? (onlineAgents.find(a => a.address?.toLowerCase() === b.winner?.toLowerCase())?.name || shortAddr(b.winner)) : null;
-                      const statusColor = b.status === 'complete' ? 'text-green-400' : b.status === 'active' ? 'text-yellow-400 animate-pulse' : 'text-gray-400';
-                      const statusIcon = b.status === 'complete' ? '✅' : b.status === 'active' ? '⚡' : '⏳';
+                      const isComplete = b.status === 'complete';
+                      const isPending = b.status === 'pending';
+
                       return (
-                        <div key={b.id} className="bg-white/[0.02] rounded-lg px-2 py-2 hover:bg-white/[0.04] transition-colors">
+                        <div key={b.id} className={`rounded-lg px-2.5 py-2 transition-colors ${
+                          isComplete ? 'bg-white/[0.03]' : isPending ? 'bg-yellow-500/5 border border-yellow-500/10' : 'bg-white/[0.02]'
+                        }`}>
+                          {/* Header: names + time */}
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-base">{statusIcon}</span>
-                              <span className={`text-xs font-semibold ${statusColor}`}>{b.status.toUpperCase()}</span>
-                              {b.rounds > 0 && <span className="text-xs text-gray-600">{b.rounds} rounds</span>}
+                            <div className="flex items-center gap-1 min-w-0">
+                              <span className={`text-xs font-bold ${b.winner?.toLowerCase() === b.player1?.toLowerCase() ? 'text-yellow-300' : 'text-gray-300'}`}>
+                                {b.winner?.toLowerCase() === b.player1?.toLowerCase() && '🏆 '}{p1Name}
+                              </span>
+                              <span className="text-[10px] text-gray-600">vs</span>
+                              {p2Name ? (
+                                <span className={`text-xs font-bold ${b.winner?.toLowerCase() === b.player2?.toLowerCase() ? 'text-yellow-300' : 'text-gray-300'}`}>
+                                  {b.winner?.toLowerCase() === b.player2?.toLowerCase() && '🏆 '}{p2Name}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-yellow-500/60 italic animate-pulse">waiting…</span>
+                              )}
                             </div>
-                            <span className="text-xs text-gray-700">{timeAgo(b.createdAt)}</span>
+                            <span className="text-[10px] text-gray-700 shrink-0">{timeAgo(b.createdAt)}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className={`text-sm font-semibold ${b.winner?.toLowerCase() === b.player1?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
-                            <span className="text-xs text-gray-600">vs</span>
-                            {p2Name ? (
-                              <span className={`text-sm font-semibold ${b.winner?.toLowerCase() === b.player2?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p2Name}</span>
-                            ) : (
-                              <span className="text-xs text-gray-500 italic">waiting for opponent...</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">💰 {b.wager || '0'} MON</div>
+
+                          {/* Cards used */}
                           {(b.player1Cards?.length || b.player2Cards?.length) ? (
-                            <div className="text-xs text-gray-400 mt-0.5 truncate">
-                              🎴 {b.player1Cards?.slice(0, 3).join(', ') || 'No cards'} vs {b.player2Cards?.slice(0, 3).join(', ') || 'No cards'}
+                            <div className="flex items-center gap-1 mt-1 text-[10px]">
+                              <span className="text-gray-500">🎴</span>
+                              <span className="text-purple-400">{b.player1Cards?.join(', ') || '—'}</span>
+                              <span className="text-gray-700">vs</span>
+                              <span className="text-cyan-400">{b.player2Cards?.join(', ') || '—'}</span>
                             </div>
                           ) : null}
-                          {b.lastRound && (
-                            <div className="text-xs text-gray-400 mt-1 leading-tight">
-                              <div>Turn {b.lastRound.turn}: {p1Name} {b.lastRound.player1Move?.action || '—'} / {p2Name || 'Opponent'} {b.lastRound.player2Move?.action || '—'}</div>
-                              {(b.lastRound.player1Move?.reasoning || b.lastRound.player2Move?.reasoning) && (
-                                <div className="text-gray-500">
-                                  💭 {b.lastRound.player1Move?.reasoning || b.lastRound.player2Move?.reasoning}
-                                </div>
+
+                          {/* Result: payout + settle */}
+                          {isComplete && winnerName && (
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="flex items-center gap-1.5">
+                                {b.payout && (
+                                  <span className="text-xs font-mono font-bold text-emerald-400">+{b.payout} MON</span>
+                                )}
+                                <span className="text-[10px] text-gray-500">→ {winnerName}</span>
+                              </div>
+                              {b.settleTxHash && b.settleTxHash !== 'pre-escrow-fix' && (
+                                <a
+                                  href={`https://testnet.monadexplorer.com/tx/${b.settleTxHash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-purple-500 hover:text-purple-400 font-mono"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  settled ↗
+                                </a>
                               )}
                             </div>
                           )}
-                          {winnerName && (
-                            <div className="text-xs text-yellow-400/80 mt-0.5">🏆 {winnerName} wins!</div>
+
+                          {/* Wager + rounds */}
+                          <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-600">
+                            <span>💰 {b.wager || '0'} MON wager</span>
+                            {b.rounds > 0 && <span>• {b.rounds} turns</span>}
+                          </div>
+
+                          {/* AI reasoning from last round */}
+                          {b.lastRound?.player1Move?.reasoning && (
+                            <div className="text-[10px] text-gray-500 mt-1 italic line-clamp-2">
+                              💭 {b.lastRound.player1Move.reasoning}
+                            </div>
                           )}
                         </div>
                       );
