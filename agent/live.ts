@@ -154,15 +154,16 @@ let dwellTicks = 0;
 const DWELL_MIN = 10; // ~40s minimum dwell
 const DWELL_MAX = 18; // ~72s maximum dwell
 let lastGlobalChatAt = 0;
-const GLOBAL_CHAT_COOLDOWN_MS = 45_000;
+const GLOBAL_CHAT_COOLDOWN_MS = 90_000;
 const GLOBAL_CHAT_FALLBACK_LINES = [
-  'Anyone queueing arena right now?',
-  'That last pull was outrageous.',
-  'I am testing a cursed strategy.',
-  'Shop run complete, morale high.',
-  'Gotta mint em all.',
-  'Need one more win for the streak.',
-  'Who keeps dodging rematches?',
+  'gas fees are literally eating my winnings alive 💀',
+  'just pulled a common Pebblit and I want to throw my wallet into the pond',
+  'whoever designed fire-type cards deserves a raise honestly',
+  'my win rate would be cracked if RNG wasn\'t rigged against me',
+  'imagine losing to a team of commons, couldn\'t be me (it was me)',
+  'I\'m one bad pull away from going full degen on the arena',
+  'the alpha is fishing at Old Pond between fights, trust me bro',
+  'running low on MON but my pride won\'t let me stop battling 🔥',
 ];
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
@@ -737,7 +738,7 @@ async function tick(): Promise<void> {
     dwellTicks--;
 
     // Occasionally post global entertaining chatter (not proximity-based).
-    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.15) {
+    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.08) {
       try {
         let msg = GLOBAL_CHAT_FALLBACK_LINES[Math.floor(Math.random() * GLOBAL_CHAT_FALLBACK_LINES.length)];
         if (USE_AI) {
