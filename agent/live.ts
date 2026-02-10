@@ -58,7 +58,7 @@ const AUTOMON_NAMES: Record<number, string> = {
 
 // Must match WORLD_LOCATIONS in GameWorld.tsx exactly
 const LOCATIONS = [
-  { name: 'Starter Town',    x:   0, z:   0 },
+  { name: 'Home',    x:   0, z:   0 },
   { name: 'Town Arena',      x:   0, z: -30 },
   { name: 'Town Market',     x:  28, z:   0 },
   { name: 'Community Farm',  x: -28, z:   0 },
@@ -69,7 +69,7 @@ const LOCATIONS = [
 
 // Actions mapped to appropriate locations
 const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> = {
-  'Starter Town': [
+  'Home': [
     { action: 'resting', reasons: ['Taking a breather at home', 'Healing up at camp', 'Reorganizing the team'] },
     { action: 'exploring', reasons: ['Checking the notice board', 'Looking for quests', 'Chatting with locals'] },
   ],

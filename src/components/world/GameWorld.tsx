@@ -38,7 +38,7 @@ interface EventData {
 }
 
 export const WORLD_LOCATIONS = {
-  starter_town:   { position: [0, 0, 0] as [number, number, number],      label: 'Starter Town',    icon: '🏠', color: '#f59e0b', variant: 'building' as const, route: '/collection' },
+  starter_town:   { position: [0, 0, 0] as [number, number, number],      label: 'Home',    icon: '🏠', color: '#f59e0b', variant: 'building' as const, route: '/collection' },
   town_arena:     { position: [0, 0, -30] as [number, number, number],     label: 'Town Arena',      icon: '⚔️', color: '#ef4444', variant: 'building' as const, route: '/battle' },
   town_market:    { position: [28, 0, 0] as [number, number, number],      label: 'Town Market',     icon: '🏪', color: '#f97316', variant: 'building' as const, route: '/shop' },
   community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
@@ -302,15 +302,169 @@ function Roads() {
       {secondaryRoads.map(([from, to], i) =>
         renderRoad(from, to, 1.8, '#7a6b55', 0.5, 0.025, `sec-${i}`)
       )}
-      {/* Starter Town plaza — circular cobblestone area */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <circleGeometry args={[5, 24]} />
-        <meshStandardMaterial color="#8B7355" transparent opacity={0.6} roughness={0.9} />
+      {/* ─── Home — cottage + stables + AutoMons ─── */}
+
+      {/* Cobblestone yard */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <circleGeometry args={[7, 24]} />
+        <meshStandardMaterial color="#8B7355" transparent opacity={0.5} roughness={0.9} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.028, 0]}>
-        <ringGeometry args={[4.5, 5.2, 24]} />
-        <meshStandardMaterial color="#6b5b45" transparent opacity={0.5} roughness={0.9} />
-      </mesh>
+
+      {/* Main cottage */}
+      <group position={[0, 0, -2]}>
+        {/* Walls */}
+        <mesh position={[0, 1.2, 0]} castShadow>
+          <boxGeometry args={[4, 2.4, 3.5]} />
+          <meshStandardMaterial color="#d4a574" roughness={0.85} />
+        </mesh>
+        {/* Roof */}
+        <mesh position={[0, 2.8, 0]} castShadow rotation={[0, Math.PI / 2, 0]}>
+          <coneGeometry args={[3.2, 1.8, 4]} />
+          <meshStandardMaterial color="#8B4513" roughness={0.9} />
+        </mesh>
+        {/* Door */}
+        <mesh position={[0, 0.7, 1.76]}>
+          <boxGeometry args={[0.8, 1.4, 0.05]} />
+          <meshStandardMaterial color="#5a3a1a" roughness={0.9} />
+        </mesh>
+        {/* Windows */}
+        {[-1.2, 1.2].map((x, i) => (
+          <mesh key={`win-${i}`} position={[x, 1.4, 1.76]}>
+            <boxGeometry args={[0.6, 0.5, 0.05]} />
+            <meshStandardMaterial color="#87CEEB" transparent opacity={0.7} roughness={0.3} />
+          </mesh>
+        ))}
+        {/* Chimney */}
+        <mesh position={[1.4, 3.2, -0.5]} castShadow>
+          <boxGeometry args={[0.5, 1.2, 0.5]} />
+          <meshStandardMaterial color="#6b5b45" roughness={0.9} />
+        </mesh>
+      </group>
+
+      {/* Stables — open-front barn to the right */}
+      <group position={[5, 0, 1]}>
+        {/* Back wall */}
+        <mesh position={[0, 1, -1.5]} castShadow>
+          <boxGeometry args={[5, 2, 0.2]} />
+          <meshStandardMaterial color="#8B6914" roughness={0.9} />
+        </mesh>
+        {/* Side walls */}
+        {[-2.4, 2.4].map((x, i) => (
+          <mesh key={`sw-${i}`} position={[x, 1, 0]} castShadow>
+            <boxGeometry args={[0.2, 2, 3]} />
+            <meshStandardMaterial color="#8B6914" roughness={0.9} />
+          </mesh>
+        ))}
+        {/* Roof — slanted */}
+        <mesh position={[0, 2.2, -0.2]} rotation={[0.15, 0, 0]} castShadow>
+          <boxGeometry args={[5.4, 0.15, 3.6]} />
+          <meshStandardMaterial color="#654321" roughness={0.9} />
+        </mesh>
+        {/* Support posts */}
+        {[-1.8, 0, 1.8].map((x, i) => (
+          <mesh key={`post-${i}`} position={[x, 1, 1.4]} castShadow>
+            <cylinderGeometry args={[0.08, 0.1, 2, 6]} />
+            <meshStandardMaterial color="#5a3a1a" roughness={0.9} />
+          </mesh>
+        ))}
+        {/* Hay bales */}
+        {[[-1.5, 0.3, -0.8], [1.2, 0.3, -1], [0, 0.2, -0.5]].map(([x, y, z], i) => (
+          <mesh key={`hay-${i}`} position={[x, y, z]} rotation={[0, i * 0.5, 0]} castShadow>
+            <cylinderGeometry args={[0.35, 0.35, 0.6, 8]} />
+            <meshStandardMaterial color="#DAA520" roughness={0.95} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Fence around stable paddock */}
+      {(() => {
+        const posts: Array<[number, number, number]> = [];
+        // Front fence (with gap for entrance)
+        for (let x = 3; x <= 7.5; x += 1.2) {
+          if (x > 4.2 && x < 5.8) continue; // gap
+          posts.push([x, 0.4, 3.5]);
+        }
+        // Right side
+        for (let z = 3.5; z >= 0; z -= 1.2) posts.push([7.5, 0.4, z]);
+        return posts.map((p, i) => (
+          <group key={`sfence-${i}`}>
+            <mesh position={p} castShadow>
+              <cylinderGeometry args={[0.05, 0.06, 0.8, 5]} />
+              <meshStandardMaterial color="#7a4a24" roughness={0.9} />
+            </mesh>
+          </group>
+        ));
+      })()}
+      {/* Fence rails */}
+      {[
+        [5.2, 0.5, 3.5, 4.5, 0], [5.2, 0.3, 3.5, 4.5, 0],
+        [7.5, 0.5, 1.75, 3.5, Math.PI / 2], [7.5, 0.3, 1.75, 3.5, Math.PI / 2],
+      ].map((r, i) => (
+        <mesh key={`srail-${i}`} position={[r[0], r[1], r[2]]} rotation={[0, r[4], 0]}>
+          <boxGeometry args={[r[3], 0.06, 0.06]} />
+          <meshStandardMaterial color="#6b3a14" roughness={0.9} />
+        </mesh>
+      ))}
+
+      {/* AutoMons in the paddock — decorative creatures */}
+      {[
+        { pos: [4, 0, 2.5] as [number,number,number], color: '#ff6b35', size: 0.4 },
+        { pos: [6, 0, 2] as [number,number,number], color: '#4ecdc4', size: 0.35 },
+        { pos: [5.5, 0, 3] as [number,number,number], color: '#ffe66d', size: 0.3 },
+      ].map((m, i) => (
+        <group key={`padmon-${i}`} position={m.pos}>
+          {/* Body */}
+          <mesh position={[0, m.size * 1.2, 0]} castShadow>
+            <sphereGeometry args={[m.size, 8, 8]} />
+            <meshStandardMaterial color={m.color} roughness={0.7} />
+          </mesh>
+          {/* Head */}
+          <mesh position={[0, m.size * 2, 0.1]} castShadow>
+            <sphereGeometry args={[m.size * 0.6, 8, 8]} />
+            <meshStandardMaterial color={m.color} roughness={0.7} />
+          </mesh>
+          {/* Eyes */}
+          <mesh position={[m.size * 0.15, m.size * 2.1, m.size * 0.4]}>
+            <sphereGeometry args={[0.06, 6, 6]} />
+            <meshStandardMaterial color="#1a1a2e" />
+          </mesh>
+          <mesh position={[-m.size * 0.15, m.size * 2.1, m.size * 0.4]}>
+            <sphereGeometry args={[0.06, 6, 6]} />
+            <meshStandardMaterial color="#1a1a2e" />
+          </mesh>
+          {/* Legs */}
+          {[[-0.15, 0], [0.15, 0], [-0.15, -0.2], [0.15, -0.2]].map(([lx, lz], li) => (
+            <mesh key={`leg-${i}-${li}`} position={[lx, 0.25, lz]}>
+              <cylinderGeometry args={[0.04, 0.05, 0.5, 5]} />
+              <meshStandardMaterial color={m.color} roughness={0.7} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+
+      {/* Mailbox */}
+      <group position={[-2.5, 0, 1.5]}>
+        <mesh position={[0, 0.5, 0]} castShadow>
+          <cylinderGeometry args={[0.04, 0.05, 1, 5]} />
+          <meshStandardMaterial color="#5a3a1a" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 1, 0]} castShadow>
+          <boxGeometry args={[0.4, 0.25, 0.2]} />
+          <meshStandardMaterial color="#cc3333" roughness={0.7} />
+        </mesh>
+      </group>
+
+      {/* Welcome sign */}
+      <group position={[-1, 0, 4]}>
+        <mesh position={[0, 0.6, 0]} castShadow>
+          <cylinderGeometry args={[0.05, 0.06, 1.2, 5]} />
+          <meshStandardMaterial color="#5a3a1a" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 1.15, 0]} castShadow>
+          <boxGeometry args={[1.4, 0.5, 0.08]} />
+          <meshStandardMaterial color="#8B6914" roughness={0.85} />
+        </mesh>
+      </group>
     </group>
   );
 }

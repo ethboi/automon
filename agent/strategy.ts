@@ -485,7 +485,7 @@ interface LocationDecision {
 }
 
 const LOCATION_INFO: Record<string, string> = {
-  'Starter Town': 'Home base. Safe area for resting and planning.',
+  'Home': 'Home base. Safe area for resting and planning.',
   'Town Arena': 'Battle arena. Create or join battles here.',
   'Town Market': 'Trading post. Buy/sell items and check prices.',
   'Community Farm': 'Grow crops. Farming here restores health (+17 HP).',
@@ -541,7 +541,7 @@ ${locationList}
 - If health drops to 0, agent faints!
 
 ## LOCATION-SPECIFIC ACTIONS (use ONLY matching actions per location)
-- Starter Town: resting, exploring
+- Home: resting, exploring
 - Town Arena: battling, training
 - Town Market: trading, shopping (buy card packs for 0.1 MON)
 - Community Farm: farming, foraging
