@@ -95,6 +95,7 @@ export function WorldUI({
 }: WorldUIProps) {
   const [tab, setTab] = useState<Tab>('agents');
   const [panelOpen, setPanelOpen] = useState(false);
+  const [aiLogOpen, setAiLogOpen] = useState(true);
 
   const onlineCount = onlineAgents.filter(a => a.online).length;
 
@@ -253,18 +254,23 @@ export function WorldUI({
         )}
       </div>
 
-      {/* ─── AI Activity Log (bottom left, always open) ─── */}
+      {/* ─── AI Activity Log (bottom left, minimizable) ─── */}
       <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 pointer-events-auto" style={{ zIndex: 50 }}>
         <div className="bg-black/75 backdrop-blur-md rounded-xl border border-purple-500/20 shadow-xl overflow-hidden"
-          style={{ width: 'min(380px, calc(100vw - 24px))', maxWidth: '380px' }}>
+          style={{ width: aiLogOpen ? 'min(380px, calc(100vw - 24px))' : 'auto', maxWidth: '380px' }}>
           {/* Header */}
-          <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2">
+          <button
+            onClick={() => setAiLogOpen(!aiLogOpen)}
+            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-white/5 transition-colors"
+          >
             <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
             <span className="text-xs font-bold text-purple-300 uppercase tracking-wider">🤖 Agent Trainer Log</span>
-            <span className="text-[10px] text-gray-500 ml-auto font-mono">claude-sonnet-4</span>
-          </div>
+            <span className="text-[10px] text-gray-500 ml-auto font-mono">{aiLogOpen ? 'claude-sonnet-4' : `${events.length}`}</span>
+            <span className="text-gray-500 text-xs">{aiLogOpen ? '▼' : '▲'}</span>
+          </button>
           {/* Events */}
-          <div className="overflow-y-auto" style={{ maxHeight: '220px' }}>
+          {aiLogOpen && (
+          <div className="overflow-y-auto border-t border-white/10" style={{ maxHeight: '220px' }}>
             {events.length === 0 ? (
               <div className="px-3 py-4 text-center text-xs text-gray-600 italic">Waiting for agent actions...</div>
             ) : (
@@ -303,6 +309,7 @@ export function WorldUI({
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 
