@@ -62,6 +62,7 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
   const glowRef = useRef<THREE.Mesh>(null);
   const waterRef = useRef<THREE.Mesh>(null);
   const orbRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const smokeRefs = useRef<(THREE.Mesh | null)[]>([]);
 
   const seed = useMemo(() => {
     let h = 0;
@@ -105,6 +106,18 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
       if (!orb) return;
       orb.position.y = 0.9 + i * 0.25 + Math.sin(state.clock.elapsedTime * (1.2 + i * 0.3)) * 0.2;
       orb.scale.setScalar(0.85 + Math.sin(state.clock.elapsedTime * (2 + i * 0.8)) * 0.15);
+    });
+    smokeRefs.current.forEach((smoke, i) => {
+      if (!smoke) return;
+      const t = state.clock.elapsedTime * 0.75 + i * 0.9;
+      smoke.position.y = 3.9 + i * 0.45 + Math.sin(t) * 0.25 + (t % 2.6) * 0.22;
+      smoke.position.x = buildingWidth * 0.2 + Math.sin(t * 0.8) * 0.12;
+      smoke.position.z = -buildingDepth * 0.12 + Math.cos(t * 0.7) * 0.1;
+      smoke.scale.setScalar(0.7 + (i + 1) * 0.2 + Math.sin(t * 0.6) * 0.08);
+      const mat = smoke.material;
+      if (mat instanceof THREE.MeshStandardMaterial) {
+        mat.opacity = 0.26 + Math.sin(t * 0.9) * 0.05;
+      }
     });
   });
 
@@ -160,6 +173,18 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
             <boxGeometry args={[0.26, 0.6, 0.26]} />
             <meshStandardMaterial color="#6b7280" roughness={0.8} />
           </mesh>
+          {[0, 1, 2].map((i) => (
+            <mesh
+              key={`smoke-${i}`}
+              ref={(el) => {
+                smokeRefs.current[i] = el;
+              }}
+              position={[buildingWidth * 0.2, 3.9 + i * 0.45, -buildingDepth * 0.12]}
+            >
+              <sphereGeometry args={[0.2 + i * 0.05, 8, 8]} />
+              <meshStandardMaterial color="#d1d5db" transparent opacity={0.22} roughness={1} />
+            </mesh>
+          ))}
 
           <mesh position={[0, foundationHeight + 0.55, buildingDepth / 2 + 0.02]} castShadow>
             <boxGeometry args={[0.72, 1.1, 0.08]} />
@@ -175,24 +200,41 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
           </mesh>
 
           {[-0.7, 0.7].map((x, i) => (
-            <mesh
-              key={`window-front-${i}`}
-              position={[x, foundationHeight + floorOneHeight * 0.66, buildingDepth / 2 - 0.06]}
-              castShadow
-            >
-              <boxGeometry args={[0.38, 0.34, 0.1]} />
-              <meshStandardMaterial color="#111827" roughness={0.3} metalness={0.05} />
-            </mesh>
+            <group key={`window-front-${i}`}>
+              <mesh position={[x, foundationHeight + floorOneHeight * 0.66, buildingDepth / 2 - 0.06]} castShadow>
+                <boxGeometry args={[0.38, 0.34, 0.1]} />
+                <meshStandardMaterial color="#111827" roughness={0.3} metalness={0.05} />
+              </mesh>
+              <mesh position={[x, foundationHeight + floorOneHeight * 0.66, buildingDepth / 2 - 0.12]}>
+                <boxGeometry args={[0.28, 0.24, 0.03]} />
+                <meshStandardMaterial color={i === 0 ? '#60a5fa' : '#93c5fd'} roughness={0.25} metalness={0.08} />
+              </mesh>
+              <mesh position={[x, foundationHeight + floorOneHeight * 0.46, buildingDepth / 2 + 0.08]} castShadow>
+                <boxGeometry args={[0.48, 0.12, 0.24]} />
+                <meshStandardMaterial color="#7c3f2c" roughness={0.8} />
+              </mesh>
+              {[[-0.12, '#f472b6'], [0.03, '#22c55e'], [0.14, '#facc15']].map((f, j) => (
+                <mesh key={`flower-box-${i}-${j}`} position={[x + (f[0] as number), foundationHeight + floorOneHeight * 0.55, buildingDepth / 2 + 0.18]}>
+                  <sphereGeometry args={[0.05, 6, 6]} />
+                  <meshStandardMaterial color={f[1] as string} roughness={0.55} />
+                </mesh>
+              ))}
+            </group>
           ))}
           {[-0.45, 0.45].map((x, i) => (
-            <mesh
-              key={`window-top-${i}`}
-              position={[x, foundationHeight + floorOneHeight + floorTwoHeight * 0.55, (buildingDepth * 0.82) / 2 - 0.05]}
-              castShadow
-            >
-              <boxGeometry args={[0.3, 0.28, 0.08]} />
-              <meshStandardMaterial color="#0f172a" roughness={0.25} />
-            </mesh>
+            <group key={`window-top-${i}`}>
+              <mesh
+                position={[x, foundationHeight + floorOneHeight + floorTwoHeight * 0.55, (buildingDepth * 0.82) / 2 - 0.05]}
+                castShadow
+              >
+                <boxGeometry args={[0.3, 0.28, 0.08]} />
+                <meshStandardMaterial color="#0f172a" roughness={0.25} />
+              </mesh>
+              <mesh position={[x, foundationHeight + floorOneHeight + floorTwoHeight * 0.55, (buildingDepth * 0.82) / 2 - 0.1]}>
+                <boxGeometry args={[0.22, 0.18, 0.02]} />
+                <meshStandardMaterial color={i === 0 ? '#bfdbfe' : '#a5f3fc'} roughness={0.2} />
+              </mesh>
+            </group>
           ))}
           {[-1, 1].map((side, i) => (
             <mesh
@@ -204,6 +246,10 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
               <meshStandardMaterial color="#0b1120" roughness={0.3} />
             </mesh>
           ))}
+          <mesh position={[0, 0.03, buildingDepth / 2 + 0.72]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[1.2, 0.5]} />
+            <meshStandardMaterial color="#7c2d12" roughness={0.92} />
+          </mesh>
         </>
       )}
 
@@ -292,10 +338,16 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
                 <meshStandardMaterial color={row % 2 === 0 ? '#6b4b2a' : '#5a3f23'} roughness={0.95} />
               </mesh>
               {[-2, -1.3, -0.6, 0.15, 0.9, 1.55, 2.2].map((x, i) => (
-                <mesh key={`sprout-${row}-${i}`} position={[x, 0.17, 0]} castShadow>
-                  <coneGeometry args={[0.06, 0.12, 5]} />
-                  <meshStandardMaterial color={i % 2 === 0 ? '#4ade80' : '#22c55e'} roughness={0.75} />
-                </mesh>
+                <group key={`sprout-${row}-${i}`} position={[x, 0.13, 0]}>
+                  <mesh castShadow>
+                    <cylinderGeometry args={[0.045, 0.06, 0.16, 6]} />
+                    <meshStandardMaterial color={i % 2 === 0 ? '#4ade80' : '#22c55e'} roughness={0.75} />
+                  </mesh>
+                  <mesh position={[0, 0.1, 0]} castShadow>
+                    <sphereGeometry args={[0.04, 6, 6]} />
+                    <meshStandardMaterial color={i % 2 === 0 ? '#86efac' : '#4ade80'} roughness={0.65} />
+                  </mesh>
+                </group>
               ))}
             </group>
           ))}
@@ -362,6 +414,32 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
               <meshStandardMaterial color="#6b3b1f" roughness={0.82} />
             </mesh>
           </group>
+
+          {[
+            [0, 0.55, -2.55, 5.6, 0],
+            [0, 0.32, -2.55, 5.6, 0],
+            [0, 0.55, 2.55, 5.6, 0],
+            [0, 0.32, 2.55, 5.6, 0],
+            [-2.8, 0.55, 0, 5.1, Math.PI / 2],
+            [-2.8, 0.32, 0, 5.1, Math.PI / 2],
+            [2.8, 0.55, 0, 5.1, Math.PI / 2],
+            [2.8, 0.32, 0, 5.1, Math.PI / 2],
+          ].map((rail, i) => (
+            <mesh key={`farm-rail-${i}`} position={[rail[0], rail[1], rail[2]]} rotation={[0, rail[4], 0]}>
+              <boxGeometry args={[rail[3], 0.08, 0.08]} />
+              <meshStandardMaterial color="#7a4a24" roughness={0.9} />
+            </mesh>
+          ))}
+          {[
+            [-2.8, -2.55], [-1.4, -2.55], [0, -2.55], [1.4, -2.55], [2.8, -2.55],
+            [-2.8, 2.55], [-1.4, 2.55], [0, 2.55], [1.4, 2.55], [2.8, 2.55],
+            [-2.8, -1.25], [-2.8, 0], [-2.8, 1.25], [2.8, -1.25], [2.8, 0], [2.8, 1.25],
+          ].map((post, i) => (
+            <mesh key={`farm-post-${i}`} position={[post[0], 0.42, post[1]]} castShadow>
+              <cylinderGeometry args={[0.08, 0.09, 0.86, 6]} />
+              <meshStandardMaterial color="#8b5a2b" roughness={0.92} />
+            </mesh>
+          ))}
 
           <mesh position={[-2.45, 1.7, -1.55]} castShadow>
             <cylinderGeometry args={[0.12, 0.18, 3.4, 8]} />
@@ -518,37 +596,59 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
             [0.1, 0, 1.25],
           ].map((tree, i) => (
             <group key={`tree-${i}`} position={tree as [number, number, number]}>
-              <mesh position={[0, 1.35, 0]} castShadow rotation={[0.1, 0, 0.09 * (i - 1)]}>
-                <cylinderGeometry args={[0.2, 0.34, 2.7, 7]} />
+              <mesh position={[0, 2.05, 0]} castShadow rotation={[0.13, 0, 0.11 * (i - 1)]}>
+                <cylinderGeometry args={[0.24, 0.42, 4.1, 7]} />
                 <meshStandardMaterial color="#2a1a1a" roughness={0.92} />
               </mesh>
-              <mesh position={[0.3, 2.18, 0.08]} rotation={[0.3, 0.1, Math.PI / 3]} castShadow>
-                <cylinderGeometry args={[0.08, 0.13, 1.2, 5]} />
+              <mesh position={[0.38, 3.35, 0.08]} rotation={[0.38, 0.1, Math.PI / 3]} castShadow>
+                <cylinderGeometry args={[0.09, 0.15, 1.55, 5]} />
                 <meshStandardMaterial color="#3b2525" roughness={0.9} />
               </mesh>
-              <mesh position={[-0.28, 2.0, -0.1]} rotation={[-0.2, 0.25, -Math.PI / 3]} castShadow>
-                <cylinderGeometry args={[0.07, 0.12, 1.0, 5]} />
+              <mesh position={[-0.33, 3.15, -0.1]} rotation={[-0.3, 0.25, -Math.PI / 3]} castShadow>
+                <cylinderGeometry args={[0.08, 0.13, 1.25, 5]} />
                 <meshStandardMaterial color="#3b2525" roughness={0.9} />
               </mesh>
-              <mesh position={[0.05, 1.55, 0.05]} castShadow>
-                <sphereGeometry args={[0.12, 7, 7]} />
+              <mesh position={[0.05, 2.45, 0.05]} castShadow>
+                <sphereGeometry args={[0.14, 7, 7]} />
                 <meshStandardMaterial color="#1f1414" roughness={0.95} />
               </mesh>
+              {[
+                [-0.08, 2.62, 0.2, '#f59e0b'],
+                [0.08, 2.62, 0.2, '#ef4444'],
+              ].map((eye, eyeIdx) => (
+                <mesh key={`eye-${i}-${eyeIdx}`} position={[eye[0] as number, eye[1] as number, eye[2] as number]}>
+                  <sphereGeometry args={[0.045, 8, 8]} />
+                  <meshStandardMaterial
+                    color={eye[3] as string}
+                    emissive={eye[3] as string}
+                    emissiveIntensity={1.1}
+                    transparent
+                    opacity={0.9}
+                  />
+                </mesh>
+              ))}
             </group>
           ))}
 
           {[
-            { p: [-0.2, 1.5, 0.2], r: [0.1, 0.45, 0] },
-            { p: [0.75, 1.35, 0.7], r: [0.2, -0.35, 0] },
+            [-0.4, 3.25, -0.75, 1.9, 0.32],
+            [0.75, 3.0, 0.52, 2.1, -0.35],
+            [0.05, 2.85, 1.1, 1.7, 0.1],
           ].map((web, i) => (
-            <mesh
-              key={`web-${i}`}
-              position={web.p as [number, number, number]}
-              rotation={web.r as [number, number, number]}
-            >
-              <planeGeometry args={[1.15, 0.82]} />
-              <meshStandardMaterial color="#cbd5e1" transparent opacity={0.22} side={THREE.DoubleSide} />
-            </mesh>
+            <group key={`web-${i}`} position={[web[0], web[1], web[2]]} rotation={[0, web[4], 0]}>
+              {[-0.28, -0.14, 0, 0.14, 0.28].map((offset, lineIdx) => (
+                <mesh key={`web-line-h-${i}-${lineIdx}`} position={[0, offset, 0]}>
+                  <boxGeometry args={[web[3], 0.01, 0.01]} />
+                  <meshStandardMaterial color="#cbd5e1" transparent opacity={0.28} />
+                </mesh>
+              ))}
+              {[-0.65, -0.32, 0, 0.32, 0.65].map((offset, lineIdx) => (
+                <mesh key={`web-line-v-${i}-${lineIdx}`} position={[offset, 0, 0]}>
+                  <boxGeometry args={[0.01, 0.62, 0.01]} />
+                  <meshStandardMaterial color="#e2e8f0" transparent opacity={0.22} />
+                </mesh>
+              ))}
+            </group>
           ))}
 
           {[
