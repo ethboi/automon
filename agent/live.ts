@@ -108,14 +108,21 @@ async function api(path: string, opts: RequestInit = {}): Promise<Response> {
   };
   if (JWT_SECRET) headers['x-agent-secret'] = JWT_SECRET;
 
-  // Default 5s timeout, but allow override via timeoutMs option
-  const timeoutMs = (opts as { timeoutMs?: number }).timeoutMs || 5000;
+  // Default 5s timeout
   if (!opts.signal) {
     const controller = new AbortController();
-    setTimeout(() => controller.abort(), timeoutMs);
+    setTimeout(() => controller.abort(), 5000);
     return fetch(`${API_URL}${path}`, { ...opts, headers, signal: controller.signal, redirect: 'follow' });
   }
   return fetch(`${API_URL}${path}`, { ...opts, headers, redirect: 'follow' });
+}
+
+function apiLong(path: string, opts: RequestInit = {}, timeoutMs = 60000): Promise<Response> {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(opts.headers as Record<string, string>) };
+  if (JWT_SECRET) headers['x-agent-secret'] = JWT_SECRET;
+  return fetch(`${API_URL}${path}`, { ...opts, headers, signal: controller.signal, redirect: 'follow' });
 }
 
 // ─── Agent State ───────────────────────────────────────────────────────────────
@@ -423,7 +430,7 @@ async function tryJoinBattle(): Promise<boolean> {
     const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
 
     console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards: ${cardIds.join(', ')}`);
-    const selectRes = await api('/api/battle/select-cards', { timeoutMs: 60000,
+    const selectRes = await apiLong('/api/battle/select-cards', {
       method: 'POST',
       body: JSON.stringify({ battleId: openBattle.battleId, cardIds, address: ADDRESS }),
     });
@@ -483,7 +490,7 @@ async function createAndWaitForBattle(): Promise<void> {
     });
     const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
     console.log(`[${ts()}]   🎴 Selecting cards: ${cardIds.join(', ')}`);
-    const selectRes = await api('/api/battle/select-cards', { timeoutMs: 60000,
+    const selectRes = await apiLong('/api/battle/select-cards', {
       method: 'POST',
       body: JSON.stringify({ battleId, cardIds, address: ADDRESS }),
     });

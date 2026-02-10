@@ -156,7 +156,7 @@ export function resolveTriangle(action1: BattleAction, action2: BattleAction): {
 // STAT CALCULATIONS
 // =============================================================================
 
-function getActiveCard(player: PlayerState): BattleCard {
+export function getActiveCard(player: PlayerState): BattleCard {
   return player.cards[player.activeCardIndex];
 }
 
