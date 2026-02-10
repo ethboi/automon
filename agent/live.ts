@@ -144,15 +144,15 @@ let agentBalance = '0';
 let agentMaxHealth = 100;
 const recentActions: string[] = [];
 let lastBattleTime = 0;
-const BATTLE_COOLDOWN_MS = 3 * 60 * 1000; // 3 min cooldown between battles
+const BATTLE_COOLDOWN_MS = 90 * 1000; // 90s cooldown between battles
 const AI_PERSONALITY = process.env.AI_PERSONALITY || 'Curious explorer who loves discovering new areas and collecting rare cards';
 const USE_AI = !!process.env.ANTHROPIC_API_KEY;
 // Pending action to perform on arrival
 let pendingAction: { action: string; reason: string; wager?: string } | null = null;
 // Dwell at location after performing action (in ticks)
 let dwellTicks = 0;
-const DWELL_MIN = 12; // ~48s minimum dwell
-const DWELL_MAX = 20; // ~80s maximum dwell
+const DWELL_MIN = 6; // ~24s minimum dwell
+const DWELL_MAX = 12; // ~48s maximum dwell
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
@@ -598,9 +598,9 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
     const selectData = await selectRes.json();
     console.log(`[${ts()}]   🎴 Cards selected! ready=${selectData.battle?.player1?.ready} waiting for opponent...`);
 
-    // Wait up to 5 minutes (75 ticks @ 4s), checking every 20s
-    const WAIT_TICKS = 75;
-    const CHECK_INTERVAL = 5; // check every 20s
+    // Wait up to 2 minutes (30 ticks @ 4s), checking every 16s
+    const WAIT_TICKS = 30;
+    const CHECK_INTERVAL = 3; // check every 12s
     for (let i = 0; i < WAIT_TICKS; i++) {
       await new Promise(r => setTimeout(r, TICK_MS));
       await updatePosition(); // keep position updating while waiting
@@ -639,7 +639,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
         console.log(`[${ts()}]   ⏳ Still waiting for opponent... (${remaining}s left)`);
       }
     }
-    console.log(`[${ts()}]   ⏰ No opponent joined after 5 min — moving on`);
+    console.log(`[${ts()}]   ⏰ No opponent joined after 2 min — moving on`);
     await logAction('battling', 'Battle expired — no opponent joined', 'Town Arena');
     lastBattleTime = Date.now();
   } catch (err) {
