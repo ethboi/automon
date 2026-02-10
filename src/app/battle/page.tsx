@@ -6,6 +6,13 @@ import { Battle, Card as CardType, BattleMove, BattleLog } from '@/lib/types';
 import Card from '@/components/Card';
 import BattleArena from '@/components/BattleArena';
 import BattleReplay from '@/components/BattleReplay';
+import { AUTOMONS } from '@/lib/automons';
+import { getCardArtDataUri } from '@/lib/cardArt';
+
+function cardImage(name: string): string {
+  const mon = AUTOMONS.find(a => a.name === name);
+  return getCardArtDataUri(mon?.id ?? 1, mon?.element || 'fire', 'common');
+}
 
 type View = 'list' | 'create' | 'select-cards' | 'battle' | 'replay';
 
@@ -609,8 +616,18 @@ export default function BattlePage() {
                         )}
                       </div>
                       {(p1Cards.length > 0 || p2Cards.length > 0) && (
-                        <div className="text-xs text-gray-400 mt-1 truncate">
-                          🎴 {p1Cards.slice(0, 3).map(c => c.name).join(', ') || 'No cards'} vs {p2Cards.slice(0, 3).map(c => c.name).join(', ') || 'No cards'}
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <div className="flex -space-x-1">
+                            {p1Cards.slice(0, 3).map((c, i) => (
+                              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name} className="w-7 h-7 rounded border border-gray-700 object-cover" />
+                            ))}
+                          </div>
+                          <span className="text-xs text-gray-500 mx-1">vs</span>
+                          <div className="flex -space-x-1">
+                            {p2Cards.slice(0, 3).map((c, i) => (
+                              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name} className="w-7 h-7 rounded border border-gray-700 object-cover" />
+                            ))}
+                          </div>
                         </div>
                       )}
                       {lastRound && (

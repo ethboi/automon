@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { BattleLog, BattleTurnLog, BattleEvent } from '@/lib/types';
+import { AUTOMONS } from '@/lib/automons';
+import { getCardArtDataUri } from '@/lib/cardArt';
+
+function getCardImage(cardName: string, element?: string): string {
+  const mon = AUTOMONS.find(a => a.name === cardName);
+  return getCardArtDataUri(mon?.id ?? 1, element || mon?.element || 'fire', 'common');
+}
 
 interface BattleReplayProps {
   battleLog: BattleLog;
@@ -215,6 +222,7 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
                 </div>
 
                 <div className="text-center mb-4">
+                  <img src={getCardImage(currentTurn.player1.activeCard)} alt={currentTurn.player1.activeCard} className="w-20 h-20 mx-auto rounded-lg object-cover mb-2" />
                   <div className="text-lg font-bold">{currentTurn.player1.activeCard}</div>
                   <div className="text-sm text-gray-400">
                     HP: {currentTurn.player1.cardHp}
@@ -247,6 +255,7 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
                 </div>
 
                 <div className="text-center mb-4">
+                  <img src={getCardImage(currentTurn.player2.activeCard)} alt={currentTurn.player2.activeCard} className="w-20 h-20 mx-auto rounded-lg object-cover mb-2" />
                   <div className="text-lg font-bold">{currentTurn.player2.activeCard}</div>
                   <div className="text-sm text-gray-400">
                     HP: {currentTurn.player2.cardHp}
