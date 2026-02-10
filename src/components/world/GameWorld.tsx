@@ -404,6 +404,7 @@ export function GameWorld() {
   }[]>([]);
   const [totalCards, setTotalCards] = useState(0);
   const [transactions, setTransactions] = useState<{ txHash: string; type: string; from: string; description: string; explorerUrl: string; timestamp: string }[]>([]);
+  const [chatMessages, setChatMessages] = useState<{ from: string; fromName: string; to?: string; toName?: string; message: string; location?: string; timestamp: string }[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
   useEffect(() => {
@@ -418,6 +419,7 @@ export function GameWorld() {
           setBattles(data.battles || []);
           setTotalCards(data.totalCards || 0);
           setTransactions(data.transactions || []);
+          setChatMessages(data.chat || []);
         }
       } catch (error) {
         console.error('Failed to fetch dashboard:', error);
@@ -496,6 +498,7 @@ export function GameWorld() {
         battles={battles}
         totalCards={totalCards}
         transactions={transactions}
+        chat={chatMessages}
         onSelectAgent={handleSelectAgent}
         onFlyToAgent={(address: string) => {
           const agent = onlineAgents.find(a => a.address?.toLowerCase() === address.toLowerCase());

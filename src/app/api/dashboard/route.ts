@@ -11,7 +11,7 @@ export async function GET() {
     const oneDayAgo = new Date(Date.now() - 86400000);
     const fiveMinAgo = new Date(Date.now() - 300000);
 
-    const [agents, recentActions, recentBattles, totalCards, recentTxs] = await Promise.all([
+    const [agents, recentActions, recentBattles, totalCards, recentTxs, recentChat] = await Promise.all([
       db.collection('agents')
         .find({ lastSeen: { $gte: oneDayAgo } })
         .toArray(),
@@ -34,6 +34,12 @@ export async function GET() {
         .find({})
         .sort({ timestamp: -1, createdAt: -1 })
         .limit(20)
+        .toArray(),
+
+      db.collection('chat')
+        .find({ timestamp: { $gte: oneDayAgo } })
+        .sort({ timestamp: -1 })
+        .limit(30)
         .toArray(),
     ]);
 
@@ -158,6 +164,15 @@ export async function GET() {
         explorerUrl: explorerUrl(tx.txHash),
         timestamp: tx.timestamp,
         amount: tx.metadata?.wager || tx.metadata?.price || tx.amount || null,
+      })),
+      chat: (recentChat || []).reverse().map(m => ({
+        from: m.from,
+        fromName: m.fromName,
+        to: m.to,
+        toName: m.toName,
+        message: m.message,
+        location: m.location,
+        timestamp: m.timestamp,
       })),
     });
   } catch (error) {

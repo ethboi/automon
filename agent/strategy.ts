@@ -513,7 +513,7 @@ export async function decideNextAction(
 
     const rarityCount = cards.reduce((acc, c) => { acc[c.rarity || 'common'] = (acc[c.rarity || 'common'] || 0) + 1; return acc; }, {} as Record<string, number>);
   const rarityStr = Object.entries(rarityCount).map(([r, n]) => `${n} ${r}`).join(', ');
-  const avgStats = cards.length > 0 ? Math.round(cards.reduce((sum, c) => sum + ((c as Record<string, unknown> as { stats?: { attack?: number; defense?: number } }).stats?.attack || 30) + ((c as Record<string, unknown> as { stats?: { attack?: number; defense?: number } }).stats?.defense || 30), 0) / cards.length) : 0;
+  const avgStats = cards.length > 0 ? Math.round(cards.reduce((sum, c) => sum + ((c as unknown as { stats?: { attack?: number; defense?: number } }).stats?.attack || 30) + ((c as unknown as { stats?: { attack?: number; defense?: number } }).stats?.defense || 30), 0) / cards.length) : 0;
   const cardSummary = cards.length > 0
     ? `${cards.length} cards (${rarityStr}), avg power: ${avgStats}, elements: ${[...new Set(cards.map(c => c.element))].join(', ')}, best: ${cards.slice(0, 3).map(c => `${c.name}(${c.rarity})`).join(', ')}`
     : 'No cards yet — should buy a pack!';
@@ -600,5 +600,44 @@ Respond with JSON only:
       action: 'exploring',
       reasoning: 'Exploring the meadows to see what we find.',
     };
+  }
+}
+
+// ─── Agent-to-Agent Chat ────────────────────────────────────────────────────────
+
+export async function agentChat(
+  myName: string,
+  otherName: string,
+  location: string,
+  myPersonality: string,
+  recentChat: string[],
+): Promise<string | null> {
+  const prompt = `You are ${myName}, an AI agent in AutoMon (Pokemon-style game). You just bumped into ${otherName} at ${location}.
+
+YOUR PERSONALITY: ${myPersonality}
+
+${recentChat.length > 0 ? `RECENT CONVERSATION:\n${recentChat.join('\n')}` : 'Start a new conversation!'}
+
+Say something short and fun to ${otherName}. Topics: your recent adventures, card collection, battle stories, the location you're both at, teasing about wins/losses, or just friendly banter.
+
+Rules:
+- Max 1-2 sentences
+- Be in character — show personality
+- Reference game activities naturally
+- Be playful and competitive but friendly
+
+Reply with just your message, nothing else.`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const content = response.content[0];
+    if (content.type !== 'text') return null;
+    return content.text.trim();
+  } catch {
+    return null;
   }
 }
