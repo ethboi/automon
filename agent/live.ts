@@ -127,19 +127,27 @@ async function register(): Promise<boolean> {
 
 async function updatePosition(): Promise<void> {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     await api('/api/agents/move', {
       method: 'POST',
       body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
   } catch { /* silent */ }
 }
 
 async function logAction(action: string, reason: string, location: string): Promise<void> {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     await api('/api/agents/action', {
       method: 'POST',
       body: JSON.stringify({ address: ADDRESS, action, reason, location }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
   } catch { /* silent */ }
 }
 
@@ -225,10 +233,10 @@ async function tick(): Promise<void> {
   const dist = Math.sqrt(dx * dx + dz * dz);
 
   if (dist > 2) {
-    // Move toward target
     const speed = 5;
     posX += (dx / dist) * speed;
     posZ += (dz / dist) * speed;
+    // silently moving
   } else {
     // Arrived — do something
     const event = pick(ACTIONS);
