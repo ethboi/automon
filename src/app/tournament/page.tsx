@@ -3,22 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useWallet } from '@/context/WalletContext';
 import { Tournament } from '@/lib/types';
-import { useRouter } from 'next/navigation';
 
 export default function TournamentPage() {
   const { address } = useWallet();
-  const router = useRouter();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!address) {
-      router.push('/');
-      return;
-    }
     fetchTournaments();
-  }, [address, router]);
+  }, [address]);
 
   const fetchTournaments = async () => {
     try {
