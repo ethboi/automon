@@ -1,25 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-interface CardInfo {
-  id: string;
-  tokenId?: number;
-  automonId?: number;
-  name: string;
-  element: string;
-  rarity: string;
-  stats?: {
-    attack: number;
-    defense: number;
-    speed: number;
-    hp: number;
-  };
-  ability?: {
-    name: string;
-    effect: string;
-  };
-}
+import { Card as CardType } from '@/lib/types';
+import CardComponent from './Card';
 
 interface AgentDetails {
   agent: {
@@ -47,7 +30,7 @@ interface AgentDetails {
     winRate: number;
     healthPercent: number;
   };
-  cards: CardInfo[];
+  cards: CardType[];
   actions: Array<{
     action: string;
     reason: string;
@@ -62,23 +45,6 @@ interface AgentProfileModalProps {
   address: string;
   onClose: () => void;
 }
-
-const ELEMENT_COLORS: Record<string, string> = {
-  fire: 'from-red-500 to-orange-500',
-  water: 'from-blue-500 to-cyan-500',
-  earth: 'from-amber-600 to-yellow-700',
-  air: 'from-gray-300 to-blue-200',
-  dark: 'from-purple-800 to-gray-800',
-  light: 'from-yellow-300 to-amber-200',
-};
-
-const RARITY_COLORS: Record<string, string> = {
-  common: 'text-gray-400 border-gray-500',
-  uncommon: 'text-green-400 border-green-500',
-  rare: 'text-blue-400 border-blue-500',
-  epic: 'text-purple-400 border-purple-500',
-  legendary: 'text-yellow-400 border-yellow-500',
-};
 
 export default function AgentProfileModal({ address, onClose }: AgentProfileModalProps) {
   const [details, setDetails] = useState<AgentDetails | null>(null);
@@ -288,48 +254,14 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
                     <p>No cards yet</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 justify-items-center">
                     {details.cards.map((card) => (
-                      <div
-                        key={card.id}
-                        className={`rounded-xl p-2 sm:p-3 bg-gradient-to-br ${ELEMENT_COLORS[card.element] || 'from-gray-600 to-gray-800'} bg-opacity-20 border ${RARITY_COLORS[card.rarity]?.split(' ')[1] || 'border-gray-600'}`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className={`text-xs font-bold uppercase ${RARITY_COLORS[card.rarity]?.split(' ')[0] || 'text-gray-400'}`}>
-                            {card.rarity}
-                          </span>
-                          {card.tokenId && (
-                            <span className="text-xs text-gray-400">#{card.tokenId}</span>
-                          )}
-                        </div>
-                        <div className="text-sm sm:text-base text-white font-bold truncate">{card.name}</div>
-                        <div className="text-[11px] sm:text-xs text-gray-300 capitalize mb-1.5 sm:mb-2">{card.element}</div>
-                        {card.stats && (
-                          <div className="grid grid-cols-4 gap-1 text-xs">
-                            <div className="text-center">
-                              <div className="text-red-400 font-bold">{card.stats.attack}</div>
-                              <div className="text-gray-500">ATK</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-blue-400 font-bold">{card.stats.defense}</div>
-                              <div className="text-gray-500">DEF</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-green-400 font-bold">{card.stats.speed}</div>
-                              <div className="text-gray-500">SPD</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-pink-400 font-bold">{card.stats.hp}</div>
-                              <div className="text-gray-500">HP</div>
-                            </div>
-                          </div>
-                        )}
-                        {card.ability && (
-                          <div className="mt-2 text-xs text-yellow-300">
-                            ⚡ {card.ability.name}
-                          </div>
-                        )}
-                      </div>
+                      <CardComponent
+                        key={card.id || card._id?.toString()}
+                        card={card}
+                        size="sm"
+                        showStats={true}
+                      />
                     ))}
                   </div>
                 )}
