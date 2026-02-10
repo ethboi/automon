@@ -153,6 +153,17 @@ let pendingAction: { action: string; reason: string; wager?: string } | null = n
 let dwellTicks = 0;
 const DWELL_MIN = 6; // ~24s minimum dwell
 const DWELL_MAX = 12; // ~48s maximum dwell
+let lastGlobalChatAt = 0;
+const GLOBAL_CHAT_COOLDOWN_MS = 70_000;
+const GLOBAL_CHAT_FALLBACK_LINES = [
+  'Anyone queueing arena right now?',
+  'That last pull was outrageous.',
+  'I am testing a cursed strategy.',
+  'Shop run complete, morale high.',
+  'Gotta mint em all.',
+  'Need one more win for the streak.',
+  'Who keeps dodging rematches?',
+];
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
@@ -725,33 +736,26 @@ async function tick(): Promise<void> {
     // Dwelling at location — performing the action
     dwellTicks--;
 
-    // Occasionally chat with nearby agents (~20% chance per tick while dwelling)
-    if (USE_AI && Math.random() < 0.05) {
+    // Occasionally post global entertaining chatter (not proximity-based).
+    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.08) {
       try {
-        const dashRes = await api('/api/dashboard');
-        if (dashRes.ok) {
-          const dash = await dashRes.json();
-          const nearby = (dash.agents || []).filter((a: { address: string; currentLocation?: string; online?: boolean }) =>
-            a.address?.toLowerCase() !== ADDRESS.toLowerCase() &&
-            a.currentLocation === target.name &&
-            a.online
-          );
-          if (nearby.length > 0) {
-            const other = nearby[Math.floor(Math.random() * nearby.length)];
-            // Get recent chat at this location
-            const chatRes = await api(`/api/chat?location=${encodeURIComponent(target.name)}&limit=6`);
-            const recentChat = chatRes.ok ? (await chatRes.json()).messages?.map((m: { fromName: string; message: string }) => `${m.fromName}: ${m.message}`) || [] : [];
-
-            const msg = await agentChat(AGENT_NAME, other.name, target.name, AI_PERSONALITY, recentChat);
-            if (msg) {
-              console.log(`[${ts()}] 💬 ${AGENT_NAME} → ${other.name}: "${msg}"`);
-              await api('/api/chat', {
-                method: 'POST',
-                body: JSON.stringify({ from: ADDRESS, fromName: AGENT_NAME, to: other.address, toName: other.name, message: msg, location: target.name }),
-              });
-            }
-          }
+        let msg = GLOBAL_CHAT_FALLBACK_LINES[Math.floor(Math.random() * GLOBAL_CHAT_FALLBACK_LINES.length)];
+        if (USE_AI) {
+          try {
+            const chatRes = await api(`/api/chat?limit=6`);
+            const recentChat = chatRes.ok
+              ? (await chatRes.json()).messages?.map((m: { fromName: string; message: string }) => `${m.fromName}: ${m.message}`) || []
+              : [];
+            const aiMsg = await agentChat(AGENT_NAME, 'Global Chat', target.name, AI_PERSONALITY, recentChat);
+            if (aiMsg?.trim()) msg = aiMsg.trim();
+          } catch { /* fallback line */ }
         }
+        console.log(`[${ts()}] 💬 ${AGENT_NAME}: "${msg}"`);
+        await api('/api/chat', {
+          method: 'POST',
+          body: JSON.stringify({ from: ADDRESS, fromName: AGENT_NAME, message: msg, location: target.name }),
+        });
+        lastGlobalChatAt = Date.now();
       } catch { /* silent */ }
     }
   } else {

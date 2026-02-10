@@ -25,6 +25,20 @@ const stats = {
   totalEarnings: 0,
   totalLosses: 0,
 };
+let lastChatAt = 0;
+const CHAT_COOLDOWN_MS = 75_000;
+const GLOBAL_CHAT_LINES = [
+  'Anyone up for a quick arena run?',
+  'Pack luck feels cracked today.',
+  'I am one card away from a nasty combo.',
+  'If I lose next fight, it was definitely lag.',
+  'Gotta mint em all.',
+  'Shop check complete. Wallet still alive.',
+  'Training arc in progress.',
+  'Who wants a rematch?',
+  'I have a weird strategy and it might work.',
+  'Chaos build online.',
+];
 
 function timestamp(): string {
   return new Date().toISOString().slice(11, 19);
@@ -299,6 +313,14 @@ async function runIteration(): Promise<void> {
     }
 
     consecutiveErrors = 0;
+
+    // Random global chatter from the agent itself (not proximity based).
+    if (Date.now() - lastChatAt > CHAT_COOLDOWN_MS && Math.random() < 0.22) {
+      const msg = GLOBAL_CHAT_LINES[Math.floor(Math.random() * GLOBAL_CHAT_LINES.length)];
+      await actions.sendChat(msg);
+      lastChatAt = Date.now();
+      verbose(`Sent global chat: "${msg}"`);
+    }
   } catch (error) {
     consecutiveErrors++;
     console.error(`[${timestamp()}] ERROR:`, error);
