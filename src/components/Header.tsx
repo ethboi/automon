@@ -106,7 +106,7 @@ export default function Header() {
                   MON
                 </span>
               </div>
-              <div className="text-[8px] sm:text-xs font-semibold tracking-[0.12em] sm:tracking-[0.16em] uppercase text-cyan-300/80">
+              <div className="text-[10px] sm:text-xs font-semibold tracking-[0.14em] sm:tracking-[0.16em] uppercase text-cyan-300/80">
                 gotta mint em all
               </div>
             </Link>
