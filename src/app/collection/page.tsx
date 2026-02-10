@@ -17,6 +17,7 @@ export default function CollectionPage() {
 
   useEffect(() => {
     if (address) fetchCards();
+    else setLoading(false);
   }, [address]);
 
   const fetchCards = async () => {

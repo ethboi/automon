@@ -19,6 +19,7 @@ export default function ShopPage() {
 
   useEffect(() => {
     if (address) fetchPacks();
+    else setLoading(false);
   }, [address]);
 
   const fetchPacks = async () => {
