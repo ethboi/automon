@@ -247,6 +247,7 @@ async function tick(): Promise<void> {
     do { next = pick(LOCATIONS); } while (next.name === target.name);
     target = next;
     console.log(`[${ts()}]    → heading to ${target.name}`);
+    await logAction('walking', `Heading to ${target.name}`, target.name);
   }
 
   // Update position on server
