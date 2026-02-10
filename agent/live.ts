@@ -258,6 +258,66 @@ async function syncCards(): Promise<void> {
   } catch { /* silent */ }
 }
 
+// ─── Battle Logic ──────────────────────────────────────────────────────────────
+
+async function tryJoinBattle(): Promise<boolean> {
+  try {
+    // Check for pending battles we can join
+    const res = await api('/api/battle/list');
+    if (!res.ok) return false;
+    const { battles } = await res.json();
+    const openBattle = battles?.find(
+      (b: { status: string; player1: { address: string } }) =>
+        b.status === 'pending' && b.player1.address.toLowerCase() !== ADDRESS.toLowerCase()
+    );
+    if (!openBattle) return false;
+
+    console.log(`[${ts()}] ⚔️ Found open battle ${openBattle.battleId} — joining!`);
+    const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+
+    const joinRes = await api('/api/battle/join', {
+      method: 'POST',
+      body: JSON.stringify({ battleId: openBattle.battleId, txHash, address: ADDRESS }),
+    });
+    if (!joinRes.ok) { console.log(`[${ts()}]   ❌ Join failed`); return false; }
+
+    // Select cards — pick our best 3
+    const cardsRes = await api(`/api/cards?address=${ADDRESS}`);
+    if (!cardsRes.ok) return false;
+    const { cards } = await cardsRes.json();
+    if (!cards || cards.length < 3) { console.log(`[${ts()}]   ❌ Not enough cards`); return false; }
+
+    // Sort by attack+defense desc, pick top 3
+    const sorted = cards.sort((a: { attack: number; defense: number }, b: { attack: number; defense: number }) =>
+      (b.attack + b.defense) - (a.attack + a.defense)
+    );
+    const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
+
+    console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards...`);
+    const selectRes = await api('/api/battle/select-cards', {
+      method: 'POST',
+      body: JSON.stringify({ battleId: openBattle.battleId, cardIds, address: ADDRESS }),
+    });
+
+    if (selectRes.ok) {
+      const data = await selectRes.json();
+      if (data.simulationComplete) {
+        const result = data.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+        console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+        await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena');
+      } else {
+        console.log(`[${ts()}]   ✅ Cards selected, waiting for simulation`);
+        await logAction('battling', `Joined battle vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena');
+      }
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error(`[${ts()}] Battle error:`, (err as Error).message?.slice(0, 80));
+    return false;
+  }
+}
+
 // ─── Main Loop ─────────────────────────────────────────────────────────────────
 
 async function tick(): Promise<void> {
@@ -282,6 +342,11 @@ async function tick(): Promise<void> {
     // ~25% chance to buy a pack if we have < 10 cards
     if (cardCount < 10 && Math.random() < 0.25 && NFT_ADDRESS) {
       await buyPack();
+    }
+
+    // ~30% chance to join a battle when at Town Arena with enough cards
+    if (target.name === 'Town Arena' && cardCount >= 3 && Math.random() < 0.3) {
+      await tryJoinBattle();
     }
 
     // Pick new destination (different from current)

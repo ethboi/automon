@@ -638,7 +638,7 @@ export default function BattlePage() {
                     </button>
                   )}
 
-                  {battle.status === 'selecting' && (
+                  {(battle.status === 'selecting' || (battle.status === 'pending' && isMyBattle)) && (
                     <button
                       onClick={() => {
                         setCurrentBattle(battle);
