@@ -545,8 +545,8 @@ function Roads() {
           <meshStandardMaterial color="#d4a574" roughness={0.85} />
         </mesh>
         {/* Roof */}
-        <mesh position={[0, 3.1, 0]} castShadow rotation={[0, Math.PI / 2, 0]}>
-          <coneGeometry args={[3.2, 1.8, 4]} />
+        <mesh position={[0, 3.5, 0]} castShadow rotation={[0, Math.PI / 2, 0]}>
+          <coneGeometry args={[3.2, 2.2, 4]} />
           <meshStandardMaterial color="#8B4513" roughness={0.9} />
         </mesh>
         {/* Door */}
@@ -562,8 +562,8 @@ function Roads() {
           </mesh>
         ))}
         {/* Chimney */}
-        <mesh position={[1.4, 3.45, -0.5]} castShadow>
-          <boxGeometry args={[0.5, 1.2, 0.5]} />
+        <mesh position={[1.4, 3.9, -0.5]} castShadow>
+          <boxGeometry args={[0.5, 1.4, 0.5]} />
           <meshStandardMaterial color="#6b5b45" roughness={0.9} />
         </mesh>
       </group>
