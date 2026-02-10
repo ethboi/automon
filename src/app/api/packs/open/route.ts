@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { generatePack } from '@/lib/cards';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

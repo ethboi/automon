@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { getAgentAuth } from '@/lib/agentAuth';
+export const dynamic = 'force-dynamic';
 
 // Health cost per action type
 const ACTION_HEALTH_COST: Record<string, number> = {

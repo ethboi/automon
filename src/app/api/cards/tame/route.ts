@@ -3,6 +3,7 @@ import { getDb } from '@/lib/mongodb';
 import { generateCardFromAutoMon } from '@/lib/cards';
 import { AUTOMONS } from '@/lib/automons';
 import { v4 as uuidv4 } from 'uuid';
+export const dynamic = 'force-dynamic';
 
 // Map wild species names to elements for matching
 const WILD_ELEMENT_MAP: Record<string, string> = {

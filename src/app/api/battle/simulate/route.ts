@@ -4,6 +4,7 @@ import { Battle, BattleLog, Card, BattleMove } from '@/lib/types';
 import { initializeBattleCard, simulateAIBattle } from '@/lib/battle';
 import { getAgentDecision } from '@/lib/agent';
 import { settleBattleOnChain } from '@/lib/blockchain';
+export const dynamic = 'force-dynamic';
 
 /**
  * AI vs AI Battle Simulation

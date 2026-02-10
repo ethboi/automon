@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+export const dynamic = 'force-dynamic';
 
 import { getAgentDecision } from '@/lib/agent';
 import { Battle } from '@/lib/types';

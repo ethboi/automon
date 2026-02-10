@@ -3,6 +3,7 @@ import { getDb } from '@/lib/mongodb';
 import { resolveTurn, validateMove } from '@/lib/battle';
 import { settleBattleOnChain } from '@/lib/blockchain';
 import { Battle } from '@/lib/types';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

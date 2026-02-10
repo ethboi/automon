@@ -5,6 +5,7 @@ import { ethers } from 'ethers';
 import { AUTOMONS, RARITY_MULTIPLIERS } from '@/lib/automons';
 import { Rarity, Card } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+export const dynamic = 'force-dynamic';
 
 const NFT_ABI = [
   'function getCard(uint256 tokenId) view returns (uint8 automonId, uint8 rarity)',

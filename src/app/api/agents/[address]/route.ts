@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { ethers } from 'ethers';
+export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
