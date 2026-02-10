@@ -149,31 +149,37 @@ function Scene({
 
   return (
     <>
-      <color attach="background" args={['#2a3a5c']} />
+      <color attach="background" args={['#87CEEB']} />
       <CameraController flyTarget={cameraFlyTarget} />
 
-      {/* Fog for depth */}
-      <fog attach="fog" args={['#2a3a5c', 120, 220]} />
+      {/* Soft fog at edges */}
+      <fog attach="fog" args={['#b8d8f0', 100, 200]} />
 
-      <ambientLight intensity={1.1} />
-      <hemisphereLight args={['#c8e8ff', '#2a4a30', 0.6]} />
+      {/* Sky dome */}
+      <Sky />
+
+      {/* Bright daylight lighting */}
+      <ambientLight intensity={1.4} />
+      <hemisphereLight args={['#87CEEB', '#4a7a3a', 0.8]} />
+      {/* Sun */}
       <directionalLight
-        position={[15, 25, 15]}
-        intensity={1.5}
+        position={[30, 40, 20]}
+        intensity={2.0}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-far={80}
-        shadow-camera-left={-35}
-        shadow-camera-right={35}
-        shadow-camera-top={35}
-        shadow-camera-bottom={-35}
+        shadow-camera-far={100}
+        shadow-camera-left={-50}
+        shadow-camera-right={50}
+        shadow-camera-top={50}
+        shadow-camera-bottom={-50}
       />
-      <directionalLight position={[-10, 15, -10]} intensity={0.3} color="#6366f1" />
-      {/* Rim light for atmosphere */}
-      <pointLight position={[0, 8, -20]} intensity={1.2} color="#ef4444" distance={35} />
-      <pointLight position={[-18, 5, 0]} intensity={0.8} color="#84cc16" distance={30} />
-      <pointLight position={[20, 5, 16]} intensity={0.8} color="#a78bfa" distance={30} />
+      {/* Fill light */}
+      <directionalLight position={[-20, 20, -15]} intensity={0.5} color="#ffe4b5" />
+      {/* Subtle location accent lights */}
+      <pointLight position={[0, 4, -30]} intensity={0.6} color="#ef4444" distance={20} />
+      <pointLight position={[-28, 4, 0]} intensity={0.5} color="#84cc16" distance={20} />
+      <pointLight position={[32, 4, 24]} intensity={0.5} color="#a78bfa" distance={20} />
 
       <Ground size={140} onClick={onGroundClick} />
 
@@ -235,38 +241,110 @@ function Scene({
 }
 
 function Roads() {
-  const connections: [string, string][] = [
-    ['starter_town', 'town_arena'],
-    ['starter_town', 'town_market'],
-    ['starter_town', 'community_farm'],
-    ['starter_town', 'green_meadows'],
-    ['green_meadows', 'old_pond'],
-    ['green_meadows', 'dark_forest'],
-    ['old_pond', 'river_delta'],
-    ['town_market', 'river_delta'],
-    ['community_farm', 'dark_forest'],
-    ['crystal_caves', 'town_market'],
-    ['crystal_caves', 'dark_forest'],
+  // Logical road network: main roads from Starter Town hub, then connecting paths
+  const mainRoads: [string, string][] = [
+    // Hub connections from Starter Town
+    ['starter_town', 'town_arena'],      // North: main road to arena
+    ['starter_town', 'town_market'],      // East: trade route
+    ['starter_town', 'community_farm'],   // West: farm path
   ];
+
+  const secondaryRoads: [string, string][] = [
+    // West side loop
+    ['community_farm', 'old_pond'],       // West: farm → pond
+    ['old_pond', 'green_meadows'],        // Northwest: pond → meadows
+    ['green_meadows', 'town_arena'],      // North: meadows → arena
+
+    // East side loop
+    ['town_market', 'river_delta'],       // Northeast: market → delta
+    ['town_market', 'crystal_caves'],     // Southeast: market → caves
+
+    // Outer paths
+    ['community_farm', 'dark_forest'],    // Southwest: farm → forest
+    ['crystal_caves', 'dark_forest'],     // South: caves → forest (cross map)
+  ];
+
+  const renderRoad = (from: string, to: string, width: number, color: string, opacity: number, yOffset: number, key: string) => {
+    const a = WORLD_LOCATIONS[from as keyof typeof WORLD_LOCATIONS].position;
+    const b = WORLD_LOCATIONS[to as keyof typeof WORLD_LOCATIONS].position;
+    const dx = b[0] - a[0];
+    const dz = b[2] - a[2];
+    const len = Math.sqrt(dx * dx + dz * dz);
+    const angle = Math.atan2(dx, dz);
+
+    return (
+      <group key={key}>
+        {/* Road surface */}
+        <mesh rotation={[-Math.PI / 2, 0, -angle]} position={[(a[0] + b[0]) / 2, yOffset, (a[2] + b[2]) / 2]}>
+          <planeGeometry args={[width, len]} />
+          <meshStandardMaterial color={color} transparent opacity={opacity} roughness={0.95} />
+        </mesh>
+        {/* Road edge lines */}
+        <mesh rotation={[-Math.PI / 2, 0, -angle]} position={[(a[0] + b[0]) / 2, yOffset + 0.005, (a[2] + b[2]) / 2]}>
+          <planeGeometry args={[width + 0.4, len]} />
+          <meshStandardMaterial color="#5a4a3a" transparent opacity={opacity * 0.4} roughness={1} />
+        </mesh>
+      </group>
+    );
+  };
 
   return (
     <group>
-      {connections.map(([from, to], i) => {
-        const a = WORLD_LOCATIONS[from as keyof typeof WORLD_LOCATIONS].position;
-        const b = WORLD_LOCATIONS[to as keyof typeof WORLD_LOCATIONS].position;
-        const dx = b[0] - a[0];
-        const dz = b[2] - a[2];
-        const len = Math.sqrt(dx * dx + dz * dz);
-        const angle = Math.atan2(dx, dz);
-
-        return (
-          <mesh key={i} rotation={[-Math.PI / 2, 0, -angle]} position={[(a[0] + b[0]) / 2, 0.02, (a[2] + b[2]) / 2]}>
-            <planeGeometry args={[1.5, len]} />
-            <meshStandardMaterial color="#3d4555" transparent opacity={0.5} />
-          </mesh>
-        );
-      })}
+      {/* Main roads — wider, more visible */}
+      {mainRoads.map(([from, to], i) =>
+        renderRoad(from, to, 2.5, '#8B7355', 0.7, 0.03, `main-${i}`)
+      )}
+      {/* Secondary paths — narrower dirt paths */}
+      {secondaryRoads.map(([from, to], i) =>
+        renderRoad(from, to, 1.8, '#7a6b55', 0.5, 0.025, `sec-${i}`)
+      )}
+      {/* Starter Town plaza — circular cobblestone area */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+        <circleGeometry args={[5, 24]} />
+        <meshStandardMaterial color="#8B7355" transparent opacity={0.6} roughness={0.9} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.028, 0]}>
+        <ringGeometry args={[4.5, 5.2, 24]} />
+        <meshStandardMaterial color="#6b5b45" transparent opacity={0.5} roughness={0.9} />
+      </mesh>
     </group>
+  );
+}
+
+/* Sky dome — gradient from blue to light horizon */
+function Sky() {
+  return (
+    <mesh scale={[-1, 1, 1]}>
+      <sphereGeometry args={[180, 32, 16]} />
+      <shaderMaterial
+        side={2}
+        uniforms={{
+          topColor: { value: new THREE.Color('#4a90d9') },
+          bottomColor: { value: new THREE.Color('#c8e0f4') },
+          offset: { value: 10 },
+          exponent: { value: 0.5 },
+        }}
+        vertexShader={`
+          varying vec3 vWorldPosition;
+          void main() {
+            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+            vWorldPosition = worldPosition.xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `}
+        fragmentShader={`
+          uniform vec3 topColor;
+          uniform vec3 bottomColor;
+          uniform float offset;
+          uniform float exponent;
+          varying vec3 vWorldPosition;
+          void main() {
+            float h = normalize(vWorldPosition + offset).y;
+            gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+          }
+        `}
+      />
+    </mesh>
   );
 }
 
@@ -345,7 +423,7 @@ export function GameWorld() {
       <Canvas
         camera={{ fov: 45, position: [0, 40, 45], near: 0.1, far: 1000 }}
         shadows
-        style={{ background: '#1a2540' }}
+        style={{ background: '#87CEEB' }}
         gl={{ antialias: true, alpha: false }}
         onContextMenu={(e) => e.preventDefault()}
       >
