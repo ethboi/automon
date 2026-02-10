@@ -190,6 +190,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ battle: finalBattle });
   } catch (error) {
     console.error('Select cards error:', error);
-    return NextResponse.json({ error: 'Failed to select cards' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: 'Failed to select cards', detail: msg }, { status: 500 });
   }
 }
