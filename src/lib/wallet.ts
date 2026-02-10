@@ -119,17 +119,27 @@ export function getEscrowContract() {
   return new ethers.Contract(contractAddress, abi, provider);
 }
 
-export function getNFTContract() {
+async function resolveNFTContractAddress(): Promise<string> {
+  const fromPublicEnv =
+    process.env.NEXT_PUBLIC_AUTOMON_NFT_ADDRESS ||
+    process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS;
+  if (fromPublicEnv) return fromPublicEnv;
+
+  const res = await fetch('/api/config/nft', { cache: 'no-store' });
+  const data = await res.json();
+  if (!res.ok || !data?.address) {
+    throw new Error(data?.error || 'NFT contract not configured');
+  }
+  return data.address as string;
+}
+
+export async function getNFTContract() {
   if (!window.ethereum) {
     throw new Error('No wallet found');
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
-  const contractAddress = process.env.NEXT_PUBLIC_AUTOMON_NFT_ADDRESS;
-
-  if (!contractAddress) {
-    throw new Error('NEXT_PUBLIC_AUTOMON_NFT_ADDRESS not configured');
-  }
+  const contractAddress = await resolveNFTContractAddress();
 
   const abi = [
     'function buyPack() external payable',
@@ -145,7 +155,7 @@ export async function buyPackOnChain(packPriceWei: string): Promise<string> {
 
   const provider = new ethers.BrowserProvider(window.ethereum);
   const signer = await provider.getSigner();
-  const contract = getNFTContract().connect(signer) as ethers.Contract;
+  const contract = (await getNFTContract()).connect(signer) as ethers.Contract;
   const value = packPriceWei.includes('.') ? ethers.parseEther(packPriceWei) : BigInt(packPriceWei);
 
   const tx = await contract.buyPack({ value });
