@@ -28,7 +28,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
   return (
     <group>
       {/* Main ground — vibrant grass green */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow onContextMenu={handleContextMenu}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow onContextMenu={handleContextMenu} onDoubleClick={handleContextMenu}>
         <planeGeometry args={[size, size]} />
         <meshStandardMaterial color="#3d8b37" roughness={0.85} />
       </mesh>
