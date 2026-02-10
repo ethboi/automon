@@ -201,7 +201,7 @@ async function updatePosition(): Promise<void> {
     const timeout = setTimeout(() => controller.abort(), 5000);
     await api('/api/agents/move', {
       method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME, activity }),
+      body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME, activity, balance: balance.toFixed(4) }),
       signal: controller.signal,
     });
     clearTimeout(timeout);

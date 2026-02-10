@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { address, position, name, activity } = await request.json();
+    const { address, position, name, activity, balance } = await request.json();
 
     if (!address || !position) {
       return NextResponse.json({ error: 'Address and position required' }, { status: 400 });
@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
 
     if (name) updateFields.name = name;
     if (activity) updateFields.currentAction = activity;
+    if (balance) updateFields.balance = balance;
 
     await db.collection('agents').updateOne(
       { address: address.toLowerCase() },

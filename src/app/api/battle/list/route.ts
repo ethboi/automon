@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const address = searchParams.get('address');
 
     const db = await getDb();
-    let query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {};
 
     // If address provided, filter by participant
     if (address) {
