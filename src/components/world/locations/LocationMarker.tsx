@@ -382,70 +382,131 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
 
       {variant === 'water' && (
         <>
-          <mesh ref={waterRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}>
-            <cylinderGeometry args={[3, 3, 0.08, 20]} />
-            <meshStandardMaterial color="#2563eb" transparent opacity={0.68} roughness={0.18} metalness={0.32} />
+          {/* Large pond water surface */}
+          <mesh ref={waterRef} position={[0, 0.06, 0]}>
+            <cylinderGeometry args={[5.5, 6, 0.12, 32]} />
+            <meshStandardMaterial color="#1d4ed8" transparent opacity={0.75} roughness={0.1} metalness={0.4} />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-            <cylinderGeometry args={[3.45, 3.45, 0.06, 20]} />
-            <meshStandardMaterial color="#d4a574" roughness={0.92} />
+          {/* Deeper center */}
+          <mesh position={[0.5, 0.03, -0.3]}>
+            <cylinderGeometry args={[3, 3.5, 0.06, 24]} />
+            <meshStandardMaterial color="#1e3a8a" transparent opacity={0.5} roughness={0.1} />
+          </mesh>
+          {/* Sandy/muddy bank */}
+          <mesh position={[0, 0.01, 0]}>
+            <cylinderGeometry args={[6.2, 6.5, 0.04, 32]} />
+            <meshStandardMaterial color="#d4a574" roughness={0.95} />
+          </mesh>
+          {/* Grassy edge */}
+          <mesh position={[0, 0.02, 0]}>
+            <cylinderGeometry args={[6.8, 7, 0.03, 32]} />
+            <meshStandardMaterial color="#4d7c3a" roughness={0.9} />
           </mesh>
 
+          {/* Lily pads */}
           {[
-            [-1.2, 0.14, 0.7],
-            [0.9, 0.15, -0.55],
-            [1.35, 0.15, 1.15],
-            [-0.25, 0.13, -1.3],
+            [-1.5, 0.13, 1.2], [0.8, 0.13, -1.0], [2.0, 0.13, 1.5],
+            [-0.5, 0.13, -2.0], [-2.5, 0.13, -0.5], [1.2, 0.13, 2.8],
           ].map((pad, i) => (
-            <mesh key={`pad-${i}`} position={pad as [number, number, number]} rotation={[-Math.PI / 2, rand(i + 10), 0]}>
-              <cylinderGeometry args={[0.26, 0.26, 0.03, 8]} />
-              <meshStandardMaterial color={i % 2 === 0 ? '#3f8f4f' : '#4aa95f'} roughness={0.86} />
-            </mesh>
+            <group key={`pad-${i}`}>
+              <mesh position={pad as [number, number, number]} rotation={[-Math.PI / 2, rand(i + 10), 0]}>
+                <cylinderGeometry args={[0.35 + i * 0.05, 0.35 + i * 0.05, 0.02, 12]} />
+                <meshStandardMaterial color={i % 3 === 0 ? '#2d8a4e' : i % 3 === 1 ? '#3f9f5f' : '#4ab06a'} roughness={0.8} />
+              </mesh>
+              {i % 2 === 0 && (
+                <mesh position={[pad[0] + 0.1, pad[1] + 0.06, pad[2]]} rotation={[-0.2, rand(i) * 3, 0]}>
+                  <coneGeometry args={[0.12, 0.2, 6]} />
+                  <meshStandardMaterial color={i === 0 ? '#f472b6' : '#fbbf24'} />
+                </mesh>
+              )}
+            </group>
           ))}
 
-          {[0, 0.5, 1.0, 1.5].map((z, i) => (
-            <mesh key={`dock-${i}`} position={[2.15, 0.18, -1.3 + z]} castShadow>
-              <boxGeometry args={[1.2, 0.08, 0.34]} />
+          {/* Wooden dock / pier */}
+          {[0, 0.55, 1.1, 1.65, 2.2, 2.75, 3.3].map((z, i) => (
+            <mesh key={`dock-${i}`} position={[4.5, 0.28, -1.8 + z]} castShadow>
+              <boxGeometry args={[1.8, 0.1, 0.42]} />
               <meshStandardMaterial color={i % 2 === 0 ? '#8b5a32' : '#7a4c28'} roughness={0.94} />
             </mesh>
           ))}
-          {[-1.48, -0.45, 0.55, 1.6].map((z, i) => (
-            <mesh key={`dock-post-${i}`} position={[1.66, -0.05, z]} castShadow>
-              <cylinderGeometry args={[0.06, 0.08, 0.7, 6]} />
+          {/* Dock support posts */}
+          {[-1.8, -0.5, 0.8, 2.1, 3.3].map((z, i) => (
+            <mesh key={`dock-post-${i}`} position={[4.0, -0.05, z]} castShadow>
+              <cylinderGeometry args={[0.08, 0.1, 0.8, 6]} />
               <meshStandardMaterial color="#5f3d22" roughness={0.95} />
             </mesh>
           ))}
+          {[-1.8, -0.5, 0.8, 2.1, 3.3].map((z, i) => (
+            <mesh key={`dock-post-r-${i}`} position={[5.0, -0.05, z]} castShadow>
+              <cylinderGeometry args={[0.08, 0.1, 0.8, 6]} />
+              <meshStandardMaterial color="#5f3d22" roughness={0.95} />
+            </mesh>
+          ))}
+          {/* Dock railing */}
+          <mesh position={[5.2, 0.55, 0.75]} castShadow>
+            <boxGeometry args={[0.08, 0.5, 5.4]} />
+            <meshStandardMaterial color="#6b4423" roughness={0.9} />
+          </mesh>
 
+          {/* Fishing rod on dock */}
+          <group position={[5.0, 0.35, 1.5]} rotation={[0.4, 0.3, -0.1]}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.03, 0.05, 2.5, 6]} />
+              <meshStandardMaterial color="#5c3d1e" roughness={0.9} />
+            </mesh>
+          </group>
+
+          {/* Reeds around the pond */}
           {[
-            [-2.6, 0.7, -0.8],
-            [-2.35, 0.72, 0.7],
-            [-1.95, 0.75, 1.5],
-            [1.45, 0.69, -2.2],
-            [0.6, 0.7, 2.35],
+            [-4.5, 0, -2], [-4.8, 0, 0.5], [-5.0, 0, 2.5], [-3.5, 0, 3.8],
+            [3.0, 0, -4.0], [1.5, 0, 4.5], [-1.0, 0, 4.8], [-3.0, 0, -4.5],
           ].map((reed, i) => (
             <group key={`reed-${i}`} position={reed as [number, number, number]}>
-              <mesh castShadow rotation={[0, 0, 0.08 - i * 0.03]}>
-                <cylinderGeometry args={[0.04, 0.05, 1.3, 5]} />
-                <meshStandardMaterial color="#4f8f46" roughness={0.84} />
-              </mesh>
-              <mesh position={[0, 0.7, 0]} castShadow>
-                <cylinderGeometry args={[0.05, 0.05, 0.22, 5]} />
+              {[0, 0.2, -0.2].map((offset, j) => (
+                <mesh key={j} position={[offset * 0.5, 0.6, offset]} castShadow rotation={[0, 0, 0.06 - j * 0.04]}>
+                  <cylinderGeometry args={[0.03, 0.04, 1.2 + j * 0.2, 5]} />
+                  <meshStandardMaterial color="#3d7a36" roughness={0.85} />
+                </mesh>
+              ))}
+              <mesh position={[0, 1.0, 0]} castShadow>
+                <cylinderGeometry args={[0.06, 0.06, 0.25, 5]} />
                 <meshStandardMaterial color="#7c5b2b" roughness={0.88} />
               </mesh>
             </group>
           ))}
 
+          {/* Rocks scattered around */}
           {[
-            [-2.05, 0.14, -1.9],
-            [-0.9, 0.12, 2.5],
-            [1.95, 0.11, 2.05],
-            [2.75, 0.12, -0.45],
+            [-5.5, 0.15, -1.5], [-3.0, 0.12, 5.0], [4.5, 0.12, 3.5],
+            [5.5, 0.14, -2.5], [-5.0, 0.13, 3.5], [2.0, 0.11, -5.0],
           ].map((rock, i) => (
-            <mesh key={`rock-${i}`} position={rock as [number, number, number]} castShadow>
-              <boxGeometry args={[0.44 + i * 0.06, 0.22, 0.34 + i * 0.04]} />
+            <mesh key={`rock-${i}`} position={rock as [number, number, number]} castShadow rotation={[0, rand(i) * 3, 0]}>
+              <boxGeometry args={[0.6 + rand(i) * 0.4, 0.3 + rand(i) * 0.2, 0.5 + rand(i) * 0.3]} />
               <meshStandardMaterial color={i % 2 === 0 ? '#6b7280' : '#4b5563'} roughness={0.95} />
             </mesh>
           ))}
+
+          {/* Willow tree */}
+          <group position={[-5.5, 0, 1.5]}>
+            <mesh position={[0, 1.5, 0]} castShadow>
+              <cylinderGeometry args={[0.25, 0.35, 3, 8]} />
+              <meshStandardMaterial color="#4a3520" roughness={0.92} />
+            </mesh>
+            <mesh position={[0, 3.2, 0]} castShadow>
+              <sphereGeometry args={[2, 12, 12]} />
+              <meshStandardMaterial color="#2d6b30" transparent opacity={0.85} roughness={0.8} />
+            </mesh>
+            {/* Drooping branches */}
+            {[0, 1, 2, 3, 4, 5].map((j) => {
+              const a = (j / 6) * Math.PI * 2;
+              return (
+                <mesh key={`branch-${j}`} position={[Math.cos(a) * 1.5, 1.8, Math.sin(a) * 1.5]} rotation={[0.8, a, 0]}>
+                  <cylinderGeometry args={[0.02, 0.01, 2.5, 4]} />
+                  <meshStandardMaterial color="#3d8b40" transparent opacity={0.7} />
+                </mesh>
+              );
+            })}
+          </group>
         </>
       )}
 

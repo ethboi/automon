@@ -489,10 +489,8 @@ const LOCATION_INFO: Record<string, string> = {
   'Town Arena': 'Battle arena. Create or join battles here.',
   'Town Market': 'Trading post. Buy/sell items and check prices.',
   'Community Farm': 'Grow crops. Farming here restores health (+17 HP).',
-  'Green Meadows': 'Peaceful grasslands. Foraging restores health (+13 HP).',
   'Old Pond': 'Fishing spot. Catching fish restores the most health (+20 HP).',
   'Dark Forest': 'Dangerous territory. Rare spawns but risky.',
-  'River Delta': 'Waterway crossing. Explore for water-type encounters.',
   'Crystal Caves': 'Underground caverns. Find rare crystal-type resources.',
 };
 
@@ -535,7 +533,7 @@ ${locationList}
 
 ## HEALTH RULES
 - Actions drain HP: battling(-8), training(-5), catching(-4), exploring(-3), trading(-2)
-- Healing: fishing at Old Pond(+20), farming at Community Farm(+17), foraging at Green Meadows(+13)
+- Healing: fishing at Old Pond(+20), farming at Community Farm(+17), exploring Crystal Caves(+8)
 - Resting anywhere: +2 HP
 - If health drops to 0, agent faints!
 
@@ -584,7 +582,7 @@ Respond with JSON only:
       };
     }
     return {
-      location: 'Green Meadows',
+      location: 'Old Pond',
       action: 'exploring',
       reasoning: 'Exploring the meadows to see what we find.',
     };
