@@ -404,7 +404,7 @@ async function trySettleBattle(battleId: string, winner: string): Promise<void> 
     const onChain = await escrowSettle.battles(battleIdBytes);
     if (onChain[3]) { console.log(`[${ts()}]   ✅ Already settled on-chain`); return; }
     if (onChain[0] === ethers.ZeroAddress) { console.log(`[${ts()}]   ⚠️ Battle not on-chain`); return; }
-    const tx = await escrowSettle.settleBattle(battleIdBytes, winner, { gasLimit: 200000 });
+    const tx = await escrowSettle.settleBattle(battleIdBytes, winner);
     const receipt = await tx.wait();
     console.log(`[${ts()}]   💰 Settled on-chain: ${receipt.hash}`);
     // Update DB + log transaction for Chain tab
@@ -445,7 +445,7 @@ async function tryJoinBattle(): Promise<boolean> {
       if (wagerWei.toString() === '0') { console.log(`[${ts()}]   ⚠️ Battle not on-chain, skipping`); return false; }
       console.log(`[${ts()}]   💰 Joining escrow with ${ethers.formatEther(wagerWei)} MON (on-chain verified)...`);
       console.log(`[${ts()}]   💰 Joining escrow with ${openBattle.wager} MON...`);
-      const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei, gasLimit: 200000 });
+      const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei });
       const receipt = await tx.wait();
       txHash = receipt.hash;
       console.log(`[${ts()}]   ✅ Escrow joined: ${txHash.slice(0, 12)}...`);
@@ -540,7 +540,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
       const battleIdBytes = ethers.id(battleIdPreview);
       const wagerWei = ethers.parseEther(wager);
       console.log(`[${ts()}] ⚔️ Creating battle with ${wager} MON wager (on-chain)...`);
-      const tx = await escrow.createBattle(battleIdBytes, { value: wagerWei, gasLimit: 200000 });
+      const tx = await escrow.createBattle(battleIdBytes, { value: wagerWei });
       const receipt = await tx.wait();
       txHash = receipt.hash;
       console.log(`[${ts()}]   ✅ Escrow created: ${txHash.slice(0, 12)}...`);
