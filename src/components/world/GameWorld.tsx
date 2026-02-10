@@ -106,7 +106,7 @@ function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
       enablePan={true}
       enableZoom={true}
       minDistance={15}
-      maxDistance={200}
+      maxDistance={100}
       maxPolarAngle={Math.PI / 2.5}
       minPolarAngle={Math.PI / 8}
       panSpeed={1.2}
