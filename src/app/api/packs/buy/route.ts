@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { logTransaction } from '@/lib/transactions';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const { txHash, price, address } = await request.json();
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!address) {
+      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
     }
-
-    const { txHash, price } = await request.json();
 
     if (!txHash) {
       return NextResponse.json({ error: 'Transaction hash required' }, { status: 400 });
@@ -28,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     const pack = {
       packId: uuidv4(),
-      owner: session.address.toLowerCase(),
+      owner: address.toLowerCase(),
       purchaseTxHash: txHash,
       price: price || process.env.NEXT_PUBLIC_PACK_PRICE,
       opened: false,
@@ -43,7 +40,7 @@ export async function POST(request: NextRequest) {
     await logTransaction({
       txHash,
       type: 'mint_pack',
-      from: session.address,
+      from: address,
       description: `Minted card pack for ${price || '0.1'} MON`,
       metadata: { packId: pack.packId, price },
     });

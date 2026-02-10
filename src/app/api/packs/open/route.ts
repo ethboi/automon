@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
 import { generatePack } from '@/lib/cards';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const { packId, address } = await request.json();
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!address) {
+      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
     }
-
-    const { packId } = await request.json();
 
     if (!packId) {
       return NextResponse.json({ error: 'Pack ID required' }, { status: 400 });
@@ -22,7 +19,7 @@ export async function POST(request: NextRequest) {
     // Find the pack
     const pack = await db.collection('packs').findOne({
       packId,
-      owner: session.address.toLowerCase(),
+      owner: address.toLowerCase(),
     });
 
     if (!pack) {
@@ -40,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate 5 new cards
-    const cards = generatePack(session.address.toLowerCase(), packId);
+    const cards = generatePack(address.toLowerCase(), packId);
 
     // Insert cards into database
     const result = await db.collection('cards').insertMany(cards);
