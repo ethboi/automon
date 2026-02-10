@@ -14,6 +14,7 @@ import { LocationMarker } from './locations/LocationMarker';
 import { BattleArena } from './buildings/BattleArena';
 import { WildAutoMons } from './WildAutoMon';
 import AgentProfileModal from '@/components/AgentProfileModal';
+import { ChainTicker } from './ChainTicker';
 import { useWallet } from '@/context/WalletContext';
 
 interface OnlineAgent {
@@ -486,6 +487,9 @@ export function GameWorld() {
           />
         </Suspense>
       </Canvas>
+
+      {/* On-chain ticker */}
+      <ChainTicker transactions={transactions} agents={onlineAgents} />
 
       <WorldUI
         nearbyBuilding={nearbyBuilding}
