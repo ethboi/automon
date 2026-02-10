@@ -385,6 +385,7 @@ export function GameWorld() {
   const [onlineAgents, setOnlineAgents] = useState<OnlineAgent[]>([]);
   const [events, setEvents] = useState<EventData[]>([]);
   const [totalBattles, setTotalBattles] = useState(0);
+  const [battles, setBattles] = useState<{ id: string; status: string; player1: string; player2: string | null; winner: string | null; rounds: number; createdAt: string }[]>([]);
   const [totalCards, setTotalCards] = useState(0);
   const [transactions, setTransactions] = useState<{ txHash: string; type: string; from: string; description: string; explorerUrl: string; timestamp: string }[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
@@ -398,6 +399,7 @@ export function GameWorld() {
           setOnlineAgents(data.agents || []);
           setEvents(data.events || []);
           setTotalBattles(data.totalBattles || 0);
+          setBattles(data.battles || []);
           setTotalCards(data.totalCards || 0);
           setTransactions(data.transactions || []);
         }
@@ -475,6 +477,7 @@ export function GameWorld() {
         onlineAgents={onlineAgents}
         events={events}
         totalBattles={totalBattles}
+        battles={battles}
         totalCards={totalCards}
         transactions={transactions}
         onSelectAgent={handleSelectAgent}
