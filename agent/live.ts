@@ -22,7 +22,7 @@ const API_URL = (process.env.AUTOMON_API_URL || process.env.NEXT_PUBLIC_APP_URL 
 const PRIVATE_KEY = process.env.AGENT_PRIVATE_KEY || '';
 const NFT_ADDRESS = process.env.AUTOMON_NFT_ADDRESS || '';
 const RPC_URL = process.env.MONAD_RPC_URL || process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz';
-const AGENT_NAME = process.env.AGENT_NAME || 'Wanderer';
+let AGENT_NAME = process.env.AGENT_NAME || '';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 const PACK_PRICE = process.env.NEXT_PUBLIC_PACK_PRICE || '0.1';
 const TICK_MS = 4000;
@@ -96,8 +96,27 @@ let isRunning = true;
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
+async function fetchExistingName(): Promise<string | null> {
+  try {
+    const res = await api(`/api/agents/${ADDRESS}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.agent?.name || null;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 async function register(): Promise<boolean> {
   try {
+    // Fetch existing agent first — don't overwrite name
+    const existing = await fetchExistingName();
+    if (existing) {
+      AGENT_NAME = AGENT_NAME || existing;
+      return true;
+    }
+    // New agent — register with default name
+    AGENT_NAME = AGENT_NAME || 'Wanderer';
     const res = await api('/api/agents/register', {
       method: 'POST',
       body: JSON.stringify({ address: ADDRESS, name: AGENT_NAME, personality: 'balanced' }),
