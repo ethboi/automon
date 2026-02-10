@@ -116,6 +116,13 @@ async function api(path: string, opts: RequestInit = {}): Promise<Response> {
     ...(opts.headers as Record<string, string> || {}),
   };
   if (JWT_SECRET) headers['x-agent-secret'] = JWT_SECRET;
+
+  // Default 5s timeout on all API calls
+  if (!opts.signal) {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 5000);
+    return fetch(`${API_URL}${path}`, { ...opts, headers, signal: controller.signal, redirect: 'follow' });
+  }
   return fetch(`${API_URL}${path}`, { ...opts, headers, redirect: 'follow' });
 }
 
@@ -327,6 +334,7 @@ async function tryJoinBattle(): Promise<boolean> {
 // ─── Main Loop ─────────────────────────────────────────────────────────────────
 
 async function tick(): Promise<void> {
+  console.log(`[${ts()}] tick: pos=(${posX.toFixed(0)},${posZ.toFixed(0)}) target=${target.name}`);
   const dx = target.x - posX;
   const dz = target.z - posZ;
   const dist = Math.sqrt(dx * dx + dz * dz);
@@ -335,7 +343,7 @@ async function tick(): Promise<void> {
     const speed = 5;
     posX += (dx / dist) * speed;
     posZ += (dz / dist) * speed;
-    // silently moving
+    if (Math.random() < 0.1) console.log(`[${ts()}] 🚶 Walking to ${target.name} (${dist.toFixed(0)}m away)`);
   } else {
     // Arrived — decide what to do
     let action: string;
@@ -415,8 +423,8 @@ async function tick(): Promise<void> {
       await buyPack();
     }
 
-    // ~30% chance to join a battle when at Town Arena with enough cards
-    if (target.name === 'Town Arena' && cardCount >= 3 && Math.random() < 0.3) {
+    // Always check for open battles if we have enough cards
+    if (cardCount >= 3) {
       await tryJoinBattle();
     }
 
