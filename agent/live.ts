@@ -338,8 +338,14 @@ async function tick(): Promise<void> {
 
   if (dist > 2) {
     const speed = 5;
-    posX += (dx / dist) * speed;
-    posZ += (dz / dist) * speed;
+    if (dist <= speed) {
+      // Close enough — snap to target
+      posX = target.x;
+      posZ = target.z;
+    } else {
+      posX += (dx / dist) * speed;
+      posZ += (dz / dist) * speed;
+    }
     if (Math.random() < 0.1) console.log(`[${ts()}] 🚶 Walking to ${target.name} (${dist.toFixed(0)}m away)`);
   } else if (pendingAction) {
     // Just arrived — log the action and start dwelling
