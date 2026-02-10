@@ -763,8 +763,8 @@ async function tick(): Promise<void> {
     }
   } else {
 
-    // Only buy packs if balance > 0.2 MON (pack costs 0.1) and < 10 cards
-    if (cardCount < 10 && parseFloat(agentBalance) > 0.2 && Math.random() < 0.15 && NFT_ADDRESS) {
+    // Buy packs if balance > 0.2 MON — always try to improve collection
+    if (parseFloat(agentBalance) > 0.2 && Math.random() < 0.12 && NFT_ADDRESS) {
       await buyPack();
     }
 
