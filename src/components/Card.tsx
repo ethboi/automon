@@ -120,7 +120,8 @@ export default function Card({ card, selected, onClick, showStats = true, size =
   };
 
   const s = sizeConfig[size];
-  const hpPercent = isBattleCard ? ((card as BattleCard).currentHp / card.stats.maxHp) * 100 : 100;
+  const stats = card.stats || { attack: 0, defense: 0, speed: 0, hp: 0, maxHp: 0 };
+  const hpPercent = isBattleCard ? ((card as BattleCard).currentHp / (stats.maxHp || 1)) * 100 : 100;
   const hpColor = hpPercent > 50 ? 'bg-emerald-500' : hpPercent > 25 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
@@ -184,7 +185,7 @@ export default function Card({ card, selected, onClick, showStats = true, size =
             <div className="flex justify-between items-center mb-1">
               <span className={`${s.stats} font-medium ${isLightElement ? 'text-gray-800' : 'text-white/90'}`}>HP</span>
               <span className={`${s.stats} font-bold ${isLightElement ? 'text-gray-900' : 'text-white'}`}>
-                {(card as BattleCard).currentHp}/{card.stats.maxHp}
+                {(card as BattleCard).currentHp}/{stats.maxHp}
               </span>
             </div>
             <div className="w-full h-2 bg-black/30 rounded-full overflow-hidden backdrop-blur-sm">
@@ -202,10 +203,10 @@ export default function Card({ card, selected, onClick, showStats = true, size =
         {showStats && (
           <div className={`grid grid-cols-2 gap-1.5 ${s.stats} mb-3`}>
             {[
-              { icon: '⚔️', value: card.stats.attack, label: 'ATK' },
-              { icon: '🛡️', value: card.stats.defense, label: 'DEF' },
-              { icon: '💨', value: card.stats.speed, label: 'SPD' },
-              { icon: '❤️', value: card.stats.hp, label: 'HP' },
+              { icon: '⚔️', value: stats.attack, label: 'ATK' },
+              { icon: '🛡️', value: stats.defense, label: 'DEF' },
+              { icon: '💨', value: stats.speed, label: 'SPD' },
+              { icon: '❤️', value: stats.hp, label: 'HP' },
             ].map((stat) => (
               <div
                 key={stat.label}
