@@ -179,7 +179,7 @@ async function register(): Promise<boolean> {
     AGENT_NAME = AGENT_NAME || 'Wanderer';
     const res = await api('/api/agents/register', {
       method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, name: AGENT_NAME, personality: 'balanced', model: 'claude-sonnet-4' }),
+      body: JSON.stringify({ address: ADDRESS, name: AGENT_NAME, personality: AI_PERSONALITY, model: 'Claude Sonnet 4' }),
     });
     return res.ok;
   } catch { return false; }

@@ -86,6 +86,7 @@ export async function GET(
         address: agent.address,
         name: agent.name,
         personality: agent.personality,
+        model: agent.model || null,
         isAI: agent.isAI,
         position: agent.position,
         health,

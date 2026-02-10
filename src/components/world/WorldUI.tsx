@@ -235,9 +235,10 @@ export function WorldUI({
                           <div className="flex items-center gap-1.5 min-w-0">
                             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-green-500 shadow-sm shadow-green-500/50" />
                             <span className="text-xs sm:text-sm text-cyan-400 font-semibold truncate">{agent.name}</span>
-                            <span className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full shrink-0 ${activity.cls}`}>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${activity.cls}`}>
                               {activity.icon} {activity.label}
                             </span>
+                            {agent.model && <span className="text-[9px] text-violet-400/60 hidden sm:inline">🧠</span>}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0 ml-1">
                             {agent.balance && (
