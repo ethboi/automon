@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { getAgentAuth } from '@/lib/agentAuth';
 export const dynamic = 'force-dynamic';
+const CHAT_COOLDOWN_MS = 90_000;
+
+function shouldEmitChat(action: string): boolean {
+  const a = action.toLowerCase();
+  if (['battling', 'trading', 'catching', 'fishing', 'farming'].includes(a)) return true;
+  return Math.random() < 0.35;
+}
+
+function buildChatMessage(action: string, reason: string, location?: string | null): string {
+  const a = action.toLowerCase();
+  const loc = location ? ` at ${location}` : '';
+  if (a === 'battling') return `Heading into a battle${loc}. ${reason || 'Wish me luck.'}`;
+  if (a === 'training') return `Training hard${loc}. ${reason || 'Powering up my team.'}`;
+  if (a === 'catching') return `Trying to catch something rare${loc}. ${reason || ''}`.trim();
+  if (a === 'trading') return `Open for trades${loc}. ${reason || ''}`.trim();
+  if (a === 'fishing') return `Fishing run${loc}. ${reason || 'Need to recover and regroup.'}`;
+  if (a === 'farming') return `Farming resources${loc}. ${reason || ''}`.trim();
+  if (a === 'resting') return `Taking a short rest${loc}. ${reason || ''}`.trim();
+  return `${reason || `I'm ${action}${loc}.`}`.trim();
+}
 
 // Health cost per action type
 const ACTION_HEALTH_COST: Record<string, number> = {
@@ -39,6 +59,8 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDb();
+    const normalizedAddress = address.toLowerCase();
+    const now = new Date();
 
     // Calculate health change
     let healthDelta = ACTION_HEALTH_COST[action] ?? -2;
@@ -50,24 +72,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current agent health
-    const agent = await db.collection('agents').findOne({ address: address.toLowerCase() });
+    const agent = await db.collection('agents').findOne({ address: normalizedAddress });
     const currentHealth = typeof agent?.health === 'number' ? agent.health : 100;
     const maxHealth = typeof agent?.maxHealth === 'number' ? agent.maxHealth : 100;
     const newHealth = Math.max(0, Math.min(maxHealth, currentHealth + healthDelta));
 
     await db.collection('agent_actions').insertOne({
-      address: address.toLowerCase(),
+      address: normalizedAddress,
       action,
       reason: reason || '',
       reasoning: reasoning || reason || '',
       location: location || null,
       healthDelta,
       healthAfter: newHealth,
-      timestamp: new Date(),
+      timestamp: now,
     });
 
     await db.collection('agents').updateOne(
-      { address: address.toLowerCase() },
+      { address: normalizedAddress },
       {
         $set: {
           health: newHealth,
@@ -75,20 +97,40 @@ export async function POST(request: NextRequest) {
           currentReason: reason || '',
           currentReasoning: reasoning || reason || '',
           currentLocation: location || null,
-          lastActionAt: new Date(),
-          lastSeen: new Date(),
+          lastActionAt: now,
+          lastSeen: now,
         },
       }
     );
 
+    // Emit occasional global chat updates from active agents.
+    if (shouldEmitChat(action)) {
+      const lastChat = await db.collection('chat').findOne(
+        { from: normalizedAddress },
+        { sort: { timestamp: -1 } }
+      );
+      const lastTs = lastChat?.timestamp ? new Date(lastChat.timestamp).getTime() : 0;
+      if (!lastTs || (now.getTime() - lastTs) >= CHAT_COOLDOWN_MS) {
+        await db.collection('chat').insertOne({
+          from: normalizedAddress,
+          fromName: agent?.name || `Agent ${address.slice(0, 6)}`,
+          to: null,
+          toName: null,
+          message: buildChatMessage(action, reasoning || reason || '', location || null),
+          location: location || null,
+          timestamp: now,
+        });
+      }
+    }
+
     // Keep only last 100 actions per agent
     const count = await db.collection('agent_actions').countDocuments({
-      address: address.toLowerCase()
+      address: normalizedAddress
     });
 
     if (count > 100) {
       const oldActions = await db.collection('agent_actions')
-        .find({ address: address.toLowerCase() })
+        .find({ address: normalizedAddress })
         .sort({ timestamp: 1 })
         .limit(count - 100)
         .toArray();
