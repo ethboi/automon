@@ -3,12 +3,58 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWallet } from '@/context/WalletContext';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+const TX_ICONS: Record<string, string> = {
+  mint_pack: '📦', battle_settle: '🏆', battle_join: '🤝',
+  escrow_deposit: '🔒', nft_mint: '💎',
+};
+
+function shortAddr(addr?: string) {
+  if (!addr) return '???';
+  return addr.slice(0, 6) + '…' + addr.slice(-4);
+}
+
+function useLatestTx() {
+  const [tx, setTx] = useState<{ type: string; description: string; from: string; amount?: string | null; txHash: string; explorerUrl: string; agentName?: string } | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const prevHash = useRef<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/dashboard');
+        if (!res.ok) return;
+        const data = await res.json();
+        const txs = data.transactions || [];
+        const agents = data.onlineAgents || [];
+        const notable = txs.find((t: { type: string }) => ['battle_settle', 'escrow_deposit', 'battle_join', 'mint_pack'].includes(t.type));
+        if (notable && mounted) {
+          const name = agents.find((a: { address?: string }) => a.address?.toLowerCase() === notable.from?.toLowerCase())?.name || shortAddr(notable.from);
+          const newTx = { ...notable, agentName: name };
+          if (notable.txHash !== prevHash.current) {
+            prevHash.current = notable.txHash;
+            setIsNew(true);
+            setTimeout(() => mounted && setIsNew(false), 600);
+          }
+          setTx(newTx);
+        }
+      } catch {}
+    };
+    poll();
+    const iv = setInterval(poll, 5000);
+    return () => { mounted = false; clearInterval(iv); };
+  }, []);
+
+  return { tx, isNew };
+}
 
 export default function Header() {
   const { address, balance, isConnecting, connect, disconnect } = useWallet();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { tx: latestTx, isNew } = useLatestTx();
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -90,6 +136,27 @@ export default function Header() {
               </nav>
             )}
           </div>
+
+          {/* On-chain ticker */}
+          {latestTx && (
+            <a
+              href={latestTx.explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`hidden sm:flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-full px-3 py-1.5 hover:border-purple-500/40 transition-all duration-300 ${
+                isNew ? 'animate-pulse ring-1 ring-emerald-500/50' : ''
+              }`}
+            >
+              <span className="text-xs">{TX_ICONS[latestTx.type] || '📝'}</span>
+              <span className="text-[11px] text-cyan-400 font-medium">{latestTx.agentName}</span>
+              <span className="text-[11px] text-gray-400">{latestTx.description}</span>
+              {latestTx.amount && (
+                <span className={`text-[11px] font-mono font-bold ${latestTx.type === 'battle_settle' ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                  {latestTx.amount} MON
+                </span>
+              )}
+            </a>
+          )}
 
         {/* Right side */}
         <div className="flex items-center gap-3 sm:gap-4">
