@@ -1,373 +1,602 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { BattleLog, BattleTurnLog, BattleEvent } from '@/lib/types';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { BattleLog, BattleEvent, Element } from '@/lib/types';
 import { AUTOMONS } from '@/lib/automons';
 import { getCardArtDataUri } from '@/lib/cardArt';
 
-function cardImage(name: string, element?: string): string {
-  const mon = AUTOMONS.find(a => a.name === name);
+/* ═══════════════════════════════════════════════════════════
+   Constants & Helpers
+   ═══════════════════════════════════════════════════════════ */
+
+const ELEMENT_HEX: Record<string, string> = {
+  fire: '#ef4444', water: '#3b82f6', earth: '#84cc16',
+  air: '#a78bfa', dark: '#a855f7', light: '#fbbf24',
+};
+
+function getCardImage(cardName: string, element?: string): string {
+  const mon = AUTOMONS.find(a => a.name === cardName);
   return getCardArtDataUri(mon?.id ?? 1, element || mon?.element || 'fire', 'common');
 }
 
-const ELEMENT_COLORS: Record<string, string> = {
-  fire: '#ef4444', water: '#3b82f6', earth: '#84cc16', air: '#a78bfa', crystal: '#06b6d4',
-};
-const ACTION_DISPLAY: Record<string, { icon: string; label: string; color: string }> = {
-  strike: { icon: '⚔️', label: 'STRIKE', color: 'from-red-600 to-orange-600' },
-  skill: { icon: '✨', label: 'SKILL', color: 'from-purple-600 to-pink-600' },
-  guard: { icon: '🛡️', label: 'GUARD', color: 'from-blue-600 to-cyan-600' },
-  switch: { icon: '🔄', label: 'SWITCH', color: 'from-yellow-600 to-amber-600' },
-};
+function getCardElement(cardName: string, cards?: { name: string; element: Element }[]): string {
+  const fromCards = cards?.find(c => c.name === cardName);
+  if (fromCards) return fromCards.element;
+  const mon = AUTOMONS.find(a => a.name === cardName);
+  return mon?.element || 'fire';
+}
+
+function elColor(el: string): string { return ELEMENT_HEX[el] || ELEMENT_HEX.fire; }
+
+function hpColor(pct: number): string {
+  if (pct > 60) return '#22c55e';
+  if (pct > 30) return '#eab308';
+  return '#ef4444';
+}
+
 const EVENT_ICONS: Record<string, string> = {
-  damage: '💥', heal: '💚', faint: '💀', element_advantage: '🔥', triangle_result: '🔺',
-  interrupt: '⚡', guard_counter: '🛡️', skill_pierce: '✨', status_applied: '🌀',
-  status_tick: '⏳', status_expired: '✅', switch: '🔄', battle_start: '🎯', battle_end: '🏁',
-  action_reveal: '👁️',
+  damage: '⚔️', heal: '💚', faint: '💀', switch: '🔄',
+  element_advantage: '🔥', triangle_result: '🔺', interrupt: '⚡',
+  guard_counter: '🛡️', skill_pierce: '✨', status_applied: '💫',
+  status_tick: '🌀', status_expired: '⏰', action_reveal: '📢',
+  battle_start: '🎬', battle_end: '🏁',
 };
 
+const ACTION_ICONS: Record<string, string> = {
+  strike: '⚔️', skill: '✨', guard: '🛡️', switch: '🔄',
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  strike: '#ef4444', skill: '#a855f7', guard: '#3b82f6', switch: '#eab308',
+};
+
+const TRIANGLE_BADGE: Record<string, { bg: string; fg: string; label: string }> = {
+  win:     { bg: 'rgba(34,197,94,0.25)',  fg: '#22c55e', label: 'WIN' },
+  lose:    { bg: 'rgba(239,68,68,0.25)',  fg: '#ef4444', label: 'LOSE' },
+  neutral: { bg: 'rgba(234,179,8,0.25)',  fg: '#eab308', label: 'DRAW' },
+};
+
+/* ═══════════════════════════════════════════════════════════
+   CSS Keyframes (injected once)
+   ═══════════════════════════════════════════════════════════ */
+
+const REPLAY_STYLES = `
+@keyframes br-vs-pulse{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.18);opacity:1}}
+@keyframes br-card-left{from{transform:translateX(-30px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes br-card-right{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes br-badge-pop{0%{transform:scale(0) translateX(-50%)}70%{transform:scale(1.12) translateX(-50%)}100%{transform:scale(1) translateX(-50%)}}
+@keyframes br-float-up{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes br-celebrate{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-6px) rotate(-1deg)}75%{transform:translateY(-3px) rotate(1deg)}}
+@keyframes br-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes br-glow-ring{0%,100%{box-shadow:0 0 12px var(--el) ,inset 0 0 8px var(--el)}50%{box-shadow:0 0 24px var(--el),inset 0 0 16px var(--el)}}
+`;
+
+/* ═══════════════════════════════════════════════════════════
+   Types
+   ═══════════════════════════════════════════════════════════ */
+
+interface BattleReplayProps {
+  battleLog: BattleLog;
+  onClose?: () => void;
+}
 type Speed = 1 | 2 | 4;
 
-function hpPercent(hp: number, max = 150) { return Math.max(0, Math.min(100, (hp / max) * 100)); }
-function hpColor(pct: number) { return pct > 50 ? 'bg-emerald-500' : pct > 25 ? 'bg-yellow-500' : 'bg-red-500'; }
+/* ═══════════════════════════════════════════════════════════
+   Main Component
+   ═══════════════════════════════════════════════════════════ */
 
-function getElement(name: string) { return AUTOMONS.find(a => a.name === name)?.element || 'fire'; }
+export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) {
+  const [turnIdx, setTurnIdx]       = useState(-1);      // -1 = intro
+  const [eventIdx, setEventIdx]     = useState(0);
+  const [playing, setPlaying]       = useState(false);
+  const [speed, setSpeed]           = useState<Speed>(1);
 
-interface Props { battleLog: BattleLog; onClose?: () => void; }
+  const turns    = battleLog.turns;
+  const turn     = turnIdx >= 0 && turnIdx < turns.length ? turns[turnIdx] : null;
+  const events   = turn?.events.slice(0, eventIdx + 1) ?? [];
+  const isLast   = turnIdx === turns.length - 1;
+  const phase    = turnIdx === -1 ? 'intro' : (isLast && !playing) ? 'victory' : 'battle';
 
-export default function BattleReplay({ battleLog, onClose }: Props) {
-  const [turnIdx, setTurnIdx] = useState(-1);
-  const [eventIdx, setEventIdx] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState<Speed>(1);
+  /* --- computed max-HP per card (highest seen across all turns) --- */
+  const maxHp = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const t of turns) {
+      m[t.player1.activeCard] = Math.max(m[t.player1.activeCard] || 0, t.player1.cardHp);
+      m[t.player2.activeCard] = Math.max(m[t.player2.activeCard] || 0, t.player2.cardHp);
+    }
+    for (const [n, hp] of Object.entries(m)) {
+      const mon = AUTOMONS.find(a => a.name === n);
+      if (mon && mon.baseHp > hp) m[n] = mon.baseHp;
+    }
+    return m;
+  }, [turns]);
 
-  const turn: BattleTurnLog | null = turnIdx >= 0 && turnIdx < battleLog.turns.length ? battleLog.turns[turnIdx] : null;
-  const events: BattleEvent[] = turn?.events.slice(0, eventIdx + 1) || [];
-  const isEnd = turnIdx === battleLog.turns.length - 1 && (!turn || eventIdx >= (turn?.events.length || 1) - 1);
-  const p1 = battleLog.player1;
-  const p2 = battleLog.player2;
-  const p1Name = p1.name || p1.address.slice(0, 8);
-  const p2Name = p2.name || p2.address.slice(0, 8);
-  const wager = parseFloat(battleLog.wager || '0');
-  const payout = (wager * 2 * 0.95).toFixed(4);
-  const winnerIsP1 = battleLog.winner?.toLowerCase() === p1.address.toLowerCase();
+  /* --- winner helpers --- */
+  const p1Name = battleLog.player1.name || battleLog.player1.address.slice(0, 8);
+  const p2Name = battleLog.player2.name || battleLog.player2.address.slice(0, 8);
+  const p1Color = '#818cf8';   // indigo-400
+  const p2Color = '#34d399';   // emerald-400
+  const winP1   = battleLog.winner === battleLog.player1.address;
+  const winP2   = battleLog.winner === battleLog.player2.address;
+  const winName = winP1 ? p1Name : winP2 ? p2Name : battleLog.winner?.slice(0, 10) ?? '???';
 
+  /* --- auto-play timer --- */
   useEffect(() => {
     if (!playing) return;
-    const ms = 1800 / speed;
+    const ms = (turnIdx === -1 ? 3000 : 2000) / speed;
     const t = setTimeout(() => {
-      if (turnIdx === -1) { setTurnIdx(0); setEventIdx(0); }
-      else if (turn) {
-        if (eventIdx < turn.events.length - 1) setEventIdx(i => i + 1);
-        else if (turnIdx < battleLog.turns.length - 1) { setTurnIdx(i => i + 1); setEventIdx(0); }
-        else setPlaying(false);
-      }
+      if (turnIdx === -1) { setTurnIdx(0); setEventIdx(0); return; }
+      if (turn && eventIdx < turn.events.length - 1) { setEventIdx(i => i + 1); return; }
+      if (turnIdx < turns.length - 1) { setTurnIdx(i => i + 1); setEventIdx(0); return; }
+      setPlaying(false);
     }, ms);
     return () => clearTimeout(t);
-  }, [playing, turnIdx, eventIdx, turn, battleLog.turns.length, speed]);
+  }, [playing, turnIdx, eventIdx, turn, turns.length, speed]);
 
-  const play = useCallback(() => {
+  /* --- controls --- */
+  const restart    = useCallback(() => { setTurnIdx(-1); setEventIdx(0); setPlaying(false); }, []);
+  const skipToEnd  = useCallback(() => {
+    if (!turns.length) return;
+    setTurnIdx(turns.length - 1);
+    setEventIdx(turns[turns.length - 1].events.length - 1);
+    setPlaying(false);
+  }, [turns]);
+  const togglePlay = useCallback(() => {
     if (turnIdx === -1) { setTurnIdx(0); setEventIdx(0); }
     setPlaying(p => !p);
   }, [turnIdx]);
-  const skip = useCallback(() => {
-    const last = battleLog.turns.length - 1;
-    setTurnIdx(last); setEventIdx(battleLog.turns[last].events.length - 1); setPlaying(false);
-  }, [battleLog.turns]);
-  const restart = useCallback(() => { setTurnIdx(-1); setEventIdx(0); setPlaying(false); }, []);
 
-  const CardPanel = ({ player, side }: { player: 'p1' | 'p2'; side: 'left' | 'right' }) => {
-    if (!turn) return null;
-    const data = player === 'p1' ? turn.player1 : turn.player2;
-    const info = player === 'p1' ? p1 : p2;
-    const name = player === 'p1' ? p1Name : p2Name;
-    const el = getElement(data.activeCard);
-    const elColor = ELEMENT_COLORS[el] || '#a78bfa';
-    const action = ACTION_DISPLAY[data.action] || ACTION_DISPLAY.strike;
-    const tri = turn.triangleResult;
-    const result = player === 'p1' ? tri?.player1Result : tri?.player2Result;
-    const resultColor = result === 'win' ? 'text-emerald-400' : result === 'lose' ? 'text-red-400' : 'text-yellow-400';
-    const resultLabel = result === 'win' ? 'WINS' : result === 'lose' ? 'LOSES' : 'DRAW';
-    const hp = hpPercent(data.cardHp);
+  /* --- progress % --- */
+  const progress = turnIdx < 0 ? 0 : ((turnIdx + 1) / turns.length) * 100;
 
-    return (
-      <div className="flex-1 min-w-0">
-        {/* Player name */}
-        <div className={`flex items-center gap-2 mb-2 ${side === 'right' ? 'justify-end' : ''}`}>
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-sm sm:text-base font-bold text-white truncate">{name}</span>
-          {info.isAI && <span className="text-[10px] bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded-full">AI</span>}
-        </div>
-
-        {/* Card display */}
-        <div className="relative bg-gray-900/60 border border-white/10 rounded-xl p-3 sm:p-4">
-          {/* Action badge */}
-          <div className={`absolute -top-3 ${side === 'left' ? 'left-3' : 'right-3'} z-10`}>
-            <div className={`bg-gradient-to-r ${action.color} px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg`}>
-              <span className="text-sm">{action.icon}</span>
-              <span className="text-[10px] sm:text-xs font-bold text-white">{action.label}</span>
-            </div>
-          </div>
-
-          {/* Triangle result */}
-          {tri && (
-            <div className={`absolute -top-3 ${side === 'left' ? 'right-3' : 'left-3'} z-10`}>
-              <span className={`text-[10px] sm:text-xs font-bold ${resultColor} bg-gray-950 px-2 py-1 rounded-full border border-white/10`}>{resultLabel}</span>
-            </div>
-          )}
-
-          {/* Card art + name */}
-          <div className="flex items-center gap-3">
-            <div className="shrink-0" style={{ borderColor: elColor }}>
-              <img
-                src={cardImage(data.activeCard, el)}
-                alt={data.activeCard}
-                className="w-14 h-14 sm:w-20 sm:h-20 rounded-lg object-cover border-2 shadow-lg"
-                style={{ borderColor: elColor, boxShadow: `0 0 15px ${elColor}33` }}
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm sm:text-lg font-bold text-white truncate">{data.activeCard}</div>
-              <div className="text-[10px] sm:text-xs font-medium uppercase tracking-wider" style={{ color: elColor }}>{el}</div>
-
-              {/* HP bar */}
-              <div className="mt-1.5">
-                <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
-                  <span>HP</span>
-                  <span className="font-mono">{data.cardHp}</span>
-                </div>
-                <div className="h-2.5 sm:h-3 bg-gray-800 rounded-full overflow-hidden">
-                  <div className={`h-full ${hpColor(hp)} transition-all duration-700 rounded-full`} style={{ width: `${hp}%` }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Reasoning */}
-          {data.reasoning && (
-            <div className="mt-3 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2">
-              <div className="flex items-center gap-1 mb-1">
-                <span className="text-[10px]">🧠</span>
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">AI Thinking</span>
-              </div>
-              <p className="text-xs text-gray-400 italic leading-relaxed line-clamp-3">{data.reasoning}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Team cards (small) */}
-        <div className={`flex gap-1.5 mt-2 ${side === 'right' ? 'justify-end' : ''}`}>
-          {info.cards.map((c, i) => {
-            const cel = c.element || getElement(c.name);
-            const isActive = c.name === data.activeCard;
-            return (
-              <div key={i} className={`relative ${isActive ? 'ring-2 ring-white/40' : 'opacity-50'}`}>
-                <img
-                  src={cardImage(c.name, cel)}
-                  alt={c.name}
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded object-cover border"
-                  style={{ borderColor: isActive ? ELEMENT_COLORS[cel] || '#888' : '#333' }}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
+  /* ═══════════════════ Render ═══════════════════ */
   return (
-    <div className="fixed inset-0 bg-gray-950/95 backdrop-blur-sm z-50 flex flex-col">
-      {/* ── Header ── */}
-      <div className="bg-gray-900/80 border-b border-white/5 px-3 py-2.5 sm:px-6 sm:py-3 shrink-0">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-lg sm:text-xl">⚔️</span>
-            <div className="min-w-0">
-              <h2 className="text-sm sm:text-lg font-bold text-white truncate">{p1Name} vs {p2Name}</h2>
-              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500">
-                <span className="text-yellow-400 font-semibold">{battleLog.wager} MON wager</span>
-                <span>•</span>
-                <span>{battleLog.turns.length} turns</span>
-                <span>•</span>
-                <span>💰 {payout} MON to winner</span>
-              </div>
-            </div>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: REPLAY_STYLES }} />
+
+      <div className="fixed inset-0 z-50 flex flex-col text-white"
+        style={{ background: 'linear-gradient(180deg, #030712 0%, #0c0a1a 50%, #030712 100%)' }}>
+
+        {/* ──── Wager Banner ──── */}
+        <div className="shrink-0 text-center py-1.5 text-xs sm:text-sm font-bold tracking-wide"
+          style={{ background: 'linear-gradient(90deg,rgba(124,58,237,.3),rgba(6,182,212,.3),rgba(124,58,237,.3))' }}>
+          💰 <span className="text-white">{battleLog.wager} MON</span>
+          <span className="text-gray-400 ml-1">wager</span>
+        </div>
+
+        {/* ──── Header / Controls ──── */}
+        <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2 sm:px-5 sm:py-3"
+          style={{ background: 'rgba(17,24,39,.85)', borderBottom: '1px solid rgba(75,85,99,.25)' }}>
+
+          {/* names */}
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <span className="font-extrabold text-xs sm:text-sm truncate" style={{ color: p1Color }}>{p1Name}</span>
+            <span className="text-[10px] text-gray-600">vs</span>
+            <span className="font-extrabold text-xs sm:text-sm truncate" style={{ color: p2Color }}>{p2Name}</span>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <button onClick={restart} className="p-1.5 sm:p-2 hover:bg-white/5 rounded-lg transition text-sm" title="Restart">⏮️</button>
-            <button onClick={play} className="px-3 py-1.5 sm:px-4 sm:py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-xs sm:text-sm font-semibold transition shadow-lg shadow-purple-600/20">
-              {playing ? '⏸ Pause' : '▶ Play'}
+          {/* playback */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <Btn onClick={restart} title="Restart">⏮</Btn>
+
+            <button onClick={togglePlay}
+              className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold text-sm transition-transform active:scale-95"
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
+              {playing ? '⏸' : '▶'}
             </button>
-            <button onClick={skip} className="p-1.5 sm:p-2 hover:bg-white/5 rounded-lg transition text-sm" title="Skip to end">⏭️</button>
-            <div className="flex bg-gray-800 rounded-lg p-0.5 ml-1">
+
+            <Btn onClick={skipToEnd} title="Skip to end">⏭</Btn>
+
+            <div className="flex rounded-lg overflow-hidden" style={{ background: 'rgba(31,41,55,.8)' }}>
               {([1, 2, 4] as Speed[]).map(s => (
                 <button key={s} onClick={() => setSpeed(s)}
-                  className={`px-2 py-1 rounded text-[10px] sm:text-xs font-semibold transition ${speed === s ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-white'}`}>
+                  className="px-2 py-1 text-[10px] sm:text-xs font-bold transition"
+                  style={speed === s
+                    ? { background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', color: '#fff' }
+                    : { color: '#6b7280' }}>
                   {s}x
                 </button>
               ))}
             </div>
-            {onClose && <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg ml-1 text-gray-400 hover:text-white transition">✕</button>}
+
+            {onClose && <Btn onClick={onClose} title="Close">✕</Btn>}
           </div>
         </div>
-      </div>
 
-      {/* ── Main content ── */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto px-3 py-4 sm:px-6 sm:py-6">
+        {/* ──── Content ──── */}
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-5xl mx-auto p-2 sm:p-4 space-y-3 sm:space-y-5">
 
-          {/* Intro screen */}
-          {turnIdx === -1 && (
-            <div className="text-center py-8 sm:py-16">
-              <div className="inline-block bg-gradient-to-r from-purple-600/20 to-cyan-600/20 border border-white/10 rounded-2xl px-8 py-6 sm:px-12 sm:py-10">
-                <h2 className="text-2xl sm:text-4xl font-black text-white mb-2">⚔️ BATTLE</h2>
-                <div className="flex items-center justify-center gap-4 sm:gap-8 mb-4">
-                  <span className="text-lg sm:text-2xl font-bold text-cyan-400">{p1Name}</span>
-                  <span className="text-gray-600 text-sm">VS</span>
-                  <span className="text-lg sm:text-2xl font-bold text-purple-400">{p2Name}</span>
-                </div>
-                <div className="text-yellow-400 font-bold text-sm sm:text-lg mb-6">💰 {battleLog.wager} MON wager</div>
-
-                {/* Team previews */}
-                <div className="grid grid-cols-2 gap-4 sm:gap-8 mb-6">
-                  {[p1, p2].map((p, pi) => (
-                    <div key={pi}>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">{pi === 0 ? p1Name : p2Name}&apos;s Team</div>
-                      <div className="flex justify-center gap-2">
-                        {p.cards.map((c, ci) => {
-                          const el = c.element || getElement(c.name);
-                          return (
-                            <div key={ci} className="text-center">
-                              <img src={cardImage(c.name, el)} alt={c.name}
-                                className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover border-2 shadow-lg"
-                                style={{ borderColor: ELEMENT_COLORS[el], boxShadow: `0 0 10px ${ELEMENT_COLORS[el]}33` }} />
-                              <div className="text-[10px] sm:text-xs text-gray-400 mt-1 truncate w-12 sm:w-16">{c.name}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button onClick={play}
-                  className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 px-8 py-3 rounded-xl text-sm sm:text-base font-bold shadow-lg transition">
-                  ▶ Start Battle
-                </button>
-              </div>
+            {/* Turn Badge */}
+            <div className="text-center">
+              <span className="inline-block px-4 py-1.5 rounded-full text-[11px] sm:text-sm font-bold tracking-wide"
+                style={{
+                  background: phase === 'victory'
+                    ? 'linear-gradient(135deg,#b45309,#d97706)'
+                    : 'linear-gradient(135deg,rgba(124,58,237,.45),rgba(6,182,212,.45))',
+                  border: '1px solid rgba(255,255,255,.1)',
+                }}>
+                {phase === 'intro'   && '⚡ Preparing for Battle…'}
+                {phase === 'battle'  && `Turn ${turnIdx + 1} / ${turns.length}`}
+                {phase === 'victory' && '🏆 Battle Complete!'}
+              </span>
             </div>
-          )}
 
-          {/* Active turn */}
-          {turn && (
-            <>
-              {/* Turn indicator */}
-              <div className="text-center mb-4 sm:mb-6">
-                <span className="bg-gray-800 border border-white/10 px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold text-gray-300">
-                  Turn {turnIdx + 1} of {battleLog.turns.length}
-                </span>
+            {/* ═══════ INTRO ═══════ */}
+            {phase === 'intro' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+                <TeamPanel
+                  label={`${p1Name}'s Team`}
+                  color={p1Color}
+                  cards={battleLog.player1.cards}
+                  reasoning={(battleLog.player1 as any).cardSelectionReasoning}
+                />
+                <TeamPanel
+                  label={`${p2Name}'s Team`}
+                  color={p2Color}
+                  cards={battleLog.player2.cards}
+                  reasoning={(battleLog.player2 as any).cardSelectionReasoning}
+                />
               </div>
+            )}
 
-              {/* Battle arena — side by side */}
-              <div className="flex gap-3 sm:gap-6 items-start mb-4 sm:mb-6">
-                <CardPanel player="p1" side="left" />
-
-                {/* VS */}
-                <div className="shrink-0 flex flex-col items-center justify-center pt-10 sm:pt-14">
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shadow-lg shadow-red-600/30">
-                    <span className="text-xs sm:text-base font-black text-white">VS</span>
+            {/* ═══════ BATTLE ═══════ */}
+            {turn && phase === 'battle' && (
+              <>
+                {/* Arena */}
+                <div className="flex items-start gap-1 sm:gap-3">
+                  <div className="flex-1" style={{ animation: 'br-card-left .4s ease-out' }}>
+                    <CardPanel
+                      name={p1Name} color={p1Color}
+                      card={turn.player1.activeCard}
+                      hp={turn.player1.cardHp} max={maxHp[turn.player1.activeCard] || 100}
+                      action={turn.player1.action}
+                      result={turn.triangleResult?.player1Result}
+                      reasoning={turn.player1.reasoning}
+                      prediction={turn.player1.prediction}
+                      element={getCardElement(turn.player1.activeCard, battleLog.player1.cards)}
+                      side="left"
+                    />
                   </div>
-                </div>
 
-                <CardPanel player="p2" side="right" />
-              </div>
-
-              {/* Event log */}
-              <div className="bg-gray-900/50 border border-white/5 rounded-xl overflow-hidden">
-                <div className="px-4 py-2 border-b border-white/5 flex items-center justify-between">
-                  <h3 className="text-xs sm:text-sm font-semibold text-gray-400">⚡ Battle Events</h3>
-                  <span className="text-[10px] text-gray-600">{events.length} / {turn.events.length}</span>
-                </div>
-                <div className="max-h-40 sm:max-h-52 overflow-y-auto p-2 sm:p-3 space-y-1">
-                  {events.map((e, i) => {
-                    const eIcon = EVENT_ICONS[e.type] || '📝';
-                    const isD = e.type === 'damage' || e.type === 'interrupt' || e.type === 'skill_pierce';
-                    const isH = e.type === 'heal' || e.type === 'status_expired';
-                    const isF = e.type === 'faint';
-                    return (
-                      <div key={i} className={`flex items-start gap-2 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm transition-all ${
-                        i === events.length - 1 ? 'bg-white/[0.04] border border-white/[0.06]' : ''
-                      }`}>
-                        <span className="shrink-0 text-sm">{eIcon}</span>
-                        <span className={`leading-relaxed ${
-                          isF ? 'text-red-400 font-semibold' : isD ? 'text-orange-300' : isH ? 'text-emerald-400' : 'text-gray-300'
-                        }`}>
-                          {e.message}
-                          {e.value && isD && <span className="ml-1 text-red-400 font-mono font-bold">-{e.value}</span>}
-                          {e.value && isH && <span className="ml-1 text-emerald-400 font-mono font-bold">+{e.value}</span>}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Victory screen */}
-          {isEnd && !playing && (
-            <div className="mt-6 sm:mt-10 text-center">
-              <div className="inline-block bg-gradient-to-br from-yellow-600/20 via-amber-600/20 to-orange-600/20 border border-yellow-500/30 rounded-2xl px-6 py-6 sm:px-12 sm:py-10 shadow-2xl">
-                <div className="text-4xl sm:text-6xl mb-3">🏆</div>
-                <h2 className="text-xl sm:text-3xl font-black text-white mb-1">VICTORY</h2>
-                <p className="text-lg sm:text-2xl font-bold text-yellow-400 mb-4">{winnerIsP1 ? p1Name : p2Name}</p>
-
-                <div className="grid grid-cols-2 gap-6 sm:gap-10 text-center mb-4">
-                  <div>
-                    <div className={`text-lg sm:text-2xl font-bold ${winnerIsP1 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {winnerIsP1 ? '👑 Winner' : 'Defeated'}
+                  {/* VS */}
+                  <div className="flex flex-col items-center pt-10 sm:pt-20 shrink-0">
+                    <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-full flex items-center justify-center"
+                      style={{
+                        background: 'linear-gradient(135deg,#ef4444,#f59e0b)',
+                        boxShadow: '0 0 18px rgba(239,68,68,.45)',
+                        animation: 'br-vs-pulse 2s ease-in-out infinite',
+                      }}>
+                      <span className="text-[10px] sm:text-sm font-black tracking-wider text-white drop-shadow-lg">VS</span>
                     </div>
-                    <div className="text-sm text-gray-400">{p1Name}</div>
-                    <div className="text-xs text-gray-500 mt-1">Damage: {battleLog.totalDamageDealt.player1}</div>
-                    <div className="text-xs text-gray-500">Fainted: {battleLog.cardsFainted.player1}</div>
+                    <div className="w-px h-6 sm:h-12 mt-1"
+                      style={{ background: 'linear-gradient(180deg,rgba(239,68,68,.4),transparent)' }} />
                   </div>
-                  <div>
-                    <div className={`text-lg sm:text-2xl font-bold ${!winnerIsP1 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {!winnerIsP1 ? '👑 Winner' : 'Defeated'}
-                    </div>
-                    <div className="text-sm text-gray-400">{p2Name}</div>
-                    <div className="text-xs text-gray-500 mt-1">Damage: {battleLog.totalDamageDealt.player2}</div>
-                    <div className="text-xs text-gray-500">Fainted: {battleLog.cardsFainted.player2}</div>
+
+                  <div className="flex-1" style={{ animation: 'br-card-right .4s ease-out' }}>
+                    <CardPanel
+                      name={p2Name} color={p2Color}
+                      card={turn.player2.activeCard}
+                      hp={turn.player2.cardHp} max={maxHp[turn.player2.activeCard] || 100}
+                      action={turn.player2.action}
+                      result={turn.triangleResult?.player2Result}
+                      reasoning={turn.player2.reasoning}
+                      prediction={turn.player2.prediction}
+                      element={getCardElement(turn.player2.activeCard, battleLog.player2.cards)}
+                      side="right"
+                    />
                   </div>
                 </div>
 
-                <div className="bg-black/30 rounded-xl px-6 py-3 inline-block">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider">Payout</div>
-                  <div className="text-xl sm:text-3xl font-black text-emerald-400">{payout} MON</div>
+                {/* Event Log */}
+                <EventLog events={events} turnLabel={`Turn ${turnIdx + 1}`} />
+              </>
+            )}
+
+            {/* ═══════ VICTORY ═══════ */}
+            {phase === 'victory' && (
+              <>
+                {/* Winner Banner */}
+                <div className="text-center" style={{ animation: 'br-float-up .5s ease-out' }}>
+                  <div className="inline-block rounded-2xl px-6 py-5 sm:px-10 sm:py-8"
+                    style={{
+                      background: 'linear-gradient(135deg,rgba(180,83,9,.35),rgba(217,119,6,.15))',
+                      border: '1px solid rgba(251,191,36,.25)',
+                      boxShadow: '0 0 50px rgba(251,191,36,.12)',
+                    }}>
+                    <div className="text-4xl sm:text-5xl mb-2">🏆</div>
+                    <h2 className="text-lg sm:text-2xl font-black mb-1"
+                      style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                      {winName} Wins!
+                    </h2>
+                    <p className="text-xl sm:text-3xl font-extrabold text-green-400">+{battleLog.wager} MON</p>
+                  </div>
                 </div>
-              </div>
+
+                {/* Final Teams */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-5">
+                  <FinalTeam name={p1Name} color={p1Color} cards={battleLog.player1.cards}
+                    dmg={battleLog.totalDamageDealt.player1} fainted={battleLog.cardsFainted.player1}
+                    isWinner={winP1} />
+                  <FinalTeam name={p2Name} color={p2Color} cards={battleLog.player2.cards}
+                    dmg={battleLog.totalDamageDealt.player2} fainted={battleLog.cardsFainted.player2}
+                    isWinner={winP2} />
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-2 text-center text-[10px] sm:text-xs">
+                  <StatBox label="Total Turns" value={String(turns.length)} />
+                  <StatBox label="Duration" value={`${Math.round(battleLog.duration / 1000)}s`} />
+                  <StatBox label="Cards Fainted"
+                    value={`${battleLog.cardsFainted.player1} — ${battleLog.cardsFainted.player2}`} />
+                </div>
+
+                {/* Last Turn Events */}
+                {turn && <EventLog events={turn.events} turnLabel="Final Turn" />}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ──── Progress Bar ──── */}
+        <div className="shrink-0 px-3 py-2 sm:px-5 sm:py-3"
+          style={{ background: 'rgba(17,24,39,.9)', borderTop: '1px solid rgba(75,85,99,.2)' }}>
+          <div className="max-w-5xl mx-auto">
+            <div className="h-1.5 sm:h-2 rounded-full overflow-hidden" style={{ background: 'rgba(55,65,81,.4)' }}>
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${progress}%`, background: 'linear-gradient(90deg,#7c3aed,#06b6d4)' }} />
             </div>
-          )}
+          </div>
         </div>
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Sub-Components
+   ═══════════════════════════════════════════════════════════ */
+
+/* ---- tiny button wrapper ---- */
+function Btn({ onClick, title, children }: { onClick: () => void; title?: string; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} title={title}
+      className="p-1.5 rounded-lg transition hover:bg-white/10 active:scale-90 text-sm text-gray-300">
+      {children}
+    </button>
+  );
+}
+
+/* ---- Team panel (intro) ---- */
+function TeamPanel({ label, color, cards, reasoning }: {
+  label: string; color: string;
+  cards: { id: string; name: string; element: Element }[];
+  reasoning?: string;
+}) {
+  return (
+    <div className="rounded-xl p-3 sm:p-5" style={{ background: `${color}0a`, border: `1px solid ${color}30` }}>
+      <h3 className="font-bold text-sm sm:text-base mb-3 flex items-center gap-2" style={{ color }}>
+        <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+        {label}
+      </h3>
+
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {cards.map((c, i) => {
+          const ec = elColor(c.element);
+          const mon = AUTOMONS.find(a => a.name === c.name);
+          return (
+            <div key={i} className="text-center" style={{ animation: `br-float-up .4s ease-out ${i * .1}s both` }}>
+              <div className="relative mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden mb-1"
+                style={{ border: `2px solid ${ec}`, boxShadow: `0 0 14px ${ec}35` }}>
+                <img src={getCardImage(c.name, c.element)} alt={c.name} className="w-full h-full object-cover" />
+              </div>
+              <p className="text-[10px] sm:text-xs font-bold truncate">{c.name}</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold uppercase" style={{ color: ec }}>{c.element}</p>
+              {mon && (
+                <p className="text-[8px] sm:text-[9px] text-gray-500 mt-0.5">
+                  ⚔{mon.baseAttack} 🛡{mon.baseDefense} ⚡{mon.baseSpeed} ❤️{mon.baseHp}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* ── Progress bar ── */}
-      <div className="bg-gray-900/80 border-t border-white/5 px-4 py-2.5 sm:py-3 shrink-0">
-        <div className="max-w-5xl mx-auto">
-          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-purple-600 to-cyan-500 transition-all duration-500 rounded-full"
-              style={{ width: `${turnIdx < 0 ? 0 : ((turnIdx + 1) / battleLog.turns.length) * 100}%` }} />
-          </div>
-          <div className="flex justify-between mt-1 text-[10px] text-gray-600">
-            <span>Start</span>
-            <span>💰 {battleLog.wager} MON</span>
-            <span>End</span>
+      {reasoning && (
+        <div className="mt-3 rounded-lg p-2 sm:p-3 text-[10px] sm:text-xs leading-relaxed text-gray-300"
+          style={{ background: `${color}0d`, border: `1px solid ${color}18` }}>
+          <span className="font-bold" style={{ color }}>🧠 Draft strategy:</span> {reasoning}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- Active card panel (battle) ---- */
+function CardPanel({ name, color, card, hp, max, action, result, reasoning, prediction, element, side }: {
+  name: string; color: string; card: string;
+  hp: number; max: number; action: string;
+  result?: 'win' | 'lose' | 'neutral';
+  reasoning?: string; prediction?: string;
+  element: string; side: 'left' | 'right';
+}) {
+  const pct   = Math.max(0, Math.min(100, (hp / max) * 100));
+  const hpC   = hpColor(pct);
+  const ec    = elColor(element);
+  const dead  = hp <= 0;
+  const actC  = ACTION_COLORS[action] || '#6b7280';
+  const badge = result ? TRIANGLE_BADGE[result] : null;
+
+  return (
+    <div className="flex flex-col items-center">
+      {/* player name */}
+      <p className="font-extrabold text-[10px] sm:text-sm mb-1 sm:mb-2 truncate max-w-full" style={{ color }}>{name}</p>
+
+      {/* card art */}
+      <div className="relative w-[72px] h-[72px] sm:w-32 sm:h-32 rounded-xl overflow-hidden"
+        style={{
+          ['--el' as string]: `${ec}40`,
+          border: `3px solid ${ec}`,
+          boxShadow: `0 0 20px ${ec}30`,
+          animation: dead ? undefined : 'br-glow-ring 3s ease-in-out infinite',
+          filter: dead ? 'grayscale(.8) brightness(.45)' : undefined,
+        }}>
+        <img src={getCardImage(card, element)} alt={card} className="w-full h-full object-cover" />
+
+        {/* action badge */}
+        <div className="absolute -bottom-px left-1/2"
+          style={{ animation: 'br-badge-pop .35s ease-out both' }}>
+          <div className="px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-[11px] font-black uppercase tracking-wider whitespace-nowrap"
+            style={{ background: `${actC}dd`, boxShadow: `0 0 10px ${actC}55`, border: '1px solid rgba(255,255,255,.15)' }}>
+            {ACTION_ICONS[action] || '?'} {action}
           </div>
         </div>
+
+        {/* triangle badge */}
+        {badge && (
+          <div className="absolute top-1 sm:top-1.5" style={{ [side === 'left' ? 'right' : 'left']: '4px' }}>
+            <span className="px-1.5 py-0.5 rounded text-[7px] sm:text-[9px] font-black"
+              style={{ background: badge.bg, color: badge.fg }}>
+              {badge.label}
+            </span>
+          </div>
+        )}
+
+        {/* faint overlay */}
+        {dead && (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,.55)' }}>
+            <span className="text-2xl sm:text-4xl">💀</span>
+          </div>
+        )}
       </div>
+
+      {/* card name + element */}
+      <p className="text-xs sm:text-base font-bold mt-1.5 sm:mt-2 truncate max-w-full">{card}</p>
+      <p className="text-[9px] sm:text-[10px] font-semibold uppercase mb-1" style={{ color: ec }}>{element}</p>
+
+      {/* HP bar */}
+      <div className="w-full" style={{ maxWidth: 180 }}>
+        <div className="h-2.5 sm:h-3.5 rounded-full overflow-hidden" style={{ background: 'rgba(55,65,81,.5)' }}>
+          <div className="h-full rounded-full relative overflow-hidden"
+            style={{ width: `${pct}%`, background: hpC, transition: 'width .8s ease, background-color .5s ease' }}>
+            <div className="absolute inset-0"
+              style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent)', backgroundSize: '200% 100%', animation: 'br-shimmer 2s ease-in-out infinite' }} />
+          </div>
+        </div>
+        <p className="text-[9px] sm:text-[11px] text-center mt-0.5 font-bold tabular-nums" style={{ color: hpC }}>
+          {hp} / {max}
+        </p>
+      </div>
+
+      {/* AI reasoning bubble */}
+      {reasoning && (
+        <div className="mt-2 sm:mt-3 w-full rounded-lg p-2 sm:p-3 text-[9px] sm:text-xs leading-relaxed"
+          style={{ background: `${color}0d`, border: `1px solid ${color}20` }}>
+          <div className="flex items-start gap-1.5">
+            <span className="text-sm sm:text-base shrink-0">🧠</span>
+            <div className="min-w-0">
+              <span className="font-bold" style={{ color }}>Thinking: </span>
+              <span className="text-gray-300">{reasoning}</span>
+              {prediction && (
+                <p className="mt-1 text-gray-400 italic">
+                  <span className="not-italic font-semibold text-gray-300">🎯 Predicts: </span>{prediction}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- Event log ---- */
+function EventLog({ events, turnLabel }: { events: BattleEvent[]; turnLabel: string }) {
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(17,24,39,.55)', border: '1px solid rgba(75,85,99,.18)' }}>
+      <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderBottom: '1px solid rgba(75,85,99,.15)' }}>
+        <span className="text-[11px] sm:text-sm font-bold text-gray-300">📜 Battle Events</span>
+        <span className="text-[9px] sm:text-[10px] text-gray-500">{turnLabel}</span>
+      </div>
+      <div className="max-h-36 sm:max-h-52 overflow-y-auto p-1.5 sm:p-2 space-y-1">
+        {events.length === 0 && (
+          <p className="text-[10px] text-gray-600 text-center py-2">Waiting…</p>
+        )}
+        {events.map((ev, i) => <EventRow key={i} event={ev} />)}
+      </div>
+    </div>
+  );
+}
+
+/* ---- Single event row ---- */
+function EventRow({ event }: { event: BattleEvent }) {
+  const icon = EVENT_ICONS[event.type] || '•';
+  const isDmg  = event.type === 'damage';
+  const isHeal = event.type === 'heal';
+  const isFaint = event.type === 'faint';
+  const isElAdv = event.type === 'element_advantage';
+
+  const fg = isDmg ? '#fca5a5' : isHeal ? '#86efac' : isFaint ? '#9ca3af' : isElAdv ? '#fde68a' : '#d1d5db';
+  const bg = isDmg ? 'rgba(239,68,68,.08)' : isHeal ? 'rgba(34,197,94,.08)' : isFaint ? 'rgba(107,114,128,.12)' : isElAdv ? 'rgba(234,179,8,.08)' : 'rgba(31,41,55,.25)';
+
+  return (
+    <div className="flex items-start gap-2 rounded-lg px-2.5 py-1.5"
+      style={{ background: bg, color: fg, animation: 'br-float-up .25s ease-out' }}>
+      <span className="shrink-0 text-xs sm:text-sm">{icon}</span>
+      <span className="text-[10px] sm:text-xs leading-relaxed flex-1">{event.message}</span>
+      {event.value != null && event.value !== 0 && (
+        <span className="ml-auto shrink-0 font-bold text-[10px] sm:text-xs"
+          style={{ color: isDmg ? '#f87171' : '#4ade80' }}>
+          {isDmg ? '−' : '+'}{Math.abs(event.value)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ---- Final team display (victory) ---- */
+function FinalTeam({ name, color, cards, dmg, fainted, isWinner }: {
+  name: string; color: string;
+  cards: { id: string; name: string; element: Element }[];
+  dmg: number; fainted: number; isWinner: boolean;
+}) {
+  return (
+    <div className="rounded-xl p-2.5 sm:p-4 transition"
+      style={{
+        background: `${color}${isWinner ? '0d' : '06'}`,
+        border: `1px solid ${color}${isWinner ? '30' : '12'}`,
+        opacity: isWinner ? 1 : .55,
+        animation: isWinner ? 'br-celebrate 1.8s ease-in-out infinite' : undefined,
+      }}>
+      <p className="font-bold text-[11px] sm:text-sm mb-2 truncate" style={{ color }}>
+        {isWinner && '👑 '}{name}
+      </p>
+
+      <div className="flex gap-1 sm:gap-2 justify-center">
+        {cards.map((c, i) => (
+          <img key={i} src={getCardImage(c.name, c.element)} alt={c.name}
+            className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg object-cover"
+            style={{
+              border: `2px solid ${elColor(c.element)}`,
+              filter: !isWinner ? 'grayscale(.7) brightness(.5)' : undefined,
+            }} />
+        ))}
+      </div>
+
+      <div className="flex justify-center gap-3 mt-2 text-[9px] sm:text-xs text-gray-400">
+        <span><span className="text-red-400 font-bold">{dmg}</span> dmg</span>
+        <span><span className="text-gray-300 font-bold">{fainted}</span> 💀</span>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Small stat box ---- */
+function StatBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg p-2 sm:p-3" style={{ background: 'rgba(31,41,55,.4)' }}>
+      <p className="text-gray-500 mb-0.5">{label}</p>
+      <p className="font-bold text-white">{value}</p>
     </div>
   );
 }
