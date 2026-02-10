@@ -56,10 +56,8 @@ const LOCATIONS = [
   { name: 'Town Arena',      x:   0, z: -30 },
   { name: 'Town Market',     x:  28, z:   0 },
   { name: 'Community Farm',  x: -28, z:   0 },
-  { name: 'Green Meadows',   x: -12, z: -30 },
   { name: 'Old Pond',        x: -36, z: -14 },
   { name: 'Dark Forest',     x: -36, z:  22 },
-  { name: 'River Delta',     x:  34, z: -24 },
   { name: 'Crystal Caves',   x:  32, z:  24 },
 ];
 
@@ -81,10 +79,6 @@ const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> 
     { action: 'farming', reasons: ['Tending the crops', 'Harvesting berries', 'Helping at the farm'] },
     { action: 'resting', reasons: ['Relaxing in the fields', 'Enjoying the countryside', 'Picnic break'] },
   ],
-  'Green Meadows': [
-    { action: 'catching', reasons: ['Found a rare spawn!', 'Tracking footprints', 'Setting a lure'] },
-    { action: 'exploring', reasons: ['Searching for wild AutoMon', 'Scouting the meadows', 'Looking for rare spawns'] },
-  ],
   'Old Pond': [
     { action: 'fishing', reasons: ['Cast a line at the pond', 'Waiting for a bite', 'Caught something shiny!'] },
     { action: 'catching', reasons: ['Water-type spotted!', 'Something surfaced!', 'Attempting capture'] },
@@ -93,10 +87,6 @@ const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> 
     { action: 'exploring', reasons: ['Venturing into the shadows', 'Following strange sounds', 'Mapping the dark paths'] },
     { action: 'catching', reasons: ['Dark-type hiding in the trees!', 'Found rare shadow spawn', 'Tracking a Shadewisp'] },
     { action: 'training', reasons: ['Shadow training session', 'Building courage in the dark', 'Endurance training'] },
-  ],
-  'River Delta': [
-    { action: 'fishing', reasons: ['Fishing at the delta', 'Great spot for water-types', 'River fishing session'] },
-    { action: 'exploring', reasons: ['Following the river upstream', 'Checking the delta banks', 'Searching the shallows'] },
   ],
   'Crystal Caves': [
     { action: 'exploring', reasons: ['Mining for crystals', 'Deep cave expedition', 'Following the glow'] },

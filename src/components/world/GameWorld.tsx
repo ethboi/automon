@@ -42,10 +42,8 @@ export const WORLD_LOCATIONS = {
   town_arena:     { position: [0, 0, -30] as [number, number, number],     label: 'Town Arena',      icon: '⚔️', color: '#ef4444', variant: 'building' as const, route: '/battle' },
   town_market:    { position: [28, 0, 0] as [number, number, number],      label: 'Town Market',     icon: '🏪', color: '#f97316', variant: 'building' as const, route: '/shop' },
   community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
-  green_meadows:  { position: [-12, 0, -30] as [number, number, number],   label: 'Green Meadows',   icon: '🌿', color: '#22c55e', variant: 'nature' as const,   route: null },
   old_pond:       { position: [-36, 0, -14] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
   dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'dark' as const,     route: null },
-  river_delta:    { position: [34, 0, -24] as [number, number, number],    label: 'River Delta',     icon: '🏞️', color: '#06b6d4', variant: 'water' as const,    route: null },
   crystal_caves:  { position: [32, 0, 24] as [number, number, number],     label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'dark' as const,     route: null },
 };
 
@@ -249,13 +247,11 @@ function Roads() {
   ];
 
   const secondaryRoads: [string, string][] = [
-    // West side loop
+    // West side
     ['community_farm', 'old_pond'],       // West: farm → pond
-    ['old_pond', 'green_meadows'],        // Northwest: pond → meadows
-    ['green_meadows', 'town_arena'],      // North: meadows → arena
+    ['old_pond', 'town_arena'],           // Northwest: pond → arena
 
-    // East side loop
-    ['town_market', 'river_delta'],       // Northeast: market → delta
+    // East side
     ['town_market', 'crystal_caves'],     // Southeast: market → caves
 
     // Outer paths
