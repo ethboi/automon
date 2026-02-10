@@ -93,7 +93,7 @@ export function WorldUI({
   onlineAgents = [], events = [], transactions = [],
   totalBattles: _totalBattles = 0, totalCards: _totalCards = 0,
 }: WorldUIProps) {
-  const [tab, setTab] = useState<Tab>('feed');
+  const [tab, setTab] = useState<Tab>('agents');
   const [panelOpen, setPanelOpen] = useState(false);
 
   const onlineCount = onlineAgents.filter(a => a.online).length;
@@ -145,8 +145,6 @@ export function WorldUI({
             <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
             <span className="text-sm font-medium text-gray-300">{onlineCount} online</span>
             <span className="text-gray-600">|</span>
-            <span className="text-sm text-gray-400">📡 Live</span>
-            <span className="text-gray-600">|</span>
             <span className="text-sm text-gray-400">⛓️ Chain</span>
           </button>
         ) : (
@@ -155,7 +153,6 @@ export function WorldUI({
             <div className="flex items-center border-b border-white/5 flex-shrink-0">
               {([
                 { id: 'agents' as Tab, label: '🤖', count: onlineCount },
-                { id: 'feed' as Tab, label: '📡', count: events.length },
                 { id: 'chain' as Tab, label: '⛓️', count: transactions.length },
               ]).map(t => (
                 <button
@@ -182,15 +179,15 @@ export function WorldUI({
             {/* Content */}
             <div className="p-2 sm:p-3 overflow-y-auto flex-1">
               {/* Agents Tab */}
-              {tab === 'agents' && (
-                onlineAgents.length === 0 ? (
-                  <Empty text="No agents online" hint="npm run agent:demo" />
+              {tab === 'agents' && (() => {
+                const online = onlineAgents.filter(a => a.online);
+                return online.length === 0 ? (
+                  <Empty text="No agents online" />
                 ) : (
                   <div className="space-y-0.5 sm:space-y-1">
-                    {onlineAgents
-                      .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
-                      .map(agent => {
+                    {online.map(agent => {
                       const activity = activityBadge(agent.currentAction);
+                      const shortPersonality = (agent.personality || '').split(/[\s,]/)[0] || 'AI';
                       return (
                       <button
                         key={agent.address}
@@ -198,9 +195,9 @@ export function WorldUI({
                         className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-2 py-2.5 transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${agent.online ? 'bg-green-500 shadow-sm shadow-green-500/50' : 'bg-gray-700'}`} />
+                          <div className="w-2 h-2 rounded-full flex-shrink-0 bg-green-500 shadow-sm shadow-green-500/50" />
                           <span className="text-sm text-cyan-400 font-semibold">{agent.name}</span>
-                          <span className="text-xs text-gray-600">{agent.personality}</span>
+                          <span className="text-[10px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">{shortPersonality}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`text-xs px-2 py-0.5 rounded-full ${activity.cls}`}>
@@ -209,46 +206,12 @@ export function WorldUI({
                           {agent.stats && (
                             <span className="text-xs text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
                           )}
-                          <span className="text-xs text-gray-700">{shortAddr(agent.address)}</span>
                         </div>
                       </button>
                     )})}
                   </div>
-                )
-              )}
-
-              {/* Feed Tab */}
-              {tab === 'feed' && (
-                events.length === 0 ? (
-                  <Empty text="Waiting for activity…" />
-                ) : (
-                  <div className="space-y-1.5">
-                    {events.slice(0, 25).map((e, i) => {
-                      const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || shortAddr(e.agent);
-                      return (
-                        <div key={i} className="text-sm leading-relaxed py-1 border-b border-white/5 last:border-0">
-                          <div>
-                            <span className="text-gray-500 mr-2 text-xs">{timeAgo(e.timestamp)}</span>
-                            <span className="text-cyan-400 font-semibold">{agentName}</span>
-                            <span className="text-gray-300"> {e.action}</span>
-                            {e.location && <span className="text-gray-500"> @ {e.location}</span>}
-                          </div>
-                          {(e.reasoning || e.reason) && (
-                            <div className="text-gray-500 italic pl-4 text-sm truncate" title={e.reasoning || e.reason}>
-                              💭 {e.reasoning || e.reason}
-                              {e.healthDelta != null && e.healthDelta !== 0 && (
-                                <span className={`ml-1.5 font-mono text-xs ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                  ({e.healthDelta > 0 ? '+' : ''}{e.healthDelta} HP)
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              )}
+                );
+              })()}
 
               {/* Chain Tab */}
               {tab === 'chain' && (
