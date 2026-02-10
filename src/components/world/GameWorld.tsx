@@ -44,7 +44,7 @@ export const WORLD_LOCATIONS = {
   community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
   old_pond:       { position: [-36, 0, -14] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
   dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'dark' as const,     route: null },
-  crystal_caves:  { position: [32, 0, 24] as [number, number, number],     label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'dark' as const,     route: null },
+  crystal_caves:  { position: [32, 0, 24] as [number, number, number],     label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'nature' as const,     route: null },
 };
 
 const INTERACTION_DISTANCE = 5;
@@ -302,6 +302,94 @@ function Roads() {
       {secondaryRoads.map(([from, to], i) =>
         renderRoad(from, to, 1.8, '#7a6b55', 0.5, 0.025, `sec-${i}`)
       )}
+      {/* ─── Crystal Caves — rocky hillside with cave mouth + crystals ─── */}
+      <group position={[32, 0, 24]}>
+        {/* Rocky hillside / cliff face */}
+        <mesh position={[0, 2, -2]} castShadow>
+          <sphereGeometry args={[4, 6, 5, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#4a4a52" roughness={0.95} flatShading />
+        </mesh>
+        <mesh position={[2.5, 1.5, -1.5]} castShadow>
+          <sphereGeometry args={[3, 5, 4, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#3d3d45" roughness={0.95} flatShading />
+        </mesh>
+        <mesh position={[-2.5, 1.5, -1.5]} castShadow>
+          <sphereGeometry args={[3, 5, 4, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#525258" roughness={0.95} flatShading />
+        </mesh>
+        {/* Top rocks */}
+        <mesh position={[0, 3.5, -2.5]} castShadow rotation={[0.2, 0.3, 0]}>
+          <dodecahedronGeometry args={[1.5, 0]} />
+          <meshStandardMaterial color="#555560" roughness={0.9} flatShading />
+        </mesh>
+        <mesh position={[2, 3, -2]} castShadow rotation={[0.1, -0.4, 0.2]}>
+          <dodecahedronGeometry args={[1, 0]} />
+          <meshStandardMaterial color="#4e4e58" roughness={0.9} flatShading />
+        </mesh>
+        <mesh position={[-1.8, 2.8, -1.8]} castShadow rotation={[-0.1, 0.5, 0]}>
+          <dodecahedronGeometry args={[1.2, 0]} />
+          <meshStandardMaterial color="#48484f" roughness={0.9} flatShading />
+        </mesh>
+
+        {/* Cave mouth — dark opening */}
+        <mesh position={[0, 1.2, -0.3]} castShadow>
+          <boxGeometry args={[3, 2.4, 2]} />
+          <meshStandardMaterial color="#0a0a0f" roughness={1} />
+        </mesh>
+        {/* Arch stones around cave mouth */}
+        <mesh position={[-1.6, 1.2, 0.7]} castShadow rotation={[0, 0, 0.1]}>
+          <boxGeometry args={[0.6, 2.6, 0.8]} />
+          <meshStandardMaterial color="#555560" roughness={0.9} flatShading />
+        </mesh>
+        <mesh position={[1.6, 1.2, 0.7]} castShadow rotation={[0, 0, -0.1]}>
+          <boxGeometry args={[0.6, 2.6, 0.8]} />
+          <meshStandardMaterial color="#4a4a52" roughness={0.9} flatShading />
+        </mesh>
+        <mesh position={[0, 2.6, 0.7]} castShadow rotation={[0, 0, 0]}>
+          <boxGeometry args={[3.6, 0.7, 0.8]} />
+          <meshStandardMaterial color="#505058" roughness={0.9} flatShading />
+        </mesh>
+
+        {/* Crystals emerging from rocks — purple/blue/cyan */}
+        {[
+          { pos: [-2.8, 1.5, -0.5] as [number,number,number], rot: [0.3, 0.2, 0.4], s: 0.8, c: '#a78bfa' },
+          { pos: [-3.2, 0.8, 0.5] as [number,number,number], rot: [-0.2, 0, 0.6], s: 0.5, c: '#7c3aed' },
+          { pos: [3, 1.2, -0.3] as [number,number,number], rot: [-0.1, 0.3, -0.5], s: 0.7, c: '#818cf8' },
+          { pos: [2.6, 2, -1.2] as [number,number,number], rot: [0.2, -0.1, -0.3], s: 0.6, c: '#a78bfa' },
+          { pos: [3.4, 0.6, 0.8] as [number,number,number], rot: [0, 0.4, -0.7], s: 0.4, c: '#c4b5fd' },
+          { pos: [-0.8, 3, -1.5] as [number,number,number], rot: [0.5, 0.1, 0.2], s: 0.55, c: '#06b6d4' },
+          { pos: [1, 3.2, -2] as [number,number,number], rot: [-0.3, 0.2, -0.1], s: 0.65, c: '#7c3aed' },
+          { pos: [0.3, 0.5, 0.8] as [number,number,number], rot: [0, 0, 0.3], s: 0.3, c: '#a78bfa' },
+          { pos: [-0.5, 0.4, 0.9] as [number,number,number], rot: [0, 0, -0.2], s: 0.25, c: '#818cf8' },
+        ].map((cr, i) => (
+          <mesh key={`crystal-${i}`} position={cr.pos} rotation={cr.rot as [number,number,number]} castShadow>
+            <coneGeometry args={[cr.s * 0.35, cr.s * 2, 5]} />
+            <meshStandardMaterial color={cr.c} roughness={0.2} metalness={0.6} transparent opacity={0.85} />
+          </mesh>
+        ))}
+
+        {/* Crystal glow lights */}
+        <pointLight position={[-2.8, 1.5, -0.5]} intensity={0.4} color="#a78bfa" distance={6} />
+        <pointLight position={[3, 1.2, -0.3]} intensity={0.4} color="#818cf8" distance={6} />
+        <pointLight position={[0, 1.2, 0.5]} intensity={0.3} color="#7c3aed" distance={4} />
+
+        {/* Scattered small rocks */}
+        {[
+          [1.5, 0.15, 2], [-1.2, 0.12, 2.5], [2.8, 0.1, 1.8], [-2, 0.18, 1.5], [0.5, 0.1, 3],
+        ].map(([x, y, z], i) => (
+          <mesh key={`crock-${i}`} position={[x, y, z]} rotation={[i * 0.3, i * 0.5, 0]} castShadow>
+            <dodecahedronGeometry args={[0.2 + i * 0.05, 0]} />
+            <meshStandardMaterial color="#555560" roughness={0.9} flatShading />
+          </mesh>
+        ))}
+
+        {/* Ground — dark rocky patch */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 1]}>
+          <circleGeometry args={[5, 12]} />
+          <meshStandardMaterial color="#3a3a40" transparent opacity={0.4} roughness={0.95} />
+        </mesh>
+      </group>
+
       {/* ─── Shop — market stall with awning + display ─── */}
       <group position={[28, 0, 0]}>
         {/* Main building */}
