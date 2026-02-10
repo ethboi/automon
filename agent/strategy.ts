@@ -537,11 +537,17 @@ ${locationList}
 - Resting anywhere: +2 HP
 - If health drops to 0, agent faints!
 
-## AVAILABLE ACTIONS
-exploring, training, battling, catching, trading, resting, fishing, farming, foraging
+## LOCATION-SPECIFIC ACTIONS (use ONLY matching actions per location)
+- Starter Town: resting, exploring
+- Town Arena: battling, training
+- Town Market: trading
+- Community Farm: farming, foraging
+- Old Pond: fishing
+- Dark Forest: exploring, catching, foraging
+- Crystal Caves: exploring, foraging
 
 ## DECISION GUIDELINES
-- Below 30 HP: prioritize healing (go to a healing location)
+- Below 30 HP: prioritize healing (farm or fish)
 - If no cards: go to Town Market or buy packs
 - If battles are pending and health is good: consider the Arena
 - Vary your behavior — don't repeat the same action endlessly
