@@ -50,16 +50,17 @@ const AUTOMON_NAMES: Record<number, string> = {
   18: 'Luxara', 19: 'Solaris', 20: 'Aurorix',
 };
 
+// Must match WORLD_LOCATIONS in GameWorld.tsx exactly
 const LOCATIONS = [
   { name: 'Starter Town',    x:   0, z:   0 },
-  { name: 'Town Arena',      x:   0, z: -20 },
-  { name: 'Town Market',     x:  18, z:   0 },
-  { name: 'Community Farm',  x: -18, z:   0 },
-  { name: 'Green Meadows',   x: -14, z: -18 },
-  { name: 'Old Pond',        x: -22, z: -18 },
-  { name: 'Dark Forest',     x: -24, z:  14 },
-  { name: 'River Delta',     x:  22, z: -16 },
-  { name: 'Crystal Caves',   x:  20, z:  16 },
+  { name: 'Town Arena',      x:   0, z: -30 },
+  { name: 'Town Market',     x:  28, z:   0 },
+  { name: 'Community Farm',  x: -28, z:   0 },
+  { name: 'Green Meadows',   x: -12, z: -30 },
+  { name: 'Old Pond',        x: -36, z: -14 },
+  { name: 'Dark Forest',     x: -36, z:  22 },
+  { name: 'River Delta',     x:  34, z: -24 },
+  { name: 'Crystal Caves',   x:  32, z:  24 },
 ];
 
 // Actions mapped to appropriate locations
@@ -139,6 +140,8 @@ let agentMaxHealth = 100;
 const recentActions: string[] = [];
 const AI_PERSONALITY = process.env.AI_PERSONALITY || 'Curious explorer who loves discovering new areas and collecting rare cards';
 const USE_AI = !!process.env.ANTHROPIC_API_KEY;
+// Pending action to perform on arrival
+let pendingAction: { action: string; reason: string } | null = null;
 
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
@@ -345,10 +348,29 @@ async function tick(): Promise<void> {
     posZ += (dz / dist) * speed;
     if (Math.random() < 0.1) console.log(`[${ts()}] 🚶 Walking to ${target.name} (${dist.toFixed(0)}m away)`);
   } else {
-    // Arrived — decide what to do
-    let action: string;
-    let reason: string;
+    // Arrived — perform pending action (decided before walking here)
+    if (pendingAction) {
+      console.log(`[${ts()}] 📍 ${target.name}: ${pendingAction.action} — "${pendingAction.reason}"`);
+      await logAction(pendingAction.action, pendingAction.reason, target.name);
+      recentActions.push(`${pendingAction.action}@${target.name}`);
+      if (recentActions.length > 10) recentActions.shift();
+      pendingAction = null;
+    }
+
+    // ~25% chance to buy a pack if we have < 10 cards
+    if (cardCount < 10 && Math.random() < 0.25 && NFT_ADDRESS) {
+      await buyPack();
+    }
+
+    // Always check for open battles if we have enough cards
+    if (cardCount >= 3) {
+      await tryJoinBattle();
+    }
+
+    // Now decide NEXT move — where to go and what to do there
     let nextLocationName: string | undefined;
+    let nextAction: string;
+    let nextReason: string;
 
     if (USE_AI) {
       try {
@@ -390,46 +412,33 @@ async function tick(): Promise<void> {
           AI_PERSONALITY,
         );
 
-        action = decision.action;
-        reason = decision.reasoning || decision.action;
+        nextAction = decision.action;
+        nextReason = decision.reasoning || decision.action;
         nextLocationName = decision.location;
 
-        console.log(`[${ts()}] 🧠 AI: ${target.name} → ${action} — "${reason}"`);
-        if (nextLocationName && nextLocationName !== target.name) {
-          console.log(`[${ts()}]    💭 Next: ${nextLocationName}`);
-        }
+        console.log(`[${ts()}] 🧠 AI decided: ${nextAction} @ ${nextLocationName || target.name} — "${nextReason}"`);
       } catch (err) {
         console.error(`[${ts()}] ⚠ AI error, falling back:`, (err as Error).message?.slice(0, 60));
         const locationActions = LOCATION_ACTIONS[target.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
         const event = pick(locationActions);
-        action = event.action;
-        reason = pick(event.reasons);
+        nextAction = event.action;
+        nextReason = pick(event.reasons);
       }
     } else {
-      const locationActions = LOCATION_ACTIONS[target.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
+      // Random fallback — pick action for next location
+      let next; do { next = pick(LOCATIONS); } while (next.name === target.name);
+      nextLocationName = next.name;
+      const locationActions = LOCATION_ACTIONS[next.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
       const event = pick(locationActions);
-      action = event.action;
-      reason = pick(event.reasons);
-      console.log(`[${ts()}] 📍 ${target.name}: ${action} — "${reason}"`);
+      nextAction = event.action;
+      nextReason = pick(event.reasons);
     }
 
-    // Log the action with reasoning
-    await logAction(action, reason, target.name);
-    recentActions.push(`${action}@${target.name}`);
-    if (recentActions.length > 10) recentActions.shift();
+    // Store the action to perform on arrival
+    pendingAction = { action: nextAction, reason: nextReason };
 
-    // ~25% chance to buy a pack if we have < 10 cards
-    if (cardCount < 10 && Math.random() < 0.25 && NFT_ADDRESS) {
-      await buyPack();
-    }
-
-    // Always check for open battles if we have enough cards
-    if (cardCount >= 3) {
-      await tryJoinBattle();
-    }
-
-    // Pick next destination — AI-chosen or random
-    if (nextLocationName) {
+    // Set next destination
+    if (nextLocationName && nextLocationName !== target.name) {
       const aiTarget = LOCATIONS.find(l => l.name === nextLocationName);
       if (aiTarget) { target = aiTarget; }
       else { let next; do { next = pick(LOCATIONS); } while (next.name === target.name); target = next; }
