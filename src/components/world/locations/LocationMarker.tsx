@@ -119,6 +119,12 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
     >
       <LocationLabel icon={icon} label={label} color={color} />
 
+      {/* Invisible hitbox for reliable click detection */}
+      <mesh visible={false}>
+        <boxGeometry args={[10, 12, 10]} />
+        <meshBasicMaterial />
+      </mesh>
+
       {variant === 'building' && (
         <>
           <mesh position={[0, foundationHeight / 2, 0]} castShadow>

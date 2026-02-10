@@ -113,7 +113,6 @@ function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
       minPolarAngle={Math.PI / 8}
       panSpeed={1.2}
       zoomSpeed={1.0}
-      // Enable screen-space panning (drag to move around map)
       screenSpacePanning={false}
     />
   );
