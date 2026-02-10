@@ -55,12 +55,12 @@ export default function ShopPage() {
         }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || 'Failed to buy pack');
       }
 
-      const { pack } = await res.json();
+      const { pack } = data;
       setPacks(prev => [pack, ...prev]);
       refreshBalance();
     } catch (error) {
@@ -85,12 +85,12 @@ export default function ShopPage() {
         body: JSON.stringify({ packId, address }),
       });
 
+      const openData = await res.json();
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to open pack');
+        throw new Error(openData.error || 'Failed to open pack');
       }
 
-      const { cards } = await res.json();
+      const { cards } = openData;
       setOpening({ packId, cards });
     } catch (error) {
       console.error('Open pack error:', error);
