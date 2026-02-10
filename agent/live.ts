@@ -337,11 +337,16 @@ async function tryJoinBattle(): Promise<boolean> {
     );
     const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
 
-    console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards...`);
+    console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards: ${cardIds.join(', ')}`);
     const selectRes = await api('/api/battle/select-cards', {
       method: 'POST',
       body: JSON.stringify({ battleId: openBattle.battleId, cardIds, address: ADDRESS }),
     });
+    if (!selectRes.ok) {
+      const errData = await selectRes.json().catch(() => ({}));
+      console.log(`[${ts()}]   ❌ Card select failed: ${selectRes.status} ${JSON.stringify(errData)}`);
+      return false;
+    }
 
     if (selectRes.ok) {
       const data = await selectRes.json();
@@ -387,11 +392,18 @@ async function createAndWaitForBattle(): Promise<void> {
       (b.attack + b.defense) - (a.attack + a.defense)
     );
     const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
-    await api('/api/battle/select-cards', {
+    console.log(`[${ts()}]   🎴 Selecting cards: ${cardIds.join(', ')}`);
+    const selectRes = await api('/api/battle/select-cards', {
       method: 'POST',
       body: JSON.stringify({ battleId, cardIds, address: ADDRESS }),
     });
-    console.log(`[${ts()}]   🎴 Cards selected, waiting up to 5 min for opponent...`);
+    if (!selectRes.ok) {
+      const errData = await selectRes.json().catch(() => ({}));
+      console.log(`[${ts()}]   ❌ Card select failed: ${selectRes.status} ${JSON.stringify(errData)}`);
+      return;
+    }
+    const selectData = await selectRes.json();
+    console.log(`[${ts()}]   🎴 Cards selected! ready=${selectData.battle?.player1?.ready} waiting for opponent...`);
 
     // Wait up to 5 minutes (75 ticks @ 4s), checking every 20s
     const WAIT_TICKS = 75;
