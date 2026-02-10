@@ -1,6 +1,7 @@
 'use client';
 
 import { Card as CardType, BattleCard, Element, Rarity } from '@/lib/types';
+import { getCardArtDataUri } from '@/lib/cardArt';
 
 interface CardProps {
   card: CardType | BattleCard;
@@ -158,6 +159,16 @@ export default function Card({ card, selected, onClick, showStats = true, size =
           <div className={`${s.icon} flex-shrink-0 drop-shadow-md`}>
             {element.icon}
           </div>
+        </div>
+
+        {/* Card Art */}
+        <div className="mb-2 flex justify-center">
+          <img
+            src={getCardArtDataUri(card.automonId ?? 1, card.element, card.rarity)}
+            alt={card.name}
+            className={`${size === 'sm' ? 'w-20 h-20' : size === 'md' ? 'w-28 h-28' : 'w-36 h-36'} rounded-xl border border-white/10`}
+            draggable={false}
+          />
         </div>
 
         {/* Rarity badge */}
