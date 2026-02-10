@@ -1,19 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
+    const address = request.nextUrl.searchParams.get('address');
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!address) {
+      return NextResponse.json({ error: 'Address required' }, { status: 400 });
     }
 
     const db = await getDb();
     const cards = await db
       .collection('cards')
-      .find({ owner: session.address.toLowerCase() })
+      .find({ owner: address.toLowerCase() })
       .sort({ createdAt: -1 })
       .toArray();
 

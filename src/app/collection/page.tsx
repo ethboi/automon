@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Card as CardType, Element, Rarity } from '@/lib/types';
 import Card from '@/components/Card';
+import { useWallet } from '@/context/WalletContext';
 
 export default function CollectionPage() {
+  const { address } = useWallet();
   const [cards, setCards] = useState<CardType[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<{
@@ -14,12 +16,12 @@ export default function CollectionPage() {
   const [sortBy, setSortBy] = useState<'name' | 'rarity' | 'attack' | 'defense'>('rarity');
 
   useEffect(() => {
-    fetchCards();
-  }, []);
+    if (address) fetchCards();
+  }, [address]);
 
   const fetchCards = async () => {
     try {
-      const res = await fetch('/api/cards');
+      const res = await fetch(`/api/cards?address=${address}`);
       const data = await res.json();
       setCards(data.cards || []);
     } catch (error) {
