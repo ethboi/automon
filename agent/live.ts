@@ -394,6 +394,29 @@ async function syncCards(): Promise<void> {
 
 // ─── Battle Logic ──────────────────────────────────────────────────────────────
 
+async function trySettleBattle(battleId: string, winner: string): Promise<void> {
+  // Only the escrow admin (Nexus) can settle
+  if (ADDRESS.toLowerCase() !== '0xe13158e35a179bf274d169818a42a26aed8eb037') return;
+  try {
+    const escrowSettle = new ethers.Contract(ESCROW_ADDRESS, [...ESCROW_ABI, 'function battles(bytes32) view returns (address,address,uint256,bool)'], wallet);
+    const battleIdBytes = ethers.id(battleId);
+    const onChain = await escrowSettle.battles(battleIdBytes);
+    if (onChain[3]) { console.log(`[${ts()}]   ✅ Already settled on-chain`); return; }
+    if (onChain[0] === ethers.ZeroAddress) { console.log(`[${ts()}]   ⚠️ Battle not on-chain`); return; }
+    const tx = await escrowSettle.settleBattle(battleIdBytes, winner, { gasLimit: 200000 });
+    const receipt = await tx.wait();
+    console.log(`[${ts()}]   💰 Settled on-chain: ${receipt.hash}`);
+    // Update DB
+    await api('/api/battle/settle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ battleId, settleTxHash: receipt.hash }),
+    }).catch(() => {});
+  } catch (err) {
+    console.error(`[${ts()}]   ⚠️ Settlement failed:`, (err as Error).message?.slice(0, 80));
+  }
+}
+
 async function tryJoinBattle(): Promise<boolean> {
   try {
     // Check for pending battles we can join
@@ -471,6 +494,7 @@ async function tryJoinBattle(): Promise<boolean> {
       if (data.simulationComplete) {
         const result = data.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
         console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+        await trySettleBattle(openBattle.battleId, data.winner);
         await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena');
       } else {
         console.log(`[${ts()}]   ✅ Cards selected, waiting for simulation`);
@@ -558,6 +582,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
           if (data.battle?.status === 'complete') {
             const result = data.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
             console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+            await trySettleBattle(battleId, data.battle.winner);
             await logAction('battling', `Battle ${result}!`, 'Town Arena');
             return;
           }
@@ -571,6 +596,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
               if (finalData.battle?.status === 'complete') {
                 const result = finalData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
                 console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+                await trySettleBattle(battleId, finalData.battle.winner);
                 await logAction('battling', `Battle ${result}!`, 'Town Arena');
               }
             }
