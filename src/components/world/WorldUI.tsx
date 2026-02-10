@@ -81,7 +81,7 @@ interface TxData {
   amount?: string | null;
 }
 
-type Tab = 'agents' | 'feed' | 'battles' | 'chain';
+type Tab = 'agents' | 'feed' | 'chain';
 
 function timeAgo(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -95,7 +95,7 @@ function shortAddr(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
-function shortHash(hash: string) {
+function _shortHash(hash: string) {
   if (!hash) return '???';
   return `${hash.slice(0, 10)}…${hash.slice(-6)}`;
 }
@@ -190,14 +190,13 @@ export function WorldUI({
             <div className="flex items-center border-b border-white/5 flex-shrink-0">
               {([
                 { id: 'agents' as Tab, label: '🤖', count: onlineCount },
-                { id: 'feed' as Tab, label: '📡', count: events.length },
-                { id: 'battles' as Tab, label: '⚔️', count: battles.length },
+                { id: 'feed' as Tab, label: '📡', count: events.length + battles.length + chat.length },
                 { id: 'chain' as Tab, label: '⛓️', count: transactions.length },
               ]).map(t => (
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-sm sm:text-base font-semibold transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-xs sm:text-sm font-semibold transition-colors ${
                     tab === t.id ? 'text-white bg-white/5 border-b-2 border-purple-500' : 'text-gray-600 hover:text-gray-400'
                   }`}
                 >
@@ -255,14 +254,19 @@ export function WorldUI({
                 );
               })()}
 
-              {/* Feed Tab (AI Activity + Chat) */}
+              {/* Feed Tab (AI Activity + Chat + Battles) */}
               {tab === 'feed' && (() => {
-                // Interleave events and chat by timestamp
-                type FeedItem = { type: 'event'; data: EventData } | { type: 'chat'; data: ChatMessage };
+                // Interleave events, chat, and battles by timestamp
+                type FeedItem = { type: 'event'; data: EventData } | { type: 'chat'; data: ChatMessage } | { type: 'battle'; data: BattleData };
                 const feed: FeedItem[] = [
                   ...events.slice(0, 15).map(e => ({ type: 'event' as const, data: e })),
                   ...chat.slice(0, 15).map(c => ({ type: 'chat' as const, data: c })),
-                ].sort((a, b) => new Date(b.data.timestamp).getTime() - new Date(a.data.timestamp).getTime()).slice(0, 20);
+                  ...battles.slice(0, 10).map(b => ({ type: 'battle' as const, data: b })),
+                ].sort((a, b) => {
+                  const tA = 'timestamp' in a.data ? a.data.timestamp : ('createdAt' in a.data ? a.data.createdAt : '');
+                  const tB = 'timestamp' in b.data ? b.data.timestamp : ('createdAt' in b.data ? b.data.createdAt : '');
+                  return new Date(tB).getTime() - new Date(tA).getTime();
+                }).slice(0, 25);
 
                 return feed.length === 0 ? (
                   <Empty text="Waiting for agent actions..." />
@@ -289,7 +293,51 @@ export function WorldUI({
                           </div>
                         );
                       }
-                      const e = item.data;
+                      if (item.type === 'battle') {
+                        const b = item.data;
+                        const p1 = onlineAgents.find(a => a.address?.toLowerCase() === b.player1?.toLowerCase())?.name || shortAddr(b.player1);
+                        const p2 = b.player2 ? (onlineAgents.find(a => a.address?.toLowerCase() === b.player2?.toLowerCase())?.name || shortAddr(b.player2)) : null;
+                        const winner = b.winner ? (onlineAgents.find(a => a.address?.toLowerCase() === b.winner?.toLowerCase())?.name || shortAddr(b.winner)) : null;
+                        const isComplete = b.status === 'complete';
+                        return (
+                          <div key={`battle-${i}`} className={`px-2 py-1.5 ${isComplete ? 'bg-yellow-500/[0.03]' : 'hover:bg-white/5'} transition-colors`}>
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm flex-shrink-0 mt-0.5">⚔️</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-xs font-bold ${b.winner?.toLowerCase() === b.player1?.toLowerCase() ? 'text-yellow-300' : 'text-gray-300'}`}>{p1}</span>
+                                  <span className="text-[10px] text-gray-600">vs</span>
+                                  {p2 ? (
+                                    <span className={`text-xs font-bold ${b.winner?.toLowerCase() === b.player2?.toLowerCase() ? 'text-yellow-300' : 'text-gray-300'}`}>{p2}</span>
+                                  ) : (
+                                    <span className="text-[10px] text-yellow-500/50 italic animate-pulse">waiting…</span>
+                                  )}
+                                  <span className="text-[10px] text-gray-700 ml-auto shrink-0">{timeAgo(b.createdAt)}</span>
+                                </div>
+                                {(b.player1Cards?.length || b.player2Cards?.length) ? (
+                                  <div className="text-[10px] text-gray-500 mt-0.5">
+                                    🎴 {b.player1Cards?.join(', ') || '—'} vs {b.player2Cards?.join(', ') || '—'}
+                                  </div>
+                                ) : null}
+                                {isComplete && winner && (
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[10px] text-yellow-400">🏆 {winner}</span>
+                                    {b.payout && <span className="text-[10px] font-mono text-emerald-400">+{b.payout} MON</span>}
+                                    {b.settleTxHash && b.settleTxHash !== 'pre-escrow-fix' && (
+                                      <a href={`https://testnet.monadexplorer.com/tx/${b.settleTxHash}`} target="_blank" rel="noopener noreferrer"
+                                        className="text-[10px] text-purple-500 hover:text-purple-400 font-mono ml-auto" onClick={e => e.stopPropagation()}>
+                                        settled ↗
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="text-[10px] text-gray-600 mt-0.5">💰 {b.wager || '0'} MON{b.rounds > 0 ? ` • ${b.rounds} turns` : ''}</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      const e = item.data as EventData;
                       const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || shortAddr(e.agent);
                       const badge = activityBadge(e.action);
                       return (
@@ -324,128 +372,30 @@ export function WorldUI({
                 );
               })()}
 
-              {/* Battles Tab */}
-              {tab === 'battles' && (
-                battles.length === 0 ? (
-                  <Empty text="No battles yet" />
-                ) : (
-                  <div className="space-y-1.5">
-                    {battles.slice(0, 15).map((b) => {
-                      const p1Name = onlineAgents.find(a => a.address?.toLowerCase() === b.player1?.toLowerCase())?.name || shortAddr(b.player1);
-                      const p2Name = b.player2 ? (onlineAgents.find(a => a.address?.toLowerCase() === b.player2?.toLowerCase())?.name || shortAddr(b.player2)) : null;
-                      const winnerName = b.winner ? (onlineAgents.find(a => a.address?.toLowerCase() === b.winner?.toLowerCase())?.name || shortAddr(b.winner)) : null;
-                      const isComplete = b.status === 'complete';
-                      const isPending = b.status === 'pending';
-
-                      return (
-                        <div key={b.id} className={`rounded-lg px-2.5 py-2 transition-colors ${
-                          isComplete ? 'bg-white/[0.03]' : isPending ? 'bg-yellow-500/5 border border-yellow-500/10' : 'bg-white/[0.02]'
-                        }`}>
-                          {/* Header: names + time */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1 min-w-0">
-                              <span className={`text-xs font-bold ${b.winner?.toLowerCase() === b.player1?.toLowerCase() ? 'text-yellow-300' : 'text-gray-300'}`}>
-                                {b.winner?.toLowerCase() === b.player1?.toLowerCase() && '🏆 '}{p1Name}
-                              </span>
-                              <span className="text-[10px] text-gray-600">vs</span>
-                              {p2Name ? (
-                                <span className={`text-xs font-bold ${b.winner?.toLowerCase() === b.player2?.toLowerCase() ? 'text-yellow-300' : 'text-gray-300'}`}>
-                                  {b.winner?.toLowerCase() === b.player2?.toLowerCase() && '🏆 '}{p2Name}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-yellow-500/60 italic animate-pulse">waiting…</span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-gray-700 shrink-0">{timeAgo(b.createdAt)}</span>
-                          </div>
-
-                          {/* Cards used */}
-                          {(b.player1Cards?.length || b.player2Cards?.length) ? (
-                            <div className="flex items-center gap-1 mt-1 text-[10px]">
-                              <span className="text-gray-500">🎴</span>
-                              <span className="text-purple-400">{b.player1Cards?.join(', ') || '—'}</span>
-                              <span className="text-gray-700">vs</span>
-                              <span className="text-cyan-400">{b.player2Cards?.join(', ') || '—'}</span>
-                            </div>
-                          ) : null}
-
-                          {/* Result: payout + settle */}
-                          {isComplete && winnerName && (
-                            <div className="flex items-center justify-between mt-1">
-                              <div className="flex items-center gap-1.5">
-                                {b.payout && (
-                                  <span className="text-xs font-mono font-bold text-emerald-400">+{b.payout} MON</span>
-                                )}
-                                <span className="text-[10px] text-gray-500">→ {winnerName}</span>
-                              </div>
-                              {b.settleTxHash && b.settleTxHash !== 'pre-escrow-fix' && (
-                                <a
-                                  href={`https://testnet.monadexplorer.com/tx/${b.settleTxHash}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] text-purple-500 hover:text-purple-400 font-mono"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  settled ↗
-                                </a>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Wager + rounds */}
-                          <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-600">
-                            <span>💰 {b.wager || '0'} MON wager</span>
-                            {b.rounds > 0 && <span>• {b.rounds} turns</span>}
-                          </div>
-
-                          {/* AI reasoning from last round */}
-                          {b.lastRound?.player1Move?.reasoning && (
-                            <div className="text-[10px] text-gray-500 mt-1 italic line-clamp-2">
-                              💭 {b.lastRound.player1Move.reasoning}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              )}
-
-              {/* Chain Tab */}
+                            {/* Chain Tab */}
               {tab === 'chain' && (
                 transactions.length === 0 ? (
                   <Empty text="No on-chain activity yet" />
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {transactions.slice(0, 20).map((tx, i) => {
                       const agentName = onlineAgents.find(a => a.address?.toLowerCase() === tx.from?.toLowerCase())?.name || shortAddr(tx.from);
+                      const isSettle = tx.type === 'battle_settle';
                       return (
-                        <div key={i} className={`rounded-lg px-2 py-1.5 sm:px-2.5 sm:py-2 transition-colors ${
-                          tx.type === 'battle_settle' ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-white/[0.02] hover:bg-white/[0.04]'
-                        }`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1 sm:gap-1.5">
-                              <span className="text-sm">{TX_ICONS[tx.type] || '📝'}</span>
-                              <span className={`text-xs sm:text-sm ${tx.type === 'battle_settle' ? 'text-emerald-300 font-medium' : 'text-gray-300'}`}>{tx.description}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {tx.amount && <span className={`text-xs font-mono ${tx.type === 'battle_settle' ? 'text-emerald-400 font-bold' : 'text-emerald-400'}`}>{tx.amount} MON</span>}
-                              <span className="text-xs text-gray-700">{timeAgo(tx.timestamp)}</span>
-                            </div>
+                        <a key={i} href={tx.explorerUrl} target="_blank" rel="noopener noreferrer"
+                          className={`flex items-center justify-between w-full rounded-lg px-2 py-1.5 transition-colors ${
+                            isSettle ? 'bg-emerald-500/[0.06] hover:bg-emerald-500/10' : 'hover:bg-white/5'
+                          }`}>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-xs shrink-0">{TX_ICONS[tx.type] || '📝'}</span>
+                            <span className="text-xs text-cyan-400 font-semibold shrink-0">{agentName}</span>
+                            <span className={`text-[10px] truncate ${isSettle ? 'text-emerald-300' : 'text-gray-400'}`}>{tx.description}</span>
                           </div>
-                          <div className="flex items-center justify-between mt-0.5 sm:mt-1">
-                            <span className="text-xs text-cyan-600">{agentName}</span>
-                            <a
-                              href={tx.explorerUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-purple-500 hover:text-purple-400 font-mono transition-colors"
-                              onClick={e => e.stopPropagation()}
-                            >
-                              {shortHash(tx.txHash)} ↗
-                            </a>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                            {tx.amount && <span className={`text-[10px] font-mono ${isSettle ? 'text-emerald-400 font-bold' : 'text-yellow-400'}`}>{tx.amount} MON</span>}
+                            <span className="text-[10px] text-gray-700">{timeAgo(tx.timestamp)}</span>
                           </div>
-                        </div>
+                        </a>
                       );
                     })}
                   </div>
