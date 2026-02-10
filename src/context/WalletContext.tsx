@@ -43,23 +43,39 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }, [address]);
 
-  const checkSession = useCallback(async () => {
+  // Restore wallet on page load — check MetaMask for already-connected accounts
+  const restoreWallet = useCallback(async () => {
+    // First try SIWE session
     try {
       const res = await fetch('/api/auth/session');
       const data = await res.json();
-
-      if (data.authenticated) {
+      if (data.authenticated && data.address) {
         setAddress(normalizeAddress(data.address));
         setIsAuthenticated(true);
+        return;
       }
-    } catch (error) {
-      console.error('Session check failed:', error);
+    } catch { /* session check failed, try MetaMask */ }
+
+    // Fall back to MetaMask — eth_accounts returns connected accounts without prompting
+    if (typeof window !== 'undefined' && window.ethereum) {
+      try {
+        const accounts: string[] = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          const saved = localStorage.getItem('automon_wallet');
+          const addr = normalizeAddress(accounts[0]);
+          // Only restore if this was the last connected wallet
+          if (addr && (!saved || saved.toLowerCase() === addr.toLowerCase())) {
+            setAddress(addr);
+            // Not SIWE authenticated, but wallet is connected
+          }
+        }
+      } catch { /* no MetaMask */ }
     }
   }, [normalizeAddress]);
 
   useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+    restoreWallet();
+  }, [restoreWallet]);
 
   useEffect(() => {
     if (address) {
@@ -119,8 +135,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
 
     const { address: verifiedAddress } = await verifyRes.json();
-    setAddress(normalizeAddress(verifiedAddress));
+    const finalAddr = normalizeAddress(verifiedAddress);
+    setAddress(finalAddr);
     setIsAuthenticated(true);
+    if (finalAddr) localStorage.setItem('automon_wallet', finalAddr);
   }, [normalizeAddress]);
 
   const connect = async () => {
@@ -151,6 +169,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setAddress(null);
     setBalance(null);
     setIsAuthenticated(false);
+    localStorage.removeItem('automon_wallet');
   };
 
   return (
