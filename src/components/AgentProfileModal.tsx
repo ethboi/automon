@@ -116,7 +116,7 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
       />
 
       {/* Modal */}
-      <div className="relative glass rounded-2xl w-full max-w-lg max-h-[85vh] sm:max-h-[80vh] overflow-hidden animate-scale-in">
+      <div className="relative glass rounded-2xl w-full max-w-lg max-h-[90vh] sm:max-h-[80vh] overflow-hidden animate-scale-in mx-1 sm:mx-4">
         {/* Header */}
         <div className="p-3 sm:p-6 border-b border-white/10">
           <div className="flex items-center justify-between">
@@ -151,80 +151,65 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
         ) : error ? (
           <div className="p-12 text-center text-red-400">{error}</div>
         ) : details && (
-          <div className="overflow-y-auto max-h-[calc(85vh-84px)] sm:max-h-[calc(80vh-100px)]">
-            {/* Health */}
-            <div className="px-3 pt-3 sm:px-6 sm:pt-5">
-              <div className="glass-light rounded-lg sm:rounded-xl p-3 sm:p-4">
-                <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
-                  <span className="text-gray-300">Health</span>
-                  <span className="text-white font-semibold">
-                    {details.agent.health}/{details.agent.maxHealth} ({details.stats.healthPercent}%)
-                  </span>
-                </div>
-                <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="overflow-y-auto max-h-[calc(90vh-64px)] sm:max-h-[calc(80vh-100px)]">
+            {/* Health + Action row */}
+            <div className="px-3 pt-3 sm:px-6 sm:pt-5 space-y-2">
+              {/* Health bar */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 w-8 shrink-0">HP</span>
+                <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
                   <div
                     className={`h-full bg-gradient-to-r ${healthTone(details.stats.healthPercent)} transition-all duration-500`}
                     style={{ width: `${details.stats.healthPercent}%` }}
                   />
                 </div>
+                <span className="text-xs text-white font-mono w-16 text-right shrink-0">
+                  {details.agent.health}/{details.agent.maxHealth}
+                </span>
               </div>
-            </div>
 
-            {/* Current Action */}
-            <div className="px-3 pt-3 sm:px-6 sm:pt-4">
-              <div className="glass-light rounded-lg sm:rounded-xl p-3 sm:p-4">
-                <div className="text-[10px] sm:text-xs uppercase tracking-wide text-gray-500 mb-1">Current Action</div>
-                <div className="text-sm sm:text-base text-cyan-300 font-medium">
-                  {currentActivity.icon} {currentActivity.label}
-                </div>
-                {(details.agent.currentReasoning || details.agent.currentReason) && (
-                  <div className="text-xs sm:text-sm text-gray-400 mt-1 italic">💭 {details.agent.currentReasoning || details.agent.currentReason}</div>
-                )}
+              {/* Current action inline */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-sm">{currentActivity.icon}</span>
+                <span className="text-cyan-300 font-medium">{currentActivity.label}</span>
                 {details.agent.currentLocation && (
-                  <div className="text-xs text-cyan-400 mt-1.5">📍 {details.agent.currentLocation}</div>
+                  <span className="text-gray-500">@ {details.agent.currentLocation}</span>
                 )}
               </div>
+              {(details.agent.currentReasoning || details.agent.currentReason) && (
+                <p className="text-[11px] text-gray-500 italic line-clamp-2">💭 {details.agent.currentReasoning || details.agent.currentReason}</p>
+              )}
             </div>
 
-            {/* Stats Grid */}
-            <div className="p-3 sm:p-6 grid grid-cols-3 gap-2 sm:gap-4">
-              <div className="glass-light rounded-lg sm:rounded-xl p-2 sm:p-4 text-center">
-                <div className="text-lg sm:text-2xl font-bold text-yellow-400">
+            {/* Stats Grid — compact */}
+            <div className="px-3 pt-2 pb-1 sm:px-6 sm:pt-4 sm:pb-2 grid grid-cols-4 gap-1.5 sm:gap-3">
+              <div className="glass-light rounded-lg p-1.5 sm:p-3 text-center">
+                <div className="text-sm sm:text-xl font-bold text-yellow-400">
                   {parseFloat(details.stats.balance).toFixed(2)}
                 </div>
-                <div className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide mt-0.5 sm:mt-1">MON</div>
+                <div className="text-[9px] sm:text-xs text-gray-500 uppercase">MON</div>
               </div>
-              <div className="glass-light rounded-lg sm:rounded-xl p-2 sm:p-4 text-center">
-                <div className="text-lg sm:text-2xl font-bold text-purple-400">
+              <div className="glass-light rounded-lg p-1.5 sm:p-3 text-center">
+                <div className="text-sm sm:text-xl font-bold text-purple-400">
                   {details.stats.cards}
                 </div>
-                <div className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide mt-0.5 sm:mt-1">Cards</div>
+                <div className="text-[9px] sm:text-xs text-gray-500 uppercase">Cards</div>
               </div>
-              <div className="glass-light rounded-lg sm:rounded-xl p-2 sm:p-4 text-center">
-                <div className="text-lg sm:text-2xl font-bold">
+              <div className="glass-light rounded-lg p-1.5 sm:p-3 text-center">
+                <div className="text-sm sm:text-xl font-bold">
                   <span className="text-emerald-400">{details.stats.wins}</span>
-                  <span className="text-gray-500">/</span>
+                  <span className="text-gray-600">/</span>
                   <span className="text-red-400">{details.stats.losses}</span>
                 </div>
-                <div className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide mt-0.5 sm:mt-1">W/L</div>
+                <div className="text-[9px] sm:text-xs text-gray-500 uppercase">W/L</div>
+              </div>
+              <div className="glass-light rounded-lg p-1.5 sm:p-3 text-center">
+                <div className="text-sm sm:text-xl font-bold text-cyan-400">
+                  {details.stats.winRate}%
+                </div>
+                <div className="text-[9px] sm:text-xs text-gray-500 uppercase">Win</div>
               </div>
             </div>
-
-            {/* Win Rate Bar */}
-            {details.stats.battles > 0 && (
-              <div className="px-3 pb-3 sm:px-6 sm:pb-4">
-                <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
-                  <span className="text-gray-400">Win Rate</span>
-                  <span className="text-white font-medium">{details.stats.winRate}%</span>
-                </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
-                    style={{ width: `${details.stats.winRate}%` }}
-                  />
-                </div>
-              </div>
-            )}
 
             {/* Tabs */}
             <div className="px-3 pt-3 sm:px-6 sm:pt-4 border-t border-white/10">
