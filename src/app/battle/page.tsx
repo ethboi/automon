@@ -228,6 +228,8 @@ export default function BattlePage() {
       b.player2?.address.toLowerCase() === address?.toLowerCase()
   );
 
+  const allBattles = battles.filter(b => b.status === 'complete' || b.status === 'active');
+
   if (loading) {
     return (
       <div className="page-container">
@@ -550,6 +552,71 @@ export default function BattlePage() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* All recent battles */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-xl font-bold text-white">Recent Battles</h2>
+          {allBattles.length > 0 && (
+            <div className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-sm font-medium">
+              {allBattles.length}
+            </div>
+          )}
+        </div>
+
+        {allBattles.length === 0 ? (
+          <div className="section-card text-center py-8">
+            <div className="text-4xl mb-3 opacity-50">📺</div>
+            <p className="text-gray-400">No battles to show yet</p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {allBattles.map((battle, index) => {
+              const p1 = battle.player1.address;
+              const p2 = battle.player2?.address;
+              const p1Short = `${p1.slice(0, 6)}...${p1.slice(-4)}`;
+              const p2Short = p2 ? `${p2.slice(0, 6)}...${p2.slice(-4)}` : 'waiting...';
+              const isActive = battle.status === 'active';
+
+              return (
+                <div
+                  key={battle.battleId}
+                  className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in-up opacity-0"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${isActive ? 'bg-yellow-500/20' : 'bg-purple-500/20'}`}>
+                      {isActive ? '⚡' : '🏆'}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-cyan-400 font-medium">{p1Short}</span>
+                        <span className="text-xs text-gray-500">vs</span>
+                        <span className="text-sm text-cyan-400 font-medium">{p2Short}</span>
+                        {isActive && <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded font-medium animate-pulse">LIVE</span>}
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-xs text-gray-500">💰 {battle.wager} MON</span>
+                        {battle.winner && (
+                          <span className="text-xs text-emerald-400">🏆 {battle.winner.slice(0, 6)}...{battle.winner.slice(-4)}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {battle.status === 'complete' && (
+                    <button
+                      onClick={() => watchReplay(battle.battleId)}
+                      className="btn-secondary text-sm w-full sm:w-auto"
+                    >
+                      📺 Watch Replay
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
