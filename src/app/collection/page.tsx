@@ -91,26 +91,26 @@ export default function CollectionPage() {
   return (
     <div className="page-container page-transition">
       {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
           My Collection
         </h1>
-        <p className="text-gray-400">
+        <p className="text-sm sm:text-base text-gray-400">
           {cards.length} {cards.length === 1 ? 'card' : 'cards'} collected
         </p>
       </div>
 
       {/* Filters section */}
-      <div className="section-card mb-8">
-        <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-end justify-between">
-          <div className="flex flex-wrap gap-4 items-end">
+      <div className="section-card mb-4 sm:mb-8">
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-6 items-start lg:items-end justify-between">
+          <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2 sm:gap-4 items-end w-full sm:w-auto">
             {/* Element filter */}
-            <div className="min-w-[160px]">
-              <label className="block text-sm text-gray-400 mb-2 font-medium">Element</label>
+            <div className="min-w-0 sm:min-w-[160px]">
+              <label className="block text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2 font-medium">Element</label>
               <select
                 value={filter.element}
                 onChange={e => setFilter(f => ({ ...f, element: e.target.value as Element | 'all' }))}
-                className="select-field w-full"
+                className="select-field w-full text-xs sm:text-sm"
               >
                 {elements.map(el => (
                   <option key={el.value} value={el.value}>
@@ -121,12 +121,12 @@ export default function CollectionPage() {
             </div>
 
             {/* Rarity filter */}
-            <div className="min-w-[160px]">
-              <label className="block text-sm text-gray-400 mb-2 font-medium">Rarity</label>
+            <div className="min-w-0 sm:min-w-[160px]">
+              <label className="block text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2 font-medium">Rarity</label>
               <select
                 value={filter.rarity}
                 onChange={e => setFilter(f => ({ ...f, rarity: e.target.value as Rarity | 'all' }))}
-                className="select-field w-full"
+                className="select-field w-full text-xs sm:text-sm"
               >
                 {rarities.map(r => (
                   <option key={r.value} value={r.value}>
@@ -137,12 +137,12 @@ export default function CollectionPage() {
             </div>
 
             {/* Sort by */}
-            <div className="min-w-[160px]">
-              <label className="block text-sm text-gray-400 mb-2 font-medium">Sort By</label>
+            <div className="min-w-0 sm:min-w-[160px]">
+              <label className="block text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2 font-medium">Sort By</label>
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                className="select-field w-full"
+                className="select-field w-full text-xs sm:text-sm"
               >
                 <option value="rarity">Rarity</option>
                 <option value="name">Name</option>
@@ -153,11 +153,11 @@ export default function CollectionPage() {
           </div>
 
           {/* Results count */}
-          <div className="flex items-center gap-2 glass-light rounded-xl px-4 py-2">
-            <span className="text-2xl">🎴</span>
+          <div className="flex items-center gap-2 glass-light rounded-xl px-3 sm:px-4 py-2">
+            <span className="text-lg sm:text-2xl">🎴</span>
             <div>
-              <div className="text-white font-semibold">{filteredCards.length}</div>
-              <div className="text-xs text-gray-400">of {cards.length} cards</div>
+              <div className="text-sm sm:text-base text-white font-semibold">{filteredCards.length}</div>
+              <div className="text-[10px] sm:text-xs text-gray-400">of {cards.length} cards</div>
             </div>
           </div>
         </div>
@@ -185,7 +185,7 @@ export default function CollectionPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4">
           {filteredCards.map((card, index) => (
             <div
               key={card._id?.toString() || card.id || index}
@@ -200,13 +200,13 @@ export default function CollectionPage() {
 
       {/* Collection stats */}
       {cards.length > 0 && (
-        <div className="section-card mt-8">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <span className="text-2xl">📊</span>
+        <div className="section-card mt-4 sm:mt-8">
+          <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center gap-2">
+            <span className="text-xl sm:text-2xl">📊</span>
             <span>Collection Stats</span>
           </h2>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
             {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as Rarity[]).map((rarity, index) => {
               const count = cards.filter(c => c.rarity === rarity).length;
               const colors = {
@@ -228,7 +228,7 @@ export default function CollectionPage() {
                 <div
                   key={rarity}
                   className={`
-                    relative overflow-hidden rounded-xl p-4 text-center
+                    relative overflow-hidden rounded-xl p-2.5 sm:p-4 text-center
                     bg-gradient-to-br ${colors[rarity]}
                     shadow-lg ${glows[rarity]}
                     transition-all duration-300 hover:scale-105
@@ -237,8 +237,8 @@ export default function CollectionPage() {
                   style={{ animationDelay: `${0.1 + index * 0.1}s` }}
                 >
                   <div className="relative z-10">
-                    <div className="text-3xl font-bold text-white mb-1">{count}</div>
-                    <div className="text-sm text-white/80 capitalize font-medium">{rarity}</div>
+                    <div className="text-xl sm:text-3xl font-bold text-white mb-0.5 sm:mb-1">{count}</div>
+                    <div className="text-xs sm:text-sm text-white/80 capitalize font-medium">{rarity}</div>
                   </div>
                   <div className="absolute inset-0 bg-black/10" />
                 </div>
@@ -249,16 +249,16 @@ export default function CollectionPage() {
           {/* Element distribution */}
           <div className="mt-6 pt-6 border-t border-white/10">
             <h3 className="text-sm font-medium text-gray-400 mb-4">Elements</h3>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {elements.slice(1).map(({ value, icon }) => {
                 const count = cards.filter(c => c.element === value).length;
                 return (
                   <div
                     key={value}
-                    className="flex items-center gap-2 glass-light rounded-full px-4 py-2"
+                    className="flex items-center gap-1.5 sm:gap-2 glass-light rounded-full px-3 sm:px-4 py-1.5 sm:py-2"
                   >
-                    <span className="text-lg">{icon}</span>
-                    <span className="text-white font-semibold">{count}</span>
+                    <span className="text-sm sm:text-lg">{icon}</span>
+                    <span className="text-sm sm:text-base text-white font-semibold">{count}</span>
                   </div>
                 );
               })}

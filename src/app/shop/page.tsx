@@ -133,11 +133,11 @@ export default function ShopPage() {
       )}
 
       {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
           Card Shop
         </h1>
-        <p className="text-gray-400">Purchase and open card packs to expand your collection</p>
+        <p className="text-sm sm:text-base text-gray-400">Purchase and open card packs to expand your collection</p>
       </div>
 
       {/* Error display */}
@@ -153,29 +153,29 @@ export default function ShopPage() {
       )}
 
       {/* Buy pack section */}
-      <div className="relative overflow-hidden rounded-3xl mb-8">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl mb-4 sm:mb-8">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-violet-800 to-purple-900" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.3),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(6,182,212,0.2),transparent_50%)]" />
 
-        <div className="relative p-8 sm:p-10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+        <div className="relative p-4 sm:p-8 lg:p-10">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-4 sm:gap-4 sm:gap-8">
             <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 mb-4">
+              <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-3 sm:px-4 py-1.5 mb-3 sm:mb-4">
                 <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                <span className="text-sm text-white/80 font-medium">Available Now</span>
+                <span className="text-xs sm:text-sm text-white/80 font-medium">Available Now</span>
               </div>
 
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">
                 Monster Card Pack
               </h2>
-              <p className="text-purple-200 mb-6 text-lg">
+              <p className="text-purple-200 mb-4 sm:mb-6 text-sm sm:text-lg">
                 Contains 5 random monster cards
               </p>
 
               {/* Rarity odds */}
-              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+              <div className="flex flex-wrap gap-1.5 sm:gap-3 justify-center lg:justify-start">
                 {[
                   { label: 'Common', chance: '60%', color: 'bg-gray-500/30 text-gray-300' },
                   { label: 'Uncommon', chance: '25%', color: 'bg-emerald-500/30 text-emerald-300' },
@@ -183,7 +183,7 @@ export default function ShopPage() {
                   { label: 'Epic', chance: '4%', color: 'bg-purple-500/30 text-purple-300' },
                   { label: 'Legendary', chance: '1%', color: 'bg-yellow-500/30 text-yellow-300' },
                 ].map((item) => (
-                  <div key={item.label} className={`${item.color} rounded-lg px-3 py-1.5 text-sm font-medium`}>
+                  <div key={item.label} className={`${item.color} rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium`}>
                     {item.label}: {item.chance}
                   </div>
                 ))}
@@ -208,15 +208,15 @@ export default function ShopPage() {
               </div>
 
               <div className="text-center">
-                <div className="flex items-baseline justify-center gap-2 mb-4">
-                  <span className="text-4xl font-bold text-white">{ethers.formatEther(PACK_PRICE)}</span>
-                  <span className="text-xl text-purple-300 font-medium">MON</span>
+                <div className="flex items-baseline justify-center gap-2 mb-3 sm:mb-4">
+                  <span className="text-2xl sm:text-2xl sm:text-4xl font-bold text-white">{ethers.formatEther(PACK_PRICE)}</span>
+                  <span className="text-base sm:text-sm sm:text-xl text-purple-300 font-medium">MON</span>
                 </div>
 
                 <button
                   onClick={buyPack}
                   disabled={buying}
-                  className="btn-primary px-10 py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="flex items-center gap-2">
                     {buying ? (
@@ -240,15 +240,15 @@ export default function ShopPage() {
 
       {/* Unopened packs */}
       {unopenedPacks.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
+        <div className="mb-4 sm:mb-8">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
             <h2 className="text-xl font-bold text-white">Unopened Packs</h2>
             <div className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
               {unopenedPacks.length}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-4">
             {unopenedPacks.map((pack, index) => (
               <button
                 key={pack.packId}
@@ -282,7 +282,7 @@ export default function ShopPage() {
       {/* Purchase history */}
       {openedPacks.length > 0 && (
         <div className="section-card">
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
             <h2 className="text-xl font-bold text-white">Opened Packs</h2>
             <div className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-sm font-medium">
               {openedPacks.length}

@@ -70,11 +70,11 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
   if (battle.status === 'complete') {
     const isWinner = battle.winner?.toLowerCase() === address?.toLowerCase();
     return (
-      <div className="text-center py-12">
-        <h2 className={`text-4xl font-bold mb-4 ${isWinner ? 'text-green-400' : 'text-red-400'}`}>
-          {isWinner ? 'Victory!' : 'Defeat'}
+      <div className="text-center py-8 sm:py-12">
+        <h2 className={`text-2xl sm:text-4xl font-bold mb-2 sm:mb-4 ${isWinner ? 'text-green-400' : 'text-red-400'}`}>
+          {isWinner ? '🏆 Victory!' : '💀 Defeat'}
         </h2>
-        <p className="text-gray-400 mb-8">
+        <p className="text-sm sm:text-base text-gray-400 mb-4 sm:mb-8">
           Winner: {battle.winner?.slice(0, 6)}...{battle.winner?.slice(-4)}
         </p>
         {battle.settleTxHash && (
@@ -87,49 +87,40 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       {/* Turn indicator */}
-      <div className="text-center mb-6">
-        <span className="bg-purple-600 px-4 py-2 rounded-full text-sm font-medium">
+      <div className="text-center mb-3 sm:mb-6">
+        <span className="bg-purple-600 px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium">
           Turn {battle.currentTurn}
         </span>
         {hasSubmittedMove && (
-          <span className="ml-4 text-yellow-400 text-sm">
+          <span className="ml-2 sm:ml-4 text-yellow-400 text-xs sm:text-sm">
             Waiting for opponent...
           </span>
         )}
       </div>
 
-      {/* Battle field */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+      {/* Battle field — side by side */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-6 mb-4 sm:mb-8">
         {/* Opponent side */}
-        <div className="md:col-span-3 flex justify-center gap-4">
-          <div className="text-center">
-            <p className="text-sm text-gray-400 mb-2">
-              {opponentState.address.slice(0, 6)}...{opponentState.address.slice(-4)}
-            </p>
-            <Card card={opponentActiveCard} size="lg" />
-          </div>
-        </div>
-
-        {/* VS */}
-        <div className="md:col-span-3 text-center">
-          <span className="text-4xl font-bold text-gray-600">VS</span>
+        <div className="text-center">
+          <p className="text-[10px] sm:text-sm text-gray-400 mb-1 sm:mb-2 truncate">
+            {opponentState.address.slice(0, 6)}...{opponentState.address.slice(-4)}
+          </p>
+          <Card card={opponentActiveCard} size="sm" />
         </div>
 
         {/* Your side */}
-        <div className="md:col-span-3 flex justify-center gap-4">
-          <div className="text-center">
-            <p className="text-sm text-gray-400 mb-2">You</p>
-            <Card card={myActiveCard} size="lg" />
-          </div>
+        <div className="text-center">
+          <p className="text-[10px] sm:text-sm text-cyan-400 mb-1 sm:mb-2">You</p>
+          <Card card={myActiveCard} size="sm" />
         </div>
       </div>
 
       {/* Your bench */}
-      <div className="mb-8">
-        <h3 className="text-lg font-medium text-gray-300 mb-3">Your Bench</h3>
-        <div className="flex gap-3">
+      <div className="mb-4 sm:mb-8">
+        <h3 className="text-sm sm:text-lg font-medium text-gray-300 mb-2 sm:mb-3">Your Bench</h3>
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1">
           {myState.cards.map((card, index) => (
             <div
               key={index}
@@ -152,23 +143,23 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
 
       {/* Actions */}
       {!hasSubmittedMove && (
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-medium mb-4">Choose Your Action</h3>
+        <div className="bg-gray-800 rounded-xl p-3 sm:p-6">
+          <h3 className="text-sm sm:text-lg font-medium mb-2 sm:mb-4">Choose Action</h3>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-4">
             {/* STRIKE - beats SKILL */}
             <button
               onClick={() => setSelectedMove({ action: 'strike' })}
-              className={`p-4 rounded-lg border-2 transition ${
+              className={`p-2 sm:p-4 rounded-lg border-2 transition ${
                 selectedMove?.action === 'strike'
                   ? 'border-red-500 bg-red-500/20'
                   : 'border-gray-600 hover:border-gray-500'
               }`}
             >
-              <span className="text-2xl mb-2 block">⚔️</span>
+              <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">⚔️</span>
               <span className="font-medium">Strike</span>
-              <span className="text-xs text-gray-400 block">Beats SKILL</span>
-              <span className="text-xs text-red-400 block">Loses to GUARD</span>
+              <span className="text-[10px] sm:text-xs text-gray-400 block">Beats SKILL</span>
+              <span className="text-[10px] sm:text-xs text-red-400 hidden sm:block">Loses to GUARD</span>
             </button>
 
             {/* SKILL - beats GUARD */}
@@ -181,14 +172,14 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
                   : 'border-gray-600 hover:border-gray-500'
               } ${myActiveCard.ability.currentCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <span className="text-2xl mb-2 block">✨</span>
+              <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">✨</span>
               <span className="font-medium">{myActiveCard.ability.name}</span>
-              <span className="text-xs text-gray-400 block">
+              <span className="text-[10px] sm:text-xs text-gray-400 block">
                 {myActiveCard.ability.currentCooldown
                   ? `Cooldown: ${myActiveCard.ability.currentCooldown}`
                   : 'Beats GUARD'}
               </span>
-              <span className="text-xs text-red-400 block">Loses to STRIKE</span>
+              <span className="text-[10px] sm:text-xs text-red-400 hidden sm:block">Loses to STRIKE</span>
             </button>
 
             {/* GUARD - beats STRIKE */}
@@ -200,10 +191,10 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
                   : 'border-gray-600 hover:border-gray-500'
               }`}
             >
-              <span className="text-2xl mb-2 block">🛡️</span>
+              <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">🛡️</span>
               <span className="font-medium">Guard</span>
-              <span className="text-xs text-gray-400 block">Beats STRIKE</span>
-              <span className="text-xs text-red-400 block">Loses to SKILL</span>
+              <span className="text-[10px] sm:text-xs text-gray-400 block">Beats STRIKE</span>
+              <span className="text-[10px] sm:text-xs text-red-400 hidden sm:block">Loses to SKILL</span>
             </button>
 
             {/* SWITCH */}
@@ -223,9 +214,9 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
                   : 'border-gray-600 hover:border-gray-500'
               }`}
             >
-              <span className="text-2xl mb-2 block">🔄</span>
+              <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">🔄</span>
               <span className="font-medium">Switch</span>
-              <span className="text-xs text-gray-400 block">Always first</span>
+              <span className="text-[10px] sm:text-xs text-gray-400 block">Always first</span>
             </button>
 
             {onAIDecide && (
@@ -234,9 +225,9 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
                 disabled={isSubmitting}
                 className="p-4 rounded-lg border-2 border-blue-600 hover:border-blue-500 bg-blue-500/10 transition"
               >
-                <span className="text-2xl mb-2 block">🤖</span>
+                <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">🤖</span>
                 <span className="font-medium">AI Suggest</span>
-                <span className="text-xs text-gray-400 block">
+                <span className="text-[10px] sm:text-xs text-gray-400 block">
                   {showAIThinking ? 'Thinking...' : 'Get AI move'}
                 </span>
               </button>
@@ -244,19 +235,19 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
           </div>
 
           {selectedMove && (
-            <div className="flex items-center justify-between bg-gray-700 rounded-lg p-4">
-              <span>
-                Selected: <strong className="text-purple-400 capitalize">{selectedMove.action}</strong>
+            <div className="flex items-center justify-between bg-gray-700 rounded-lg p-2 sm:p-4 gap-2">
+              <span className="text-xs sm:text-base truncate">
+                <strong className="text-purple-400 capitalize">{selectedMove.action}</strong>
                 {selectedMove.targetIndex !== undefined && (
-                  <span> to {myState.cards[selectedMove.targetIndex].name}</span>
+                  <span className="text-gray-400"> → {myState.cards[selectedMove.targetIndex].name}</span>
                 )}
               </span>
               <button
                 onClick={handleSubmitMove}
                 disabled={isSubmitting}
-                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 px-6 py-2 rounded-lg font-medium transition"
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 px-3 py-1.5 sm:px-6 sm:py-2 rounded-lg text-xs sm:text-base font-medium transition flex-shrink-0"
               >
-                {isSubmitting ? 'Submitting...' : 'Confirm Move'}
+                {isSubmitting ? '...' : 'Confirm'}
               </button>
             </div>
           )}
