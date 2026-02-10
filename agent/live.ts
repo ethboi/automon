@@ -108,10 +108,11 @@ async function api(path: string, opts: RequestInit = {}): Promise<Response> {
   };
   if (JWT_SECRET) headers['x-agent-secret'] = JWT_SECRET;
 
-  // Default 5s timeout on all API calls
+  // Default 5s timeout, but allow override via timeoutMs option
+  const timeoutMs = (opts as { timeoutMs?: number }).timeoutMs || 5000;
   if (!opts.signal) {
     const controller = new AbortController();
-    setTimeout(() => controller.abort(), 5000);
+    setTimeout(() => controller.abort(), timeoutMs);
     return fetch(`${API_URL}${path}`, { ...opts, headers, signal: controller.signal, redirect: 'follow' });
   }
   return fetch(`${API_URL}${path}`, { ...opts, headers, redirect: 'follow' });
@@ -422,7 +423,7 @@ async function tryJoinBattle(): Promise<boolean> {
     const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
 
     console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards: ${cardIds.join(', ')}`);
-    const selectRes = await api('/api/battle/select-cards', {
+    const selectRes = await api('/api/battle/select-cards', { timeoutMs: 60000,
       method: 'POST',
       body: JSON.stringify({ battleId: openBattle.battleId, cardIds, address: ADDRESS }),
     });
@@ -482,7 +483,7 @@ async function createAndWaitForBattle(): Promise<void> {
     });
     const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
     console.log(`[${ts()}]   🎴 Selecting cards: ${cardIds.join(', ')}`);
-    const selectRes = await api('/api/battle/select-cards', {
+    const selectRes = await api('/api/battle/select-cards', { timeoutMs: 60000,
       method: 'POST',
       body: JSON.stringify({ battleId, cardIds, address: ADDRESS }),
     });
