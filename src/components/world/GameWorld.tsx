@@ -12,7 +12,9 @@ import { AICharacter } from './AICharacter';
 import { WorldUI } from './WorldUI';
 import { LocationMarker } from './locations/LocationMarker';
 import { BattleArena } from './buildings/BattleArena';
+import { WildAutoMons } from './WildAutoMon';
 import AgentProfileModal from '@/components/AgentProfileModal';
+import { useWallet } from '@/context/WalletContext';
 
 interface OnlineAgent {
   address: string;
@@ -125,6 +127,8 @@ function Scene({
   onlineAgents,
   cameraFlyTarget,
   onAgentClick,
+  walletAddress,
+  playerPositionRef,
 }: {
   onLocationClick: (route: string) => void;
   onGroundClick: (point: THREE.Vector3) => void;
@@ -133,6 +137,8 @@ function Scene({
   onlineAgents: OnlineAgent[];
   cameraFlyTarget: THREE.Vector3 | null;
   onAgentClick: (address: string) => void;
+  walletAddress?: string;
+  playerPositionRef: React.MutableRefObject<THREE.Vector3 | null>;
 }) {
   const buildingsArray = Object.values(WORLD_LOCATIONS).map((b) => ({
     position: b.position,
@@ -212,7 +218,15 @@ function Scene({
         initialPosition={[0, 0, 8]}
         targetPosition={targetPosition}
         buildings={buildingsArray}
-        onPositionChange={onCharacterMove}
+        onPositionChange={(pos: THREE.Vector3) => {
+          onCharacterMove(pos);
+          playerPositionRef.current = pos.clone();
+        }}
+      />
+
+      <WildAutoMons
+        playerPosition={playerPositionRef.current}
+        walletAddress={walletAddress}
       />
     </>
   );
@@ -256,6 +270,8 @@ function Roads() {
 
 export function GameWorld() {
   const router = useRouter();
+  const { address } = useWallet();
+  const playerPositionRef = useRef<THREE.Vector3 | null>(null);
   const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
   const [cameraFlyTarget, setCameraFlyTarget] = useState<THREE.Vector3 | null>(null);
   const [nearbyBuilding, setNearbyBuilding] = useState<string | null>(null);
@@ -335,6 +351,8 @@ export function GameWorld() {
             onlineAgents={onlineAgents}
             cameraFlyTarget={cameraFlyTarget}
             onAgentClick={handleSelectAgent}
+            walletAddress={address || undefined}
+            playerPositionRef={playerPositionRef}
           />
         </Suspense>
       </Canvas>
