@@ -225,9 +225,9 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                 d.cards.length === 0 ? (
                   <div className="text-center py-8 text-gray-700 text-[10px]">No cards yet</div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-1 p-2">
+                  <div className="grid grid-cols-3 gap-2 p-3">
                     {d.cards.map(card => (
-                      <div key={card.id || card._id?.toString()} className="transform scale-90 origin-top">
+                      <div key={card.id || card._id?.toString()}>
                         <CardComponent card={card} size="sm" showStats={false} />
                       </div>
                     ))}
