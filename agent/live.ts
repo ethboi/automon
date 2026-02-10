@@ -15,7 +15,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 import { ethers } from 'ethers';
-import { decideNextAction } from './strategy';
+import { decideNextAction, selectBattleCards } from './strategy';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -467,18 +467,24 @@ async function tryJoinBattle(): Promise<boolean> {
     if (!cards || cards.length < 3) { console.log(`[${ts()}]   ❌ Not enough cards`); return false; }
 
     // Sort by total stats desc, pick top 3 (handle both flat and nested stats)
-    const getStats = (c: Record<string, unknown>) => {
-      const s = c.stats as Record<string, number> | undefined;
-      return {
-        attack: s?.attack ?? (c.attack as number) ?? 30,
-        defense: s?.defense ?? (c.defense as number) ?? 30,
-      };
-    };
-    const sorted = cards.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-      const sa = getStats(a), sb = getStats(b);
-      return (sb.attack + sb.defense) - (sa.attack + sa.defense);
-    });
-    const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
+        // AI card selection
+    let cardIds: string[];
+    try {
+      const aiPick = await selectBattleCards(cards);
+      if (aiPick?.indices?.length === 3) {
+        cardIds = aiPick.indices.map((i: number) => cards[i]?._id).filter(Boolean);
+        console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
+        if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
+      } else throw new Error('fallback');
+    } catch {
+      // Fallback: sort by total stats
+      const sorted = [...cards].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+        const sa = (a.stats as Record<string, number>) || {}, sb = (b.stats as Record<string, number>) || {};
+        return ((sb.attack || 30) + (sb.defense || 30)) - ((sa.attack || 30) + (sa.defense || 30));
+      });
+      cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
+      console.log(`[${ts()}]   🎴 Fallback: top 3 by stats`);
+    }
 
     console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards: ${cardIds.join(', ')}`);
     const selectRes = await apiLong('/api/battle/select-cards', {
@@ -548,15 +554,23 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
     if (!cardsRes.ok) return;
     const { cards } = await cardsRes.json();
     if (!cards || cards.length < 3) return;
-    const getStats2 = (c: Record<string, unknown>) => {
-      const s = c.stats as Record<string, number> | undefined;
-      return { attack: s?.attack ?? (c.attack as number) ?? 30, defense: s?.defense ?? (c.defense as number) ?? 30 };
-    };
-    const sorted = cards.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-      const sa = getStats2(a), sb = getStats2(b);
-      return (sb.attack + sb.defense) - (sa.attack + sa.defense);
-    });
-    const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
+    // AI card selection
+    let cardIds: string[];
+    try {
+      const aiPick = await selectBattleCards(cards);
+      if (aiPick?.indices?.length === 3) {
+        cardIds = aiPick.indices.map((i: number) => cards[i]?._id).filter(Boolean);
+        console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
+        if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
+      } else throw new Error('fallback');
+    } catch {
+      const sorted = [...cards].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+        const sa = (a.stats as Record<string, number>) || {}, sb = (b.stats as Record<string, number>) || {};
+        return ((sb.attack || 30) + (sb.defense || 30)) - ((sa.attack || 30) + (sa.defense || 30));
+      });
+      cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
+      console.log(`[${ts()}]   🎴 Fallback: top 3 by stats`);
+    }
     console.log(`[${ts()}]   🎴 Selecting cards: ${cardIds.join(', ')}`);
     const selectRes = await apiLong('/api/battle/select-cards', {
       method: 'POST',
@@ -638,6 +652,17 @@ async function tick(): Promise<void> {
   } else if (pendingAction) {
     // Just arrived — log the action and start dwelling
     console.log(`[${ts()}] 📍 ${target.name}: ${pendingAction.action} — "${pendingAction.reason}"`);
+
+    // If shopping at market, buy a pack
+    if ((pendingAction.action === 'shopping' || pendingAction.action === 'trading') && target.name === 'Town Market') {
+      await logAction(pendingAction.action, pendingAction.reason, target.name);
+      recentActions.push(`${pendingAction.action}@${target.name}`);
+      if (recentActions.length > 10) recentActions.shift();
+      pendingAction = null;
+      await buyPack();
+      dwellTicks = DWELL_MIN + Math.floor(Math.random() * (DWELL_MAX - DWELL_MIN));
+      return;
+    }
 
     // If battling at arena, try joining first, then create
     if (pendingAction.action === 'battling' && target.name === 'Town Arena' && cardCount >= 3) {
