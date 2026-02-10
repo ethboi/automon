@@ -19,15 +19,32 @@ import {
 // =============================================================================
 
 export function initializeBattleCard(card: Card): BattleCard {
+  // Handle both formats: nested stats object or flat fields
+  const stats = card.stats || {
+    hp: (card as Record<string, unknown>).hp as number || ((card as Record<string, unknown>).attack as number || 30) + ((card as Record<string, unknown>).defense as number || 30),
+    maxHp: (card as Record<string, unknown>).maxHp as number || ((card as Record<string, unknown>).attack as number || 30) + ((card as Record<string, unknown>).defense as number || 30),
+    attack: (card as Record<string, unknown>).attack as number || 30,
+    defense: (card as Record<string, unknown>).defense as number || 30,
+    speed: (card as Record<string, unknown>).speed as number || 20,
+  };
+  const ability = card.ability || {
+    name: 'Strike',
+    effect: 'damage' as const,
+    power: 20,
+    cooldown: 2,
+    currentCooldown: 0,
+    description: 'A basic attack',
+  };
   return {
     ...card,
-    currentHp: card.stats.hp,
+    stats,
+    currentHp: stats.hp,
     buffs: [],
     debuffs: [],
     statusEffects: [],
     isStunned: false,
     ability: {
-      ...card.ability,
+      ...ability,
       currentCooldown: 0,
     },
   };
