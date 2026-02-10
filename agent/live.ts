@@ -154,7 +154,7 @@ let dwellTicks = 0;
 const DWELL_MIN = 6; // ~24s minimum dwell
 const DWELL_MAX = 12; // ~48s maximum dwell
 let lastGlobalChatAt = 0;
-const GLOBAL_CHAT_COOLDOWN_MS = 70_000;
+const GLOBAL_CHAT_COOLDOWN_MS = 45_000;
 const GLOBAL_CHAT_FALLBACK_LINES = [
   'Anyone queueing arena right now?',
   'That last pull was outrageous.',
@@ -737,7 +737,7 @@ async function tick(): Promise<void> {
     dwellTicks--;
 
     // Occasionally post global entertaining chatter (not proximity-based).
-    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.08) {
+    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.15) {
       try {
         let msg = GLOBAL_CHAT_FALLBACK_LINES[Math.floor(Math.random() * GLOBAL_CHAT_FALLBACK_LINES.length)];
         if (USE_AI) {
