@@ -6,6 +6,7 @@ interface WorldUIProps {
   nearbyBuilding: string | null;
   onEnterBuilding?: () => void;
   onSelectAgent?: (address: string) => void;
+  onFlyToAgent?: (address: string) => void;
   onlineAgents?: OnlineAgent[];
   events?: EventData[];
   transactions?: TxData[];
@@ -89,7 +90,7 @@ const TX_ICONS: Record<string, string> = {
 };
 
 export function WorldUI({
-  nearbyBuilding, onEnterBuilding, onSelectAgent,
+  nearbyBuilding, onEnterBuilding, onSelectAgent, onFlyToAgent,
   onlineAgents = [], events = [], transactions = [],
   totalBattles: _totalBattles = 0, totalCards: _totalCards = 0,
 }: WorldUIProps) {
@@ -194,7 +195,7 @@ export function WorldUI({
                       return (
                       <button
                         key={agent.address}
-                        onClick={() => onSelectAgent?.(agent.address)}
+                        onClick={() => { onFlyToAgent?.(agent.address); onSelectAgent?.(agent.address); }}
                         className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-2 py-2.5 transition-colors"
                       >
                         <div className="flex items-center gap-2">
@@ -226,7 +227,7 @@ export function WorldUI({
                       const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || shortAddr(e.agent);
                       const badge = activityBadge(e.action);
                       return (
-                        <div key={i} className="px-2 py-1.5 hover:bg-white/5 transition-colors">
+                        <div key={i} className="px-2 py-1.5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => onFlyToAgent?.(e.agent)}>
                           <div className="flex items-start gap-2">
                             <span className="text-sm flex-shrink-0 mt-0.5">{badge.icon}</span>
                             <div className="flex-1 min-w-0">

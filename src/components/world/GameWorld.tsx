@@ -478,6 +478,12 @@ export function GameWorld() {
         totalCards={totalCards}
         transactions={transactions}
         onSelectAgent={handleSelectAgent}
+        onFlyToAgent={(address: string) => {
+          const agent = onlineAgents.find(a => a.address?.toLowerCase() === address.toLowerCase());
+          if (agent?.position) {
+            setCameraFlyTarget(new THREE.Vector3(agent.position.x, 0, agent.position.z));
+          }
+        }}
       />
 
       {selectedAgent && (
