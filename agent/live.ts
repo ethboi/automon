@@ -753,7 +753,7 @@ async function tick(): Promise<void> {
         console.log(`[${ts()}] 💬 ${AGENT_NAME}: "${msg}"`);
         await api('/api/chat', {
           method: 'POST',
-          body: JSON.stringify({ from: ADDRESS, fromName: AGENT_NAME, message: msg, location: target.name }),
+          body: JSON.stringify({ address: ADDRESS, from: ADDRESS, fromName: AGENT_NAME, message: msg, location: target.name }),
         });
         lastGlobalChatAt = Date.now();
       } catch { /* silent */ }

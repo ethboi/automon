@@ -134,10 +134,14 @@ export default function ShopPage() {
 
       {/* Page header */}
       <div className="mb-4 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        <div className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-400/20 rounded-full px-3 py-1 mb-3">
+          <span className="w-2 h-2 rounded-full bg-cyan-300 animate-pulse" />
+          <span className="text-xs font-semibold tracking-wide text-cyan-200 uppercase">Pack Market</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-2 bg-gradient-to-r from-white via-cyan-100 to-blue-200 bg-clip-text text-transparent">
           Card Shop
         </h1>
-        <p className="text-sm sm:text-base text-gray-400">Purchase and open card packs to expand your collection</p>
+        <p className="text-sm sm:text-base lg:text-lg text-gray-300">Purchase and open card packs to expand your collection</p>
       </div>
 
       {/* Error display */}
@@ -153,21 +157,21 @@ export default function ShopPage() {
       )}
 
       {/* Buy pack section */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl mb-4 sm:mb-8">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl mb-4 sm:mb-8 border border-purple-400/20 shadow-[0_20px_60px_rgba(58,8,90,0.45)]">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-violet-800 to-purple-900" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.3),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(6,182,212,0.2),transparent_50%)]" />
 
         <div className="relative p-4 sm:p-8 lg:p-10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-4 sm:gap-4 sm:gap-8">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-8">
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-3 sm:px-4 py-1.5 mb-3 sm:mb-4">
                 <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                 <span className="text-xs sm:text-sm text-white/80 font-medium">Available Now</span>
               </div>
 
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-2 sm:mb-3">
                 Monster Card Pack
               </h2>
               <p className="text-purple-200 mb-4 sm:mb-6 text-sm sm:text-lg">
@@ -209,14 +213,14 @@ export default function ShopPage() {
 
               <div className="text-center">
                 <div className="flex items-baseline justify-center gap-2 mb-3 sm:mb-4">
-                  <span className="text-2xl sm:text-2xl sm:text-4xl font-bold text-white">{ethers.formatEther(PACK_PRICE)}</span>
-                  <span className="text-base sm:text-sm sm:text-xl text-purple-300 font-medium">MON</span>
+                  <span className="text-3xl sm:text-4xl font-black text-white">{ethers.formatEther(PACK_PRICE)}</span>
+                  <span className="text-lg sm:text-xl text-purple-200 font-semibold">MON</span>
                 </div>
 
                 <button
                   onClick={buyPack}
                   disabled={buying}
-                  className="btn-primary px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-lg shadow-lg shadow-cyan-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="flex items-center gap-2">
                     {buying ? (
@@ -242,38 +246,44 @@ export default function ShopPage() {
       {unopenedPacks.length > 0 && (
         <div className="mb-4 sm:mb-8">
           <div className="flex items-center gap-3 mb-4 sm:mb-6">
-            <h2 className="text-xl font-bold text-white">Unopened Packs</h2>
-            <div className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
+            <h2 className="text-2xl font-black text-white">Unopened Packs</h2>
+            <div className="bg-purple-500/20 text-purple-200 px-3 py-1 rounded-full text-sm font-semibold border border-purple-400/20">
               {unopenedPacks.length}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {unopenedPacks.map((pack, index) => (
-              <button
+              <div
                 key={pack.packId}
-                onClick={() => openPack(pack.packId)}
-                className="group relative overflow-hidden rounded-2xl animate-fade-in-up opacity-0"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className="section-card relative overflow-hidden animate-fade-in-up opacity-0 border border-purple-400/20"
+                style={{ animationDelay: `${index * 0.08}s` }}
               >
-                {/* Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-indigo-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-
-                {/* Content */}
-                <div className="relative p-6 text-center">
-                  <div className="text-5xl mb-3 group-hover:scale-110 group-hover:animate-bounce transition-transform duration-300">
-                    🎁
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-700/30 via-indigo-700/20 to-cyan-900/20 pointer-events-none" />
+                <div className="relative">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-2xl shadow-lg shadow-purple-900/40">
+                      🎁
+                    </div>
+                    <span className="text-[11px] uppercase tracking-wide text-purple-200 bg-purple-500/20 border border-purple-400/20 px-2 py-1 rounded-full">
+                      Ready
+                    </span>
                   </div>
-                  <span className="text-white font-medium text-sm opacity-80 group-hover:opacity-100 transition-opacity">
-                    Tap to Open
-                  </span>
+                  <p className="text-sm text-gray-300 mb-1">Pack ID</p>
+                  <p className="font-mono text-sm text-cyan-200 mb-3">
+                    {pack.packId.slice(0, 10)}...{pack.packId.slice(-6)}
+                  </p>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Purchased {new Date(pack.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                  <button
+                    onClick={() => openPack(pack.packId)}
+                    className="btn-primary w-full"
+                  >
+                    Open Pack
+                  </button>
                 </div>
-
-                {/* Hover glow */}
-                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300" />
-                <div className="absolute inset-0 border-2 border-white/0 group-hover:border-white/30 rounded-2xl transition-colors duration-300" />
-              </button>
+              </div>
             ))}
           </div>
         </div>
@@ -283,56 +293,56 @@ export default function ShopPage() {
       {openedPacks.length > 0 && (
         <div className="section-card">
           <div className="flex items-center gap-3 mb-4 sm:mb-6">
-            <h2 className="text-xl font-bold text-white">Opened Packs</h2>
-            <div className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-sm font-medium">
+            <h2 className="text-2xl font-black text-white">Opened Packs</h2>
+            <div className="bg-white/10 border border-white/10 text-gray-200 px-3 py-1 rounded-full text-sm font-semibold">
               {openedPacks.length}
             </div>
           </div>
 
-          <div className="overflow-x-auto -mx-6 sm:-mx-8 px-6 sm:px-8">
-            <table className="w-full min-w-[500px]">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left text-sm font-medium text-gray-400 pb-4">Pack ID</th>
-                  <th className="text-left text-sm font-medium text-gray-400 pb-4">Cards</th>
-                  <th className="text-left text-sm font-medium text-gray-400 pb-4">Opened</th>
-                </tr>
-              </thead>
-              <tbody>
-                {openedPacks.slice(0, 10).map((pack) => (
-                  <tr
-                    key={pack.packId}
-                    className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                  >
-                    <td className="py-4">
-                      <span className="font-mono text-sm text-purple-300 bg-purple-500/10 px-2 py-1 rounded">
-                        {pack.packId.slice(0, 8)}...{pack.packId.slice(-4)}
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      <span className="flex items-center gap-2">
-                        <span className="text-lg">🎴</span>
-                        <span className="text-white">{pack.cards?.length || 5} cards</span>
-                      </span>
-                    </td>
-                    <td className="py-4 text-gray-400 text-sm">
-                      {pack.openedAt
-                        ? new Date(pack.openedAt).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })
-                        : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+            {openedPacks.slice(0, 9).map((pack, index) => (
+              <div
+                key={pack.packId}
+                className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-4 animate-fade-in-up opacity-0"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-400/20 flex items-center justify-center text-lg">
+                    ✅
+                  </div>
+                  <span className="text-[11px] uppercase tracking-wide text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded-full border border-emerald-400/20">
+                    Opened
+                  </span>
+                </div>
+
+                <p className="text-xs text-gray-400 mb-1">Pack</p>
+                <p className="font-mono text-sm text-cyan-200 mb-3">
+                  {pack.packId.slice(0, 10)}...{pack.packId.slice(-6)}
+                </p>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-300">Cards</span>
+                  <span className="text-white font-semibold">{pack.cards?.length || 5}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm mt-2">
+                  <span className="text-gray-300">Opened</span>
+                  <span className="text-white font-medium">
+                    {pack.openedAt
+                      ? new Date(pack.openedAt).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })
+                      : '-'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {openedPacks.length > 10 && (
+          {openedPacks.length > 9 && (
             <div className="text-center mt-6 text-gray-400 text-sm">
-              Showing 10 of {openedPacks.length} opened packs
+              Showing 9 of {openedPacks.length} opened packs
             </div>
           )}
         </div>

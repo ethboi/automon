@@ -268,6 +268,7 @@ export async function sendChat(message: string, location?: string): Promise<void
     await fetchApi('/api/chat', {
       method: 'POST',
       body: JSON.stringify({
+        address: config.agentWalletAddress,
         from: config.agentWalletAddress,
         fromName: config.agentName,
         message: message.trim(),

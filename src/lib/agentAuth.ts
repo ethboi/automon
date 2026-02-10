@@ -22,8 +22,9 @@ export async function getAgentAuth(request: NextRequest): Promise<{ address: str
     // Trust the address from the request body
     try {
       const body = await request.clone().json();
-      if (body.address) {
-        return { address: body.address.toLowerCase() };
+      const claimedAddress = body.address || body.from;
+      if (claimedAddress) {
+        return { address: String(claimedAddress).toLowerCase() };
       }
     } catch {
       // Can't parse body
