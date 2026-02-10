@@ -207,7 +207,7 @@ async function tick(): Promise<void> {
 
   if (dist > 2) {
     // Move toward target
-    const speed = 1.5;
+    const speed = 5;
     posX += (dx / dist) * speed;
     posZ += (dz / dist) * speed;
   } else {
