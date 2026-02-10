@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { wager, txHash, address: bodyAddress } = await request.json();
+    const { wager, txHash, address: bodyAddress, battleId: requestedBattleId } = await request.json();
 
     // Accept address from body (wallet-connected) or agent secret auth
     const agentAuth = await getAgentAuth(request);
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDb();
-    const battleId = uuidv4();
+    const battleId = requestedBattleId || uuidv4();
 
     const battle: Battle = {
       battleId,
