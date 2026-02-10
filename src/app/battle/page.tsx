@@ -23,7 +23,8 @@ export default function BattlePage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
 
   useEffect(() => {
     if (currentBattle && currentBattle.status === 'active') {
@@ -34,10 +35,11 @@ export default function BattlePage() {
   }, [currentBattle]);
 
   const fetchData = async () => {
+    if (!address) return;
     try {
       const [battlesRes, cardsRes] = await Promise.all([
         fetch('/api/battle/list'),
-        fetch('/api/cards'),
+        fetch(`/api/cards?address=${address}`),
       ]);
 
       const battlesData = await battlesRes.json();
