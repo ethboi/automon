@@ -708,8 +708,8 @@ async function tick(): Promise<void> {
     dwellTicks--;
   } else {
 
-    // ~25% chance to buy a pack if we have < 10 cards
-    if (cardCount < 10 && Math.random() < 0.25 && NFT_ADDRESS) {
+    // Only buy packs if balance > 0.2 MON (pack costs 0.1) and < 10 cards
+    if (cardCount < 10 && balance > 0.2 && Math.random() < 0.15 && NFT_ADDRESS) {
       await buyPack();
     }
 
