@@ -5,7 +5,7 @@ import clientPromise from '@/lib/mongodb';
 
 export async function POST(request: NextRequest) {
   try {
-    const { battleId, settleTxHash } = await request.json();
+    const { battleId, settleTxHash, winner, wager } = await request.json();
     if (!battleId || !settleTxHash) {
       return NextResponse.json({ error: 'Missing battleId or settleTxHash' }, { status: 400 });
     }
@@ -17,6 +17,19 @@ export async function POST(request: NextRequest) {
       { battleId },
       { $set: { settleTxHash } }
     );
+
+    // Log to transactions for Chain tab
+    if (winner && wager) {
+      const payout = (Number(wager) * 2 * 0.95).toFixed(4);
+      await db.collection('transactions').insertOne({
+        type: 'battle_settle',
+        txHash: settleTxHash,
+        from: winner,
+        description: `Battle won! ${payout} MON payout`,
+        metadata: { battleId, wager: payout },
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

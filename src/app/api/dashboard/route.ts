@@ -32,7 +32,7 @@ export async function GET() {
 
       db.collection('transactions')
         .find({})
-        .sort({ timestamp: -1 })
+        .sort({ timestamp: -1, createdAt: -1 })
         .limit(20)
         .toArray(),
     ]);
