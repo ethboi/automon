@@ -39,6 +39,13 @@ interface AgentDetails {
     location?: string;
     healthDelta?: number;
   }>;
+  transactions?: Array<{
+    txHash: string;
+    type: string;
+    description: string;
+    amount?: string | null;
+    timestamp: string;
+  }>;
 }
 
 interface AgentProfileModalProps {
@@ -50,7 +57,7 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
   const [details, setDetails] = useState<AgentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'cards' | 'activity'>('cards');
+  const [activeTab, setActiveTab] = useState<'cards' | 'activity' | 'txs'>('cards');
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -242,6 +249,16 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
                 >
                   📝 Activity
                 </button>
+                <button
+                  onClick={() => setActiveTab('txs')}
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    activeTab === 'txs'
+                      ? 'bg-emerald-500/30 text-emerald-300'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                  }`}
+                >
+                  💰 Txs ({details.transactions?.length || 0})
+                </button>
               </div>
             </div>
 
@@ -309,6 +326,54 @@ export default function AgentProfileModal({ address, onClose }: AgentProfileModa
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Transactions Tab */}
+            {activeTab === 'txs' && (
+              <div className="p-3 sm:p-6">
+                {!details.transactions?.length ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-3xl mb-2">💰</div>
+                    <p>No transactions yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {details.transactions.map((tx, i) => {
+                      const icons: Record<string, string> = {
+                        escrow_deposit: '🔒',
+                        battle_join: '⚔️',
+                        battle_won: '🏆',
+                        mint_pack: '🎴',
+                        settlement: '💸',
+                      };
+                      return (
+                        <div key={i} className="glass-light rounded-lg p-2.5 sm:p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm flex-shrink-0">{icons[tx.type] || '📝'}</span>
+                              <span className="text-xs sm:text-sm text-gray-300 truncate">{tx.description}</span>
+                            </div>
+                            <div className="text-right flex-shrink-0 ml-2">
+                              {tx.amount && (
+                                <div className="text-xs font-mono text-emerald-400">{tx.amount} MON</div>
+                              )}
+                              <div className="text-[10px] text-gray-600">{formatTime(tx.timestamp)}</div>
+                            </div>
+                          </div>
+                          <a
+                            href={`https://testnet.monadexplorer.com/tx/${tx.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-purple-500 hover:text-purple-400 font-mono mt-1 block"
+                          >
+                            {tx.txHash.slice(0, 10)}...{tx.txHash.slice(-6)} ↗
+                          </a>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

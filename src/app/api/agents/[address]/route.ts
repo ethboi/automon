@@ -63,6 +63,13 @@ export async function GET(
       .limit(50)
       .toArray();
 
+    // Get transactions
+    const txs = await db.collection('transactions')
+      .find({ from: address.toLowerCase() })
+      .sort({ timestamp: -1 })
+      .limit(30)
+      .toArray();
+
     const cardsCount = cardsData.length;
     const latestAction = actions[0];
     const rawAction = agent.currentAction || latestAction?.action || null;
@@ -117,6 +124,13 @@ export async function GET(
         timestamp: a.timestamp,
         location: a.location,
         healthDelta: a.healthDelta,
+      })),
+      transactions: txs.map(tx => ({
+        txHash: tx.txHash,
+        type: tx.type,
+        description: tx.description,
+        amount: tx.metadata?.wager || tx.metadata?.price || null,
+        timestamp: tx.timestamp,
       })),
     });
   } catch (error) {
