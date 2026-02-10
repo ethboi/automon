@@ -156,9 +156,9 @@ export function WorldUI({
             className="flex items-center gap-2.5 bg-black/70 backdrop-blur-md rounded-full px-5 py-3 border border-white/10 hover:border-purple-500/30 transition-all shadow-xl hover:shadow-purple-500/10 active:scale-95"
           >
             <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm font-medium text-gray-300">{onlineCount} online</span>
+            <span className="text-base font-medium text-gray-300">{onlineCount} online</span>
             <span className="text-gray-600">|</span>
-            <span className="text-sm text-gray-400">📡 ⚔️ ⛓️</span>
+            <span className="text-base text-gray-400">📡 ⚔️ ⛓️</span>
           </button>
         ) : (
           <div className="w-[calc(100vw-24px)] sm:w-[420px] max-h-[70vh] sm:max-h-[75vh] bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in flex flex-col">
@@ -173,13 +173,13 @@ export function WorldUI({
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-xs sm:text-sm font-semibold transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-sm sm:text-base font-semibold transition-colors ${
                     tab === t.id ? 'text-white bg-white/5 border-b-2 border-purple-500' : 'text-gray-600 hover:text-gray-400'
                   }`}
                 >
                   <span>{t.label}</span>
                   {t.count > 0 && (
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                       tab === t.id ? 'bg-purple-500/20 text-purple-300' : 'bg-white/5 text-gray-500'
                     }`}>{t.count}</span>
                   )}
@@ -187,7 +187,7 @@ export function WorldUI({
               ))}
               <button
                 onClick={() => setPanelOpen(false)}
-                className="px-3 py-2.5 text-gray-600 hover:text-gray-400 transition-colors text-xs"
+                className="px-3 py-2.5 text-gray-600 hover:text-gray-400 transition-colors text-sm"
               >✕</button>
             </div>
 
@@ -211,15 +211,15 @@ export function WorldUI({
                       >
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full flex-shrink-0 bg-green-500 shadow-sm shadow-green-500/50" />
-                          <span className="text-sm text-cyan-400 font-semibold">{agent.name}</span>
-                          <span className="text-[10px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">{shortPersonality}</span>
+                          <span className="text-base text-cyan-400 font-semibold">{agent.name}</span>
+                          <span className="text-xs sm:text-sm text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">{shortPersonality}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${activity.cls}`}>
+                          <span className={`text-sm px-2 py-0.5 rounded-full ${activity.cls}`}>
                             {activity.icon} {activity.label}
                           </span>
                           {agent.stats && (
-                            <span className="text-xs text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
+                            <span className="text-sm text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
                           )}
                         </div>
                       </button>
@@ -240,25 +240,25 @@ export function WorldUI({
                       return (
                         <div key={i} className="px-2 py-1.5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => onFlyToAgent?.(e.agent)}>
                           <div className="flex items-start gap-2">
-                            <span className="text-sm flex-shrink-0 mt-0.5">{badge.icon}</span>
+                            <span className="text-base flex-shrink-0 mt-0.5">{badge.icon}</span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-semibold text-cyan-400">{agentName}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${badge.cls}`}>{e.action}</span>
+                                <span className="text-sm font-semibold text-cyan-400">{agentName}</span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full ${badge.cls}`}>{e.action}</span>
                                 {e.healthDelta != null && e.healthDelta !== 0 && (
-                                  <span className={`text-[10px] font-mono ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  <span className={`text-xs font-mono ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                     {e.healthDelta > 0 ? '+' : ''}{e.healthDelta}HP
                                   </span>
                                 )}
-                                <span className="text-[10px] text-gray-600 ml-auto flex-shrink-0">{timeAgo(e.timestamp)}</span>
+                                <span className="text-xs text-gray-600 ml-auto flex-shrink-0">{timeAgo(e.timestamp)}</span>
                               </div>
                               {(e.reasoning || e.reason) && (
-                                <div className="text-[11px] text-gray-400 mt-0.5 leading-tight">
+                                <div className="text-sm text-gray-400 mt-0.5 leading-tight">
                                   💭 {e.reasoning || e.reason}
                                 </div>
                               )}
                               {e.location && (
-                                <div className="text-[10px] text-purple-400/60 mt-0.5">📍 {e.location}</div>
+                                <div className="text-xs text-purple-400/60 mt-0.5">📍 {e.location}</div>
                               )}
                             </div>
                           </div>
@@ -285,23 +285,23 @@ export function WorldUI({
                         <div key={b.id} className="bg-white/[0.02] rounded-lg px-2 py-2 hover:bg-white/[0.04] transition-colors">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-sm">{statusIcon}</span>
-                              <span className={`text-[10px] font-semibold ${statusColor}`}>{b.status.toUpperCase()}</span>
-                              {b.rounds > 0 && <span className="text-[9px] text-gray-600">{b.rounds} rounds</span>}
+                              <span className="text-base">{statusIcon}</span>
+                              <span className={`text-xs font-semibold ${statusColor}`}>{b.status.toUpperCase()}</span>
+                              {b.rounds > 0 && <span className="text-xs text-gray-600">{b.rounds} rounds</span>}
                             </div>
-                            <span className="text-[9px] text-gray-700">{timeAgo(b.createdAt)}</span>
+                            <span className="text-xs text-gray-700">{timeAgo(b.createdAt)}</span>
                           </div>
                           <div className="flex items-center gap-1.5 mt-1">
-                            <span className={`text-xs font-semibold ${b.winner?.toLowerCase() === b.player1?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
-                            <span className="text-[10px] text-gray-600">vs</span>
+                            <span className={`text-sm font-semibold ${b.winner?.toLowerCase() === b.player1?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
+                            <span className="text-xs text-gray-600">vs</span>
                             {p2Name ? (
-                              <span className={`text-xs font-semibold ${b.winner?.toLowerCase() === b.player2?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p2Name}</span>
+                              <span className={`text-sm font-semibold ${b.winner?.toLowerCase() === b.player2?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p2Name}</span>
                             ) : (
-                              <span className="text-[10px] text-gray-500 italic">waiting for opponent...</span>
+                              <span className="text-xs text-gray-500 italic">waiting for opponent...</span>
                             )}
                           </div>
                           {winnerName && (
-                            <div className="text-[10px] text-yellow-400/80 mt-0.5">🏆 {winnerName} wins!</div>
+                            <div className="text-xs text-yellow-400/80 mt-0.5">🏆 {winnerName} wins!</div>
                           )}
                         </div>
                       );
@@ -322,18 +322,18 @@ export function WorldUI({
                         <div key={i} className="bg-white/[0.02] rounded-lg px-2 py-1.5 sm:px-2.5 sm:py-2 hover:bg-white/[0.04] transition-colors">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 sm:gap-1.5">
-                              <span className="text-xs">{TX_ICONS[tx.type] || '📝'}</span>
-                              <span className="text-[10px] sm:text-xs text-gray-300">{tx.description}</span>
+                              <span className="text-sm">{TX_ICONS[tx.type] || '📝'}</span>
+                              <span className="text-xs sm:text-sm text-gray-300">{tx.description}</span>
                             </div>
-                            <span className="text-[9px] text-gray-700">{timeAgo(tx.timestamp)}</span>
+                            <span className="text-xs text-gray-700">{timeAgo(tx.timestamp)}</span>
                           </div>
                           <div className="flex items-center justify-between mt-0.5 sm:mt-1">
-                            <span className="text-[9px] text-cyan-600">{agentName}</span>
+                            <span className="text-xs text-cyan-600">{agentName}</span>
                             <a
                               href={tx.explorerUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[9px] text-purple-500 hover:text-purple-400 font-mono transition-colors"
+                              className="text-xs text-purple-500 hover:text-purple-400 font-mono transition-colors"
                               onClick={e => e.stopPropagation()}
                             >
                               {shortHash(tx.txHash)} ↗
@@ -378,9 +378,9 @@ export function WorldUI({
 
 function Empty({ text, hint }: { text: string; hint?: string }) {
   return (
-    <div className="text-[10px] sm:text-xs text-gray-600 italic py-6 text-center">
+    <div className="text-xs sm:text-sm text-gray-600 italic py-6 text-center">
       {text}
-      {hint && <><br /><code className="text-[9px] bg-white/5 px-1.5 py-0.5 rounded mt-1 inline-block">{hint}</code></>}
+      {hint && <><br /><code className="text-xs bg-white/5 px-1.5 py-0.5 rounded mt-1 inline-block">{hint}</code></>}
     </div>
   );
 }
