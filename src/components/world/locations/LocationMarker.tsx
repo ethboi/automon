@@ -183,17 +183,23 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
         hint={variant === 'building' ? 'Click to enter' : 'Click to inspect'}
       />
 
-      {/* Invisible hitbox for reliable click detection */}
+      {/* Invisible hitbox for click detection */}
       <mesh visible={false}>
-        <boxGeometry args={[10, 12, 10]} />
+        <boxGeometry args={[6, 8, 6]} />
         <meshBasicMaterial />
       </mesh>
 
-      {/* Interaction ring */}
+      {/* Interaction ring — visible border on hover */}
       <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[3.2, hovered ? 4.15 : 3.9, 40]} />
-        <meshBasicMaterial color={color} transparent opacity={hovered ? 0.45 : 0.2} />
+        <ringGeometry args={[hovered ? 3.5 : 3.2, hovered ? 4 : 3.5, 40]} />
+        <meshBasicMaterial color={color} transparent opacity={hovered ? 0.6 : 0.1} />
       </mesh>
+      {hovered && (
+        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[3.9, 4.05, 40]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.5} />
+        </mesh>
+      )}
 
       {variant === 'building' && (
         <>
