@@ -4,6 +4,7 @@ import { getAgentAuth } from '@/lib/agentAuth';
 import { v4 as uuidv4 } from 'uuid';
 import { logTransaction } from '@/lib/transactions';
 import { Battle } from '@/lib/types';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

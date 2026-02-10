@@ -5,6 +5,7 @@ import { getAgentDecision } from '@/lib/agent';
 import { settleBattleOnChain } from '@/lib/blockchain';
 import { Card, Battle, BattleMove, BattleLog } from '@/lib/types';
 import { ObjectId } from 'mongodb';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

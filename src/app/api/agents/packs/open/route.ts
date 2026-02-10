@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+export const dynamic = 'force-dynamic';
 
 import { generatePack } from '@/lib/cards';
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { v4 as uuidv4 } from 'uuid';
 import { logTransaction } from '@/lib/transactions';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

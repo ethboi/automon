@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { getAgentAuth } from '@/lib/agentAuth';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

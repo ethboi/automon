@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { AUTOMONS, RARITY_MULTIPLIERS } from '@/lib/automons';
+export const dynamic = 'force-dynamic';
 
 const RARITY_NAMES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'] as const;
 
