@@ -260,8 +260,8 @@ export function WorldUI({
           {/* Header */}
           <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2">
             <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-purple-300 uppercase tracking-wider">🧠 AI Agent Log</span>
-            <span className="text-[10px] text-gray-500 ml-auto">{onlineCount} active</span>
+            <span className="text-xs font-bold text-purple-300 uppercase tracking-wider">🤖 Agent Trainer Log</span>
+            <span className="text-[10px] text-gray-500 ml-auto font-mono">claude-sonnet-4</span>
           </div>
           {/* Events */}
           <div className="overflow-y-auto" style={{ maxHeight: '220px' }}>
