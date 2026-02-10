@@ -119,7 +119,7 @@ export function Character({
 
     const newPosition = position.clone().add(newVelocity.clone().multiplyScalar(delta));
 
-    const bounds = 18;
+    const bounds = 65;
     newPosition.x = Math.max(-bounds, Math.min(bounds, newPosition.x));
     newPosition.z = Math.max(-bounds, Math.min(bounds, newPosition.z));
 
@@ -148,67 +148,139 @@ export function Character({
 
   return (
     <group ref={groupRef} position={position.toArray()}>
-      {/* Body */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <capsuleGeometry args={[0.6, 1.2, 8, 16]} />
-        <meshStandardMaterial color="#a855f7" roughness={0.4} metalness={0.1} />
+      {/* === Ash-style Human Trainer === */}
+
+      {/* Legs — dark jeans */}
+      <mesh position={[0.2, 0.45, 0]} castShadow>
+        <capsuleGeometry args={[0.14, 0.6, 4, 8]} />
+        <meshStandardMaterial color="#1e3a5f" roughness={0.8} />
+      </mesh>
+      <mesh position={[-0.2, 0.45, 0]} castShadow>
+        <capsuleGeometry args={[0.14, 0.6, 4, 8]} />
+        <meshStandardMaterial color="#1e3a5f" roughness={0.8} />
       </mesh>
 
-      {/* Head */}
-      <mesh position={[0, 2.5, 0]} castShadow>
-        <sphereGeometry args={[0.5, 16, 16]} />
-        <meshStandardMaterial color="#c084fc" roughness={0.4} metalness={0.1} />
+      {/* Shoes */}
+      <mesh position={[0.2, 0.1, 0.05]} castShadow>
+        <boxGeometry args={[0.22, 0.14, 0.32]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.6} />
+      </mesh>
+      <mesh position={[-0.2, 0.1, 0.05]} castShadow>
+        <boxGeometry args={[0.22, 0.14, 0.32]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.6} />
+      </mesh>
+
+      {/* Torso — blue jacket */}
+      <mesh position={[0, 1.25, 0]} castShadow>
+        <capsuleGeometry args={[0.38, 0.7, 8, 16]} />
+        <meshStandardMaterial color="#2563eb" roughness={0.5} />
+      </mesh>
+
+      {/* Jacket collar / white T-shirt peek */}
+      <mesh position={[0, 1.55, 0.2]}>
+        <boxGeometry args={[0.35, 0.12, 0.12]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.7} />
+      </mesh>
+
+      {/* Arms — blue jacket sleeves */}
+      <mesh position={[0.55, 1.3, 0]} rotation={[0, 0, -0.25]} castShadow>
+        <capsuleGeometry args={[0.12, 0.55, 4, 8]} />
+        <meshStandardMaterial color="#2563eb" roughness={0.5} />
+      </mesh>
+      <mesh position={[-0.55, 1.3, 0]} rotation={[0, 0, 0.25]} castShadow>
+        <capsuleGeometry args={[0.12, 0.55, 4, 8]} />
+        <meshStandardMaterial color="#2563eb" roughness={0.5} />
+      </mesh>
+
+      {/* Hands — skin tone */}
+      <mesh position={[0.65, 0.95, 0]}>
+        <sphereGeometry args={[0.1, 8, 8]} />
+        <meshStandardMaterial color="#f5d0a9" roughness={0.6} />
+      </mesh>
+      <mesh position={[-0.65, 0.95, 0]}>
+        <sphereGeometry args={[0.1, 8, 8]} />
+        <meshStandardMaterial color="#f5d0a9" roughness={0.6} />
+      </mesh>
+
+      {/* Head — skin */}
+      <mesh position={[0, 2.1, 0]} castShadow>
+        <sphereGeometry args={[0.38, 16, 16]} />
+        <meshStandardMaterial color="#f5d0a9" roughness={0.5} />
+      </mesh>
+
+      {/* Hair — dark spiky (visible under cap at sides/back) */}
+      <mesh position={[0, 2.05, -0.15]}>
+        <sphereGeometry args={[0.4, 12, 12]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.9} />
+      </mesh>
+      {/* Spiky hair tufts poking out */}
+      <mesh position={[0.25, 2.0, -0.25]} rotation={[0.3, 0.5, 0.3]}>
+        <coneGeometry args={[0.08, 0.25, 4]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.9} />
+      </mesh>
+      <mesh position={[-0.25, 2.0, -0.25]} rotation={[0.3, -0.5, -0.3]}>
+        <coneGeometry args={[0.08, 0.25, 4]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.9} />
       </mesh>
 
       {/* Eyes */}
-      <mesh position={[0.18, 2.55, 0.38]}>
-        <sphereGeometry args={[0.12, 8, 8]} />
+      <mesh position={[0.14, 2.12, 0.3]}>
+        <sphereGeometry args={[0.08, 8, 8]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
-      <mesh position={[-0.18, 2.55, 0.38]}>
-        <sphereGeometry args={[0.12, 8, 8]} />
+      <mesh position={[-0.14, 2.12, 0.3]}>
+        <sphereGeometry args={[0.08, 8, 8]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
-
       {/* Pupils */}
-      <mesh position={[0.18, 2.55, 0.48]}>
-        <sphereGeometry args={[0.06, 8, 8]} />
-        <meshBasicMaterial color="#1f2937" />
+      <mesh position={[0.14, 2.12, 0.37]}>
+        <sphereGeometry args={[0.045, 8, 8]} />
+        <meshBasicMaterial color="#3b1a08" />
       </mesh>
-      <mesh position={[-0.18, 2.55, 0.48]}>
-        <sphereGeometry args={[0.06, 8, 8]} />
-        <meshBasicMaterial color="#1f2937" />
-      </mesh>
-
-      {/* Ears/Horns */}
-      <mesh position={[0.35, 2.9, 0]} castShadow>
-        <coneGeometry args={[0.15, 0.4, 8]} />
-        <meshStandardMaterial color="#7c3aed" />
-      </mesh>
-      <mesh position={[-0.35, 2.9, 0]} castShadow>
-        <coneGeometry args={[0.15, 0.4, 8]} />
-        <meshStandardMaterial color="#7c3aed" />
+      <mesh position={[-0.14, 2.12, 0.37]}>
+        <sphereGeometry args={[0.045, 8, 8]} />
+        <meshBasicMaterial color="#3b1a08" />
       </mesh>
 
-      {/* Arms */}
-      <mesh position={[0.7, 1.3, 0]} rotation={[0, 0, -0.3]} castShadow>
-        <capsuleGeometry args={[0.15, 0.6, 4, 8]} />
-        <meshStandardMaterial color="#a855f7" />
+      {/* Red Cap — brim */}
+      <mesh position={[0, 2.35, 0.15]} rotation={[-0.15, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.42, 0.42, 0.06, 16]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.4} />
       </mesh>
-      <mesh position={[-0.7, 1.3, 0]} rotation={[0, 0, 0.3]} castShadow>
-        <capsuleGeometry args={[0.15, 0.6, 4, 8]} />
-        <meshStandardMaterial color="#a855f7" />
+      {/* Cap dome */}
+      <mesh position={[0, 2.45, -0.02]} castShadow>
+        <sphereGeometry args={[0.38, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.4} />
+      </mesh>
+      {/* Cap front white logo patch */}
+      <mesh position={[0, 2.42, 0.25]}>
+        <circleGeometry args={[0.1, 8]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.5} />
+      </mesh>
+      {/* Cap brim visor (extended forward) */}
+      <mesh position={[0, 2.32, 0.35]} rotation={[-0.3, 0, 0]} castShadow>
+        <boxGeometry args={[0.3, 0.03, 0.25]} />
+        <meshStandardMaterial color="#b91c1c" roughness={0.5} />
       </mesh>
 
-      {/* Glow ring at feet */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
-        <ringGeometry args={[0.5, 0.8, 32]} />
-        <meshBasicMaterial color="#a855f7" transparent opacity={0.4} side={THREE.DoubleSide} />
+      {/* Backpack */}
+      <mesh position={[0, 1.3, -0.35]} castShadow>
+        <boxGeometry args={[0.45, 0.5, 0.25]} />
+        <meshStandardMaterial color="#16a34a" roughness={0.6} />
+      </mesh>
+      {/* Backpack strap hint */}
+      <mesh position={[0.2, 1.5, -0.15]} rotation={[0, 0, -0.1]}>
+        <boxGeometry args={[0.06, 0.3, 0.06]} />
+        <meshStandardMaterial color="#15803d" roughness={0.7} />
+      </mesh>
+      <mesh position={[-0.2, 1.5, -0.15]} rotation={[0, 0, 0.1]}>
+        <boxGeometry args={[0.06, 0.3, 0.06]} />
+        <meshStandardMaterial color="#15803d" roughness={0.7} />
       </mesh>
 
       {/* Shadow */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.7, 16]} />
+        <circleGeometry args={[0.6, 16]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.3} />
       </mesh>
     </group>
