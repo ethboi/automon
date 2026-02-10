@@ -230,11 +230,13 @@ export interface BattleLog {
   battleId: string;
   player1: {
     address: string;
+    name?: string;
     cards: { id: string; name: string; element: Element }[];
     isAI: boolean;
   };
   player2: {
     address: string;
+    name?: string;
     cards: { id: string; name: string; element: Element }[];
     isAI: boolean;
   };

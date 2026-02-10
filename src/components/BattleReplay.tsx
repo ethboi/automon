@@ -127,11 +127,11 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
           <div className="hidden sm:block min-w-0">
             <h2 className="text-lg font-bold truncate">Battle Replay</h2>
             <p className="text-xs text-gray-400 truncate">
-              {battleLog.player1.address.slice(0, 8)}… vs {battleLog.player2.address.slice(0, 8)}…
+              {battleLog.player1.name || battleLog.player1.address.slice(0, 8)} vs {battleLog.player2.name || battleLog.player2.address.slice(0, 8)}
             </p>
           </div>
           <span className="sm:hidden text-xs text-gray-400 font-medium shrink-0">
-            Turn {Math.max(0, currentTurnIndex + 1)}/{battleLog.turns.length}
+            {(battleLog.player1.name || battleLog.player1.address.slice(0, 6))} vs {(battleLog.player2.name || battleLog.player2.address.slice(0, 6))}
           </span>
 
           {/* Playback controls — compact strip */}
@@ -216,8 +216,7 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
               {/* Player 1 */}
               <div className="bg-gray-800/50 rounded-xl p-2.5 sm:p-5">
                 <div className="mb-2 sm:mb-4">
-                  <p className="text-[10px] sm:text-sm text-gray-500">P1</p>
-                  <p className="text-xs sm:text-base font-medium truncate">{battleLog.player1.address.slice(0, 8)}...</p>
+                  <p className="text-xs sm:text-base font-medium truncate">{battleLog.player1.name || battleLog.player1.address.slice(0, 8)}</p>
                 </div>
 
                 <div className="text-center mb-2 sm:mb-4">
@@ -250,8 +249,7 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
               {/* Player 2 */}
               <div className="bg-gray-800/50 rounded-xl p-2.5 sm:p-5">
                 <div className="mb-2 sm:mb-4">
-                  <p className="text-[10px] sm:text-sm text-gray-500">P2</p>
-                  <p className="text-xs sm:text-base font-medium truncate">{battleLog.player2.address.slice(0, 8)}...</p>
+                  <p className="text-xs sm:text-base font-medium truncate">{battleLog.player2.name || battleLog.player2.address.slice(0, 8)}</p>
                 </div>
 
                 <div className="text-center mb-2 sm:mb-4">
@@ -302,7 +300,7 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
               <div className="inline-block bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl p-4 sm:p-8">
                 <h2 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2">🏆 Battle Complete!</h2>
                 <p className="text-sm sm:text-xl">
-                  Winner: {battleLog.winner.slice(0, 10)}...
+                  Winner: {battleLog.winner === battleLog.player1.address ? (battleLog.player1.name || battleLog.winner.slice(0, 10)) : battleLog.winner === battleLog.player2.address ? (battleLog.player2.name || battleLog.winner.slice(0, 10)) : battleLog.winner}
                 </p>
                 <div className="mt-2 sm:mt-4 grid grid-cols-2 gap-4 sm:gap-8 text-xs sm:text-sm">
                   <div>
