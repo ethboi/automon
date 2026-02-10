@@ -119,6 +119,40 @@ export function getEscrowContract() {
   return new ethers.Contract(contractAddress, abi, provider);
 }
 
+export function getNFTContract() {
+  if (!window.ethereum) {
+    throw new Error('No wallet found');
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const contractAddress = process.env.NEXT_PUBLIC_AUTOMON_NFT_ADDRESS;
+
+  if (!contractAddress) {
+    throw new Error('NEXT_PUBLIC_AUTOMON_NFT_ADDRESS not configured');
+  }
+
+  const abi = [
+    'function buyPack() external payable',
+  ];
+
+  return new ethers.Contract(contractAddress, abi, provider);
+}
+
+export async function buyPackOnChain(packPriceWei: string): Promise<string> {
+  if (!window.ethereum) {
+    throw new Error('No wallet found');
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  const contract = getNFTContract().connect(signer) as ethers.Contract;
+  const value = packPriceWei.includes('.') ? ethers.parseEther(packPriceWei) : BigInt(packPriceWei);
+
+  const tx = await contract.buyPack({ value });
+  const receipt = await tx.wait();
+  return receipt.hash;
+}
+
 export async function createBattleOnChain(battleId: string, wager: string): Promise<string> {
   if (!window.ethereum) {
     throw new Error('No wallet found');

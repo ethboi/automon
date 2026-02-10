@@ -5,6 +5,7 @@ import { useWallet } from '@/context/WalletContext';
 import { Card as CardType, Pack } from '@/lib/types';
 import PackOpening from '@/components/PackOpening';
 import { ethers } from 'ethers';
+import { buyPackOnChain } from '@/lib/wallet';
 
 const PACK_PRICE = process.env.NEXT_PUBLIC_PACK_PRICE || '100000000000000000'; // 0.1 MON
 
@@ -42,7 +43,7 @@ export default function ShopPage() {
     setBuying(true);
     
     try {
-      const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+      const txHash = await buyPackOnChain(PACK_PRICE);
 
       const res = await fetch('/api/packs/buy', {
         method: 'POST',

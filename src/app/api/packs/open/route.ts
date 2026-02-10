@@ -4,12 +4,10 @@ import { ethers } from 'ethers';
 import { AUTOMONS, RARITY_MULTIPLIERS } from '@/lib/automons';
 import { Rarity, Card } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { generatePack } from '@/lib/cards';
 export const dynamic = 'force-dynamic';
 
 const NFT_ABI = [
   'function getCard(uint256 tokenId) view returns (uint8 automonId, uint8 rarity)',
-  'function getCardsOf(address owner) view returns (uint256[])',
 ];
 
 const RARITY_NAMES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -58,87 +56,93 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ cards, alreadyOpened: true });
     }
 
-    const newCards: Card[] = [];
     const contractAddress = process.env.AUTOMON_NFT_ADDRESS;
     const rpcUrl = process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz';
-
-    // Best effort: sync missing cards from chain if configured.
-    if (contractAddress) {
-      try {
-        const provider = new ethers.JsonRpcProvider(rpcUrl);
-        const contract = new ethers.Contract(contractAddress, NFT_ABI, provider);
-        const tokenIds: bigint[] = await contract.getCardsOf(address);
-
-        for (const tokenId of tokenIds) {
-          const tid = Number(tokenId);
-          const existing = await db.collection('cards').findOne({ tokenId: tid });
-          if (existing) continue;
-
-          const [automonId, rarityIndex] = await contract.getCard(tid);
-          const automonIdNum = Number(automonId);
-          const rarityNum = Number(rarityIndex);
-          const automon = AUTOMONS.find(a => a.id === automonIdNum);
-          if (!automon) continue;
-
-          const rarity = RARITY_NAMES[rarityNum] || 'common';
-          const multiplier = RARITY_MULTIPLIERS[rarity];
-          const hp = Math.floor(automon.baseHp * multiplier);
-          const abilityDef = ABILITY_DEFINITIONS[automon.ability] || {
-            effect: 'damage' as const, power: 30, cooldown: 3,
-            description: `${automon.name}'s special ability`,
-          };
-
-          const card: Card = {
-            id: uuidv4(),
-            tokenId: tid,
-            automonId: automonIdNum,
-            owner,
-            name: automon.name,
-            element: automon.element,
-            rarity,
-            stats: {
-              attack: Math.floor(automon.baseAttack * multiplier),
-              defense: Math.floor(automon.baseDefense * multiplier),
-              speed: Math.floor(automon.baseSpeed * multiplier),
-              hp,
-              maxHp: hp,
-            },
-            ability: {
-              name: automon.ability,
-              effect: abilityDef.effect,
-              power: Math.floor(abilityDef.power * multiplier),
-              cooldown: abilityDef.cooldown,
-              description: abilityDef.description,
-              currentCooldown: 0,
-            },
-            level: 1,
-            xp: 0,
-            packId,
-            createdAt: new Date(),
-          };
-
-          await db.collection('cards').insertOne(card);
-          newCards.push(card);
-        }
-      } catch (syncError) {
-        console.warn('On-chain card sync failed, falling back to generated cards:', syncError);
-      }
+    if (!contractAddress) {
+      return NextResponse.json({ error: 'NFT contract not configured' }, { status: 500 });
     }
 
-    // Fallback for local/dev and partial chain config: generate cards to ensure pack can open.
-    if (newCards.length === 0) {
-      const generatedCards = generatePack(owner, packId);
-      await db.collection('cards').insertMany(generatedCards);
-      newCards.push(...generatedCards);
+    const tokenIds = Array.isArray(pack.onchainTokenIds)
+      ? (pack.onchainTokenIds as number[])
+      : [];
+    if (tokenIds.length === 0) {
+      return NextResponse.json({ error: 'Pack has no verified on-chain token IDs' }, { status: 400 });
+    }
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const contract = new ethers.Contract(contractAddress, NFT_ABI, provider);
+    const newCards: Card[] = [];
+    const cardIds: string[] = [];
+
+    for (const tid of tokenIds) {
+      const existing = await db.collection('cards').findOne({ tokenId: tid, owner });
+      if (existing) {
+        const existingId = typeof existing.id === 'string' ? existing.id : String(existing._id);
+        cardIds.push(existingId);
+        continue;
+      }
+
+      const [automonId, rarityIndex] = await contract.getCard(BigInt(tid));
+      const automonIdNum = Number(automonId);
+      const rarityNum = Number(rarityIndex);
+      const automon = AUTOMONS.find(a => a.id === automonIdNum);
+      if (!automon) {
+        throw new Error(`Unknown automonId for token ${tid}`);
+      }
+
+      const rarity = RARITY_NAMES[rarityNum] || 'common';
+      const multiplier = RARITY_MULTIPLIERS[rarity];
+      const hp = Math.floor(automon.baseHp * multiplier);
+      const abilityDef = ABILITY_DEFINITIONS[automon.ability] || {
+        effect: 'damage' as const, power: 30, cooldown: 3,
+        description: `${automon.name}'s special ability`,
+      };
+
+      const card: Card = {
+        id: uuidv4(),
+        tokenId: tid,
+        automonId: automonIdNum,
+        owner,
+        name: automon.name,
+        element: automon.element,
+        rarity,
+        stats: {
+          attack: Math.floor(automon.baseAttack * multiplier),
+          defense: Math.floor(automon.baseDefense * multiplier),
+          speed: Math.floor(automon.baseSpeed * multiplier),
+          hp,
+          maxHp: hp,
+        },
+        ability: {
+          name: automon.ability,
+          effect: abilityDef.effect,
+          power: Math.floor(abilityDef.power * multiplier),
+          cooldown: abilityDef.cooldown,
+          description: abilityDef.description,
+          currentCooldown: 0,
+        },
+        level: 1,
+        xp: 0,
+        packId,
+        createdAt: new Date(),
+      };
+
+      await db.collection('cards').insertOne(card);
+      newCards.push(card);
+      cardIds.push(card.id!);
     }
 
     // Mark pack as opened
     await db.collection('packs').updateOne(
       { packId },
-      { $set: { opened: true, cards: newCards.map(c => c.id), openedAt: new Date() } }
+      { $set: { opened: true, cards: cardIds, openedAt: new Date() } }
     );
 
-    return NextResponse.json({ cards: newCards });
+    const cards = newCards.length > 0
+      ? newCards
+      : await db.collection('cards').find({ packId, owner }).toArray();
+
+    return NextResponse.json({ cards });
   } catch (error) {
     console.error('Open pack error:', error);
     const msg = error instanceof Error ? error.message : String(error);
