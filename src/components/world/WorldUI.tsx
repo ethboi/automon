@@ -195,21 +195,21 @@ export function WorldUI({
                       <button
                         key={agent.address}
                         onClick={() => onSelectAgent?.(agent.address)}
-                        className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-1.5 py-1.5 sm:px-2 sm:py-2 transition-colors"
+                        className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg px-2 py-2.5 transition-colors"
                       >
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${agent.online ? 'bg-green-500 shadow-sm shadow-green-500/50' : 'bg-gray-700'}`} />
-                          <span className="text-xs sm:text-sm text-cyan-400 font-medium">{agent.name}</span>
-                          <span className="text-[9px] text-gray-600">{agent.personality}</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${agent.online ? 'bg-green-500 shadow-sm shadow-green-500/50' : 'bg-gray-700'}`} />
+                          <span className="text-sm text-cyan-400 font-semibold">{agent.name}</span>
+                          <span className="text-xs text-gray-600">{agent.personality}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${activity.cls}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${activity.cls}`}>
                             {activity.icon} {activity.label}
                           </span>
                           {agent.stats && (
-                            <span className="text-[9px] text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
+                            <span className="text-xs text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
                           )}
-                          <span className="text-[9px] text-gray-700">{shortAddr(agent.address)}</span>
+                          <span className="text-xs text-gray-700">{shortAddr(agent.address)}</span>
                         </div>
                       </button>
                     )})}
@@ -222,20 +222,22 @@ export function WorldUI({
                 events.length === 0 ? (
                   <Empty text="Waiting for activity…" />
                 ) : (
-                  <div className="space-y-0.5">
+                  <div className="space-y-1.5">
                     {events.slice(0, 25).map((e, i) => {
                       const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || shortAddr(e.agent);
                       return (
-                        <div key={i} className="text-[10px] sm:text-xs leading-snug sm:leading-relaxed py-0.5">
-                          <span className="text-gray-700 mr-1">{timeAgo(e.timestamp)}</span>
-                          <span className="text-cyan-500 font-medium">{agentName}</span>
-                          <span className="text-gray-500"> {e.action}</span>
-                          {e.location && <span className="text-gray-700"> @ {e.location}</span>}
+                        <div key={i} className="text-sm leading-relaxed py-1 border-b border-white/5 last:border-0">
+                          <div>
+                            <span className="text-gray-500 mr-2 text-xs">{timeAgo(e.timestamp)}</span>
+                            <span className="text-cyan-400 font-semibold">{agentName}</span>
+                            <span className="text-gray-300"> {e.action}</span>
+                            {e.location && <span className="text-gray-500"> @ {e.location}</span>}
+                          </div>
                           {(e.reasoning || e.reason) && (
-                            <div className="text-gray-600 italic pl-2 sm:pl-3 truncate" title={e.reasoning || e.reason}>
+                            <div className="text-gray-500 italic pl-4 text-sm truncate" title={e.reasoning || e.reason}>
                               💭 {e.reasoning || e.reason}
                               {e.healthDelta != null && e.healthDelta !== 0 && (
-                                <span className={`ml-1 font-mono text-[10px] ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                <span className={`ml-1.5 font-mono text-xs ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                   ({e.healthDelta > 0 ? '+' : ''}{e.healthDelta} HP)
                                 </span>
                               )}
