@@ -48,29 +48,44 @@ export const WORLD_LOCATIONS = {
 };
 
 const INTERACTION_DISTANCE = 5;
+type CameraMode = 'isometric' | 'shoulder';
 
-function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
+function CameraController({
+  flyTarget,
+  cameraMode,
+  playerPositionRef,
+  moveTarget,
+}: {
+  flyTarget: THREE.Vector3 | null;
+  cameraMode: CameraMode;
+  playerPositionRef: React.MutableRefObject<THREE.Vector3 | null>;
+  moveTarget: THREE.Vector3 | null;
+}) {
   const { camera, size } = useThree();
   const controlsRef = useRef<any>(null);
   const flyingRef = useRef(false);
   const targetPos = useRef(new THREE.Vector3());
   const targetLookAt = useRef(new THREE.Vector3());
   const currentLookAt = useRef(new THREE.Vector3(0, 0, -5));
+  const shoulderForward = useRef(new THREE.Vector3(0, 0, -1));
 
   useEffect(() => {
-    const isMobile = size.width < 768;
-    if (isMobile) {
-      camera.position.set(0, 50, 40);
-    } else {
-      camera.position.set(0, 40, 45);
+    if (cameraMode === 'isometric') {
+      const isMobile = size.width < 768;
+      if (isMobile) {
+        camera.position.set(0, 50, 40);
+      } else {
+        camera.position.set(0, 40, 45);
+      }
+      currentLookAt.current.set(0, 0, -5);
+      camera.lookAt(0, 0, -5);
     }
-    currentLookAt.current.set(0, 0, -5);
-    camera.lookAt(0, 0, -5);
     camera.updateProjectionMatrix();
-  }, [camera, size.width]);
+  }, [camera, size.width, cameraMode]);
 
   // Start fly-to when target changes
   useEffect(() => {
+    if (cameraMode !== 'isometric') return;
     if (!flyTarget) return;
     const isMobile = size.width < 768;
     const height = isMobile ? 35 : 30;
@@ -78,9 +93,49 @@ function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
     targetPos.current.set(flyTarget.x, height, flyTarget.z + offsetZ);
     targetLookAt.current.copy(flyTarget);
     flyingRef.current = true;
-  }, [flyTarget, size.width]);
+  }, [flyTarget, size.width, cameraMode]);
 
   useFrame(() => {
+    if (cameraMode === 'shoulder') {
+      flyingRef.current = false;
+      const playerPos = playerPositionRef.current;
+      if (!playerPos) return;
+
+      if (moveTarget) {
+        const toTarget = new THREE.Vector3().subVectors(moveTarget, playerPos);
+        if (toTarget.lengthSq() > 0.25) {
+          toTarget.y = 0;
+          toTarget.normalize();
+          shoulderForward.current.lerp(toTarget, 0.12);
+        }
+      }
+
+      const isMobile = size.width < 768;
+      const shoulderDistance = isMobile ? 5.8 : 7.4;
+      const shoulderHeight = isMobile ? 2.6 : 3.2;
+      const lookAhead = isMobile ? 3.4 : 4.8;
+      const sideOffset = isMobile ? 0.7 : 1.1;
+
+      const right = new THREE.Vector3()
+        .crossVectors(shoulderForward.current, new THREE.Vector3(0, 1, 0))
+        .normalize();
+
+      const desiredCameraPos = new THREE.Vector3()
+        .copy(playerPos)
+        .addScaledVector(shoulderForward.current, -shoulderDistance)
+        .addScaledVector(right, sideOffset)
+        .add(new THREE.Vector3(0, shoulderHeight, 0));
+      const desiredLookAt = new THREE.Vector3()
+        .copy(playerPos)
+        .addScaledVector(shoulderForward.current, lookAhead)
+        .add(new THREE.Vector3(0, 1.4, 0));
+
+      camera.position.lerp(desiredCameraPos, 0.1);
+      currentLookAt.current.lerp(desiredLookAt, 0.12);
+      camera.lookAt(currentLookAt.current);
+      return;
+    }
+
     if (!flyingRef.current) return;
 
     // Smoothly lerp camera position
@@ -102,9 +157,10 @@ function CameraController({ flyTarget }: { flyTarget: THREE.Vector3 | null }) {
   return (
     <MapControls
       ref={controlsRef}
-      enableRotate={true}
-      enablePan={true}
-      enableZoom={true}
+      enabled={cameraMode === 'isometric'}
+      enableRotate={cameraMode === 'isometric'}
+      enablePan={cameraMode === 'isometric'}
+      enableZoom={cameraMode === 'isometric'}
       minDistance={15}
       maxDistance={100}
       maxPolarAngle={Math.PI / 2.5}
@@ -489,7 +545,7 @@ function Roads() {
           <meshStandardMaterial color="#d4a574" roughness={0.85} />
         </mesh>
         {/* Roof */}
-        <mesh position={[0, 2.8, 0]} castShadow rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[0, 3.1, 0]} castShadow rotation={[0, Math.PI / 2, 0]}>
           <coneGeometry args={[3.2, 1.8, 4]} />
           <meshStandardMaterial color="#8B4513" roughness={0.9} />
         </mesh>
@@ -506,7 +562,7 @@ function Roads() {
           </mesh>
         ))}
         {/* Chimney */}
-        <mesh position={[1.4, 3.2, -0.5]} castShadow>
+        <mesh position={[1.4, 3.45, -0.5]} castShadow>
           <boxGeometry args={[0.5, 1.2, 0.5]} />
           <meshStandardMaterial color="#6b5b45" roughness={0.9} />
         </mesh>
