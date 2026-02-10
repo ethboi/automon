@@ -107,6 +107,9 @@ export default function Header() {
                   MON
                 </span>
               </div>
+              <div className="hidden lg:block text-xs font-semibold tracking-[0.16em] uppercase text-cyan-300/80">
+                gotta mint em all
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
