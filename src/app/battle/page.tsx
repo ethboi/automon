@@ -147,6 +147,11 @@ export default function BattlePage() {
         setView('replay');
       } else if (data.battle.status === 'active') {
         setView('battle');
+      } else {
+        // Cards selected, waiting for opponent — go back to list
+        setCurrentBattle(data.battle);
+        setSelectedCards([]);
+        setView('list');
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
