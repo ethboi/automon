@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
 import { initializeBattleCard, simulateAIBattle } from '@/lib/battle';
 import { getAgentDecision } from '@/lib/agent';
 import { settleBattleOnChain } from '@/lib/blockchain';
@@ -9,13 +8,11 @@ import { ObjectId } from 'mongodb';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const { battleId, cardIds, address } = await request.json();
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!address) {
+      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
     }
-
-    const { battleId, cardIds } = await request.json();
 
     if (!battleId || !cardIds || !Array.isArray(cardIds) || cardIds.length !== 3) {
       return NextResponse.json({ error: 'Battle ID and exactly 3 card IDs required' }, { status: 400 });
@@ -28,7 +25,7 @@ export async function POST(request: NextRequest) {
       .collection('cards')
       .find({
         _id: { $in: cardIds.map((id: string) => new ObjectId(id)) },
-        owner: session.address.toLowerCase(),
+        owner: address.toLowerCase(),
       })
       .toArray();
 
@@ -47,8 +44,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot select cards at this time' }, { status: 400 });
     }
 
-    const isPlayer1 = battle.player1.address.toLowerCase() === session.address.toLowerCase();
-    const isPlayer2 = battle.player2?.address.toLowerCase() === session.address.toLowerCase();
+    const isPlayer1 = battle.player1.address.toLowerCase() === address.toLowerCase();
+    const isPlayer2 = battle.player2?.address.toLowerCase() === address.toLowerCase();
 
     if (!isPlayer1 && !isPlayer2) {
       return NextResponse.json({ error: 'Not a participant in this battle' }, { status: 403 });
