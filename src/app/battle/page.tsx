@@ -288,11 +288,11 @@ export default function BattlePage() {
   if (view === 'select-cards') {
     return (
       <div className="page-container page-transition">
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
             Select Your Team
           </h1>
-          <p className="text-gray-400">Choose 3 cards for battle</p>
+          <p className="text-sm sm:text-base text-gray-400">Choose 3 cards for battle</p>
         </div>
 
         {error && (
@@ -307,14 +307,14 @@ export default function BattlePage() {
         )}
 
         {/* Selected cards preview */}
-        <div className="section-card mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Your Team</h3>
+        <div className="section-card mb-4 sm:mb-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="text-sm sm:text-lg font-semibold text-white">Your Team</h3>
             <span className={`text-sm font-medium ${selectedCards.length === 3 ? 'text-emerald-400' : 'text-gray-400'}`}>
               {selectedCards.length}/3 selected
             </span>
           </div>
-          <div className="flex gap-4 min-h-[80px] items-center">
+          <div className="flex gap-2 sm:gap-4 min-h-[60px] sm:min-h-[80px] items-center">
             {[0, 1, 2].map((slot) => {
               const cardId = selectedCards[slot];
               const card = cardId ? myCards.find(c => (c._id?.toString() || c.id) === cardId) : null;
@@ -337,7 +337,7 @@ export default function BattlePage() {
         </div>
 
         {/* Cards grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-8">
           {myCards.map((card, index) => (
             <div
               key={card._id?.toString() || card.id}
@@ -396,11 +396,11 @@ export default function BattlePage() {
           <span>Back</span>
         </button>
 
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
             Create Battle
           </h1>
-          <p className="text-gray-400">Set your wager and challenge other players</p>
+          <p className="text-sm sm:text-base text-gray-400">Set your wager and challenge other players</p>
         </div>
 
         {error && (
@@ -477,12 +477,12 @@ export default function BattlePage() {
   // Battle list view
   return (
     <div className="page-container page-transition">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-8">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
             Battle Arena
           </h1>
-          <p className="text-gray-400">Challenge players and win rewards</p>
+          <p className="text-sm sm:text-base text-gray-400">Challenge players and win rewards</p>
         </div>
         <button
           onClick={() => setView('create')}
@@ -507,8 +507,8 @@ export default function BattlePage() {
       )}
 
       {/* Open battles */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="mb-4 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <h2 className="text-xl font-bold text-white">Open Battles</h2>
           {openBattles.length > 0 && (
             <div className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-sm font-medium animate-pulse">
@@ -524,24 +524,24 @@ export default function BattlePage() {
             <p className="text-gray-400">Create one or wait for other players!</p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-2 sm:gap-4">
             {openBattles.map((battle, index) => (
               <div
                 key={battle.battleId}
-                className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in-up opacity-0"
+                className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 animate-fade-in-up opacity-0"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-xl">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-lg sm:text-xl flex-shrink-0">
                     👤
                   </div>
                   <div>
-                    <p className="font-medium text-white">
+                    <p className="text-sm sm:text-base font-medium text-white font-mono">
                       {battle.player1.address.slice(0, 6)}...{battle.player1.address.slice(-4)}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-yellow-400">💰</span>
-                      <span className="text-sm text-gray-400">Wager: <span className="text-white font-medium">{battle.wager} MON</span></span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
+                      <span className="text-yellow-400 text-sm">💰</span>
+                      <span className="text-xs sm:text-sm text-gray-400">Wager: <span className="text-white font-medium">{battle.wager} MON</span></span>
                     </div>
                   </div>
                 </div>
@@ -559,8 +559,8 @@ export default function BattlePage() {
       </div>
 
       {/* All recent battles */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="mb-4 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <h2 className="text-xl font-bold text-white">Recent Battles</h2>
           {allBattles.length > 0 && (
             <div className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-sm font-medium">
@@ -657,7 +657,7 @@ export default function BattlePage() {
 
       {/* My battles */}
       <div>
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <h2 className="text-xl font-bold text-white">My Battles</h2>
           {myBattles.length > 0 && (
             <div className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-sm font-medium">
@@ -673,7 +673,7 @@ export default function BattlePage() {
             <p className="text-gray-400">Create or join a battle to get started!</p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-2 sm:gap-4">
             {myBattles.map((battle, index) => {
               const isMyBattle = battle.player1.address.toLowerCase() === address?.toLowerCase();
               const opponent = isMyBattle ? battle.player2 : battle.player1;
@@ -693,25 +693,25 @@ export default function BattlePage() {
               return (
                 <div
                   key={battle.battleId}
-                  className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in-up opacity-0"
+                  className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 animate-fade-in-up opacity-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${status.bg}`}>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-lg sm:text-xl flex-shrink-0 ${status.bg}`}>
                       {battle.status === 'complete' ? (isWinner ? '🏆' : '💀') : battle.status === 'active' ? '⚔️' : '⏳'}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`${status.bg} ${status.text} px-2 py-0.5 rounded text-xs font-medium`}>
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <span className={`${status.bg} ${status.text} px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium`}>
                           {status.label}
                         </span>
-                        <span className="text-sm text-gray-400">
+                        <span className="text-xs sm:text-sm text-gray-400">
                           vs {opponent ? `${opponent.address.slice(0, 6)}...${opponent.address.slice(-4)}` : 'Waiting...'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-yellow-400">💰</span>
-                        <span className="text-sm text-gray-400">Wager: <span className="text-white font-medium">{battle.wager} MON</span></span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
+                        <span className="text-yellow-400 text-sm">💰</span>
+                        <span className="text-xs sm:text-sm text-gray-400">Wager: <span className="text-white font-medium">{battle.wager} MON</span></span>
                       </div>
                     </div>
                   </div>
