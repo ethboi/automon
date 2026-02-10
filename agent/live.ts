@@ -142,6 +142,8 @@ let isRunning = true;
 let agentHealth = 100;
 let agentMaxHealth = 100;
 const recentActions: string[] = [];
+let lastBattleTime = 0;
+const BATTLE_COOLDOWN_MS = 3 * 60 * 1000; // 3 min cooldown between battles
 const AI_PERSONALITY = process.env.AI_PERSONALITY || 'Curious explorer who loves discovering new areas and collecting rare cards';
 const USE_AI = !!process.env.ANTHROPIC_API_KEY;
 // Pending action to perform on arrival
@@ -502,6 +504,7 @@ async function tryJoinBattle(): Promise<boolean> {
       if (data.simulationComplete) {
         const result = data.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
         console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+        lastBattleTime = Date.now();
         await trySettleBattle(openBattle.battleId, data.winner);
         await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena');
       } else {
@@ -608,6 +611,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
           if (data.battle?.status === 'complete') {
             const result = data.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
             console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+        lastBattleTime = Date.now();
             await trySettleBattle(battleId, data.battle.winner);
             await logAction('battling', `Battle ${result}!`, 'Town Arena');
             return;
@@ -622,6 +626,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
               if (finalData.battle?.status === 'complete') {
                 const result = finalData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
                 console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+        lastBattleTime = Date.now();
                 await trySettleBattle(battleId, finalData.battle.winner);
                 await logAction('battling', `Battle ${result}!`, 'Town Arena');
               }
@@ -635,6 +640,7 @@ async function createAndWaitForBattle(aiWager?: string): Promise<void> {
     }
     console.log(`[${ts()}]   ⏰ No opponent joined after 5 min — moving on`);
     await logAction('battling', 'Battle expired — no opponent joined', 'Town Arena');
+    lastBattleTime = Date.now();
   } catch (err) {
     console.error(`[${ts()}] Create battle error:`, (err as Error).message?.slice(0, 80));
   }
@@ -676,6 +682,17 @@ async function tick(): Promise<void> {
 
     // If battling at arena, try joining first, then create
     if (pendingAction.action === 'battling' && target.name === 'Town Arena' && cardCount >= 3) {
+      const sinceLastBattle = Date.now() - lastBattleTime;
+      if (sinceLastBattle < BATTLE_COOLDOWN_MS) {
+        const waitSec = Math.ceil((BATTLE_COOLDOWN_MS - sinceLastBattle) / 1000);
+        console.log(`[${ts()}] ⏳ Battle cooldown — ${waitSec}s remaining, resting instead`);
+        await logAction('resting', `Cooling down after battle (${waitSec}s left)`, target.name);
+        recentActions.push(`resting@${target.name}`);
+        if (recentActions.length > 10) recentActions.shift();
+        pendingAction = null;
+        dwellTicks = Math.min(waitSec / 4, DWELL_MAX);
+        return;
+      }
       const battleWager = pendingAction.wager;
       await logAction(pendingAction.action, pendingAction.reason, target.name);
       recentActions.push(`${pendingAction.action}@${target.name}`);
