@@ -16,9 +16,11 @@ interface AICharacterProps {
 const SPEED = 6;
 
 function getActivityIndicator(activity?: string | null): { label: string; color: string } {
-  const value = (activity || '').toLowerCase();
-  if (value === 'came online') return { label: 'wandering', color: 'text-cyan-300 border-cyan-500/60' };
-  if (!value) return { label: 'idle', color: 'text-gray-300 border-gray-500/60' };
+  const raw = (activity || '').toLowerCase();
+  if (raw === 'came online') return { label: 'wandering', color: 'text-cyan-300 border-cyan-500/60' };
+  if (!raw) return { label: 'idle', color: 'text-gray-300 border-gray-500/60' };
+  // Strip " at <Location>" to avoid location names triggering wrong keywords
+  const value = raw.replace(/\s+at\s+.+$/, '');
   if (value.includes('battle') || value.includes('arena') || value.includes('duel')) {
     return { label: 'battling', color: 'text-red-300 border-red-500/60' };
   }
@@ -28,16 +30,20 @@ function getActivityIndicator(activity?: string | null): { label: string; color:
   if (value.includes('train')) {
     return { label: 'training', color: 'text-orange-300 border-orange-500/60' };
   }
-  if (value.includes('trade') || value.includes('shop') || value.includes('market')) {
+  if (value.includes('trade') || value.includes('shop') || value.includes('market') || value.includes('buy') || value.includes('sell')) {
     return { label: 'trading', color: 'text-yellow-300 border-yellow-500/60' };
   }
   if (value.includes('rest') || value.includes('heal') || value.includes('sleep')) {
     return { label: 'resting', color: 'text-lime-300 border-lime-500/60' };
   }
-  if (value.includes('move') || value.includes('wander') || value.includes('explor') || value.includes('walk')) {
-    return { label: 'wandering', color: 'text-cyan-300 border-cyan-500/60' };
+  if (value.includes('explor')) {
+    return { label: 'exploring', color: 'text-emerald-300 border-emerald-500/60' };
   }
-  return { label: activity || 'active', color: 'text-purple-200 border-purple-500/60' };
+  if (value.includes('heading') || value.includes('walking') || value.includes('wander') || value.includes('move')) {
+    return { label: 'walking', color: 'text-cyan-300 border-cyan-500/60' };
+  }
+  // Show the raw activity (truncated) as-is
+  return { label: raw.split(' at ')[0] || 'active', color: 'text-purple-200 border-purple-500/60' };
 }
 
 export function AICharacter({ address, name, targetPosition, activity, onClick }: AICharacterProps) {
