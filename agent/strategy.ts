@@ -487,7 +487,7 @@ interface LocationDecision {
 const LOCATION_INFO: Record<string, string> = {
   'Home': 'Home base. Safe area for resting and planning.',
   'Town Arena': 'Battle arena. Create or join battles here.',
-  'Town Market': 'Trading post. Buy/sell items and check prices.',
+  'Shop': 'Trading post. Buy/sell items and check prices.',
   'Community Farm': 'Grow crops. Farming here restores health (+17 HP).',
   'Old Pond': 'Fishing spot. Catching fish restores the most health (+20 HP).',
   'Dark Forest': 'Dangerous territory. Rare spawns but risky.',
@@ -543,7 +543,7 @@ ${locationList}
 ## LOCATION-SPECIFIC ACTIONS (use ONLY matching actions per location)
 - Home: resting, exploring
 - Town Arena: battling, training
-- Town Market: trading, shopping (buy card packs for 0.1 MON)
+- Shop: trading, shopping (buy card packs for 0.1 MON)
 - Community Farm: farming, foraging
 - Old Pond: fishing
 - Dark Forest: exploring, catching, foraging
@@ -554,7 +554,7 @@ ${locationList}
 - Between battles: explore, fish, farm, forage — enjoy the world!
 - When you DO battle, make it count — pick your best cards and a smart wager.
 - Below 30 HP: heal first (farm or fish), then get back to battling
-- If no cards or only common cards with low stats: go to Town Market to buy a pack (0.1 MON) to get stronger cards, then battle
+- If no cards or only common cards with low stats: go to Shop to buy a pack (0.1 MON) to get stronger cards, then battle
 - If you keep losing battles, consider buying packs for better cards before battling again
 - When battling, choose a wager between 0.005-0.05 MON. Consider your balance, confidence in your cards, and risk tolerance
 - Higher wagers when you have strong/rare cards, high HP, and are feeling confident

@@ -40,7 +40,7 @@ interface EventData {
 export const WORLD_LOCATIONS = {
   starter_town:   { position: [0, 0, 0] as [number, number, number],      label: 'Home',    icon: '🏠', color: '#f59e0b', variant: 'building' as const, route: '/collection' },
   town_arena:     { position: [0, 0, -30] as [number, number, number],     label: 'Town Arena',      icon: '⚔️', color: '#ef4444', variant: 'building' as const, route: '/battle' },
-  town_market:    { position: [28, 0, 0] as [number, number, number],      label: 'Town Market',     icon: '🏪', color: '#f97316', variant: 'building' as const, route: '/shop' },
+  town_market:    { position: [28, 0, 0] as [number, number, number],      label: 'Shop',     icon: '🏪', color: '#f97316', variant: 'nature' as const, route: '/shop' },
   community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
   old_pond:       { position: [-36, 0, -14] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
   dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'dark' as const,     route: null },
@@ -302,6 +302,89 @@ function Roads() {
       {secondaryRoads.map(([from, to], i) =>
         renderRoad(from, to, 1.8, '#7a6b55', 0.5, 0.025, `sec-${i}`)
       )}
+      {/* ─── Shop — market stall with awning + display ─── */}
+      <group position={[28, 0, 0]}>
+        {/* Main building */}
+        <mesh position={[0, 1.5, 0]} castShadow>
+          <boxGeometry args={[5, 3, 4]} />
+          <meshStandardMaterial color="#c9a66b" roughness={0.8} />
+        </mesh>
+        {/* Flat roof */}
+        <mesh position={[0, 3.05, 0]} castShadow>
+          <boxGeometry args={[5.4, 0.15, 4.4]} />
+          <meshStandardMaterial color="#8B6914" roughness={0.9} />
+        </mesh>
+        {/* Front awning — striped canopy */}
+        <mesh position={[0, 2.8, 2.8]} rotation={[0.3, 0, 0]} castShadow>
+          <boxGeometry args={[5.2, 0.08, 2]} />
+          <meshStandardMaterial color="#e74c3c" roughness={0.6} />
+        </mesh>
+        {/* Awning stripes */}
+        {[-2, -1, 0, 1, 2].map((x, i) => (
+          <mesh key={`stripe-${i}`} position={[x, 2.78, 2.78]} rotation={[0.3, 0, 0]}>
+            <boxGeometry args={[0.5, 0.09, 2]} />
+            <meshStandardMaterial color={i % 2 === 0 ? '#fff5e6' : '#e74c3c'} roughness={0.6} />
+          </mesh>
+        ))}
+        {/* Awning support poles */}
+        {[-2.2, 2.2].map((x, i) => (
+          <mesh key={`pole-${i}`} position={[x, 1.5, 3.5]} castShadow>
+            <cylinderGeometry args={[0.06, 0.08, 3, 6]} />
+            <meshStandardMaterial color="#5a3a1a" roughness={0.9} />
+          </mesh>
+        ))}
+        {/* Shop door */}
+        <mesh position={[0, 0.9, 2.01]}>
+          <boxGeometry args={[1.2, 1.8, 0.05]} />
+          <meshStandardMaterial color="#3a2510" roughness={0.9} />
+        </mesh>
+        {/* Display windows */}
+        {[-1.6, 1.6].map((x, i) => (
+          <mesh key={`shopwin-${i}`} position={[x, 1.5, 2.01]}>
+            <boxGeometry args={[1, 1, 0.05]} />
+            <meshStandardMaterial color="#87CEEB" transparent opacity={0.6} roughness={0.2} metalness={0.3} />
+          </mesh>
+        ))}
+        {/* Sign board — "SHOP" */}
+        <group position={[0, 3.6, 2.2]}>
+          {/* Sign backing */}
+          <mesh castShadow>
+            <boxGeometry args={[3, 0.8, 0.12]} />
+            <meshStandardMaterial color="#2c1810" roughness={0.85} />
+          </mesh>
+          {/* Sign border */}
+          <mesh position={[0, 0, 0.06]}>
+            <boxGeometry args={[2.8, 0.6, 0.02]} />
+            <meshStandardMaterial color="#d4a017" roughness={0.5} metalness={0.4} />
+          </mesh>
+        </group>
+        {/* Display crates outside */}
+        {[[-1.8, 0.3, 3.2], [1.8, 0.3, 3.2], [0, 0.25, 3.5]].map(([x, y, z], i) => (
+          <mesh key={`crate-${i}`} position={[x, y, z]} rotation={[0, i * 0.4, 0]} castShadow>
+            <boxGeometry args={[0.6, 0.5, 0.6]} />
+            <meshStandardMaterial color={['#8B6914', '#a0722a', '#7a5a10'][i]} roughness={0.9} />
+          </mesh>
+        ))}
+        {/* Potion bottles on crates */}
+        {[[-1.8, 0.7, 3.2], [1.8, 0.7, 3.2], [0, 0.65, 3.5]].map(([x, y, z], i) => (
+          <mesh key={`bottle-${i}`} position={[x, y, z]} castShadow>
+            <cylinderGeometry args={[0.06, 0.08, 0.25, 6]} />
+            <meshStandardMaterial color={['#e74c3c', '#3498db', '#2ecc71'][i]} transparent opacity={0.8} roughness={0.3} />
+          </mesh>
+        ))}
+        {/* Barrel next to shop */}
+        <mesh position={[3, 0.5, 1.5]} castShadow>
+          <cylinderGeometry args={[0.4, 0.35, 1, 10]} />
+          <meshStandardMaterial color="#6b4226" roughness={0.9} />
+        </mesh>
+        {/* Lantern hanging from awning */}
+        <mesh position={[0, 2.3, 3.3]} castShadow>
+          <boxGeometry args={[0.2, 0.3, 0.2]} />
+          <meshStandardMaterial color="#d4a017" roughness={0.5} metalness={0.3} />
+        </mesh>
+        <pointLight position={[0, 2.2, 3.3]} intensity={0.3} color="#ffaa44" distance={5} />
+      </group>
+
       {/* ─── Home — cottage + stables + AutoMons ─── */}
 
       {/* Cobblestone yard */}
