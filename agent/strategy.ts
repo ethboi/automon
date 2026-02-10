@@ -511,9 +511,12 @@ export async function decideNextAction(
     .map(([name, desc]) => `- ${name}: ${desc}`)
     .join('\n');
 
+    const rarityCount = cards.reduce((acc, c) => { acc[c.rarity || 'common'] = (acc[c.rarity || 'common'] || 0) + 1; return acc; }, {} as Record<string, number>);
+  const rarityStr = Object.entries(rarityCount).map(([r, n]) => `${n} ${r}`).join(', ');
+  const avgStats = cards.length > 0 ? Math.round(cards.reduce((sum, c) => sum + ((c as Record<string, unknown> as { stats?: { attack?: number; defense?: number } }).stats?.attack || 30) + ((c as Record<string, unknown> as { stats?: { attack?: number; defense?: number } }).stats?.defense || 30), 0) / cards.length) : 0;
   const cardSummary = cards.length > 0
-    ? `${cards.length} cards (${[...new Set(cards.map(c => c.element))].join(', ')}), best: ${cards.slice(0, 3).map(c => `${c.name}(${c.rarity})`).join(', ')}`
-    : 'No cards yet';
+    ? `${cards.length} cards (${rarityStr}), avg power: ${avgStats}, elements: ${[...new Set(cards.map(c => c.element))].join(', ')}, best: ${cards.slice(0, 3).map(c => `${c.name}(${c.rarity})`).join(', ')}`
+    : 'No cards yet — should buy a pack!';
 
   const personalityLine = personality ? `\n## YOUR PERSONALITY\n${personality}\nStay in character. Your personality should heavily influence your decisions.\n` : '';
 
@@ -540,7 +543,7 @@ ${locationList}
 ## LOCATION-SPECIFIC ACTIONS (use ONLY matching actions per location)
 - Starter Town: resting, exploring
 - Town Arena: battling, training
-- Town Market: trading
+- Town Market: trading, shopping (buy card packs for 0.1 MON)
 - Community Farm: farming, foraging
 - Old Pond: fishing
 - Dark Forest: exploring, catching, foraging
@@ -550,10 +553,11 @@ ${locationList}
 - PRIORITY: If health > 50 HP and you have 3+ cards, go to Town Arena and battle! Battles are the main activity.
 - Try to battle at LEAST every 2-3 actions. Don't just explore endlessly.
 - Below 30 HP: heal first (farm or fish), then get back to battling
-- If no cards: go to Town Market or buy packs, then battle
+- If no cards or only common cards with low stats: go to Town Market to buy a pack (0.1 MON) to get stronger cards, then battle
+- If you keep losing battles, consider buying packs for better cards before battling again
 - When battling, choose a wager between 0.005-0.05 MON. Consider your balance, confidence in your cards, and risk tolerance
-- Higher wagers when you have strong cards, high HP, and are feeling confident
-- Lower wagers when low HP, weak cards, or being cautious
+- Higher wagers when you have strong/rare cards, high HP, and are feeling confident
+- Lower wagers when low HP, only common cards, or being cautious
 - Vary non-battle actions — explore, fish, farm between fights
 - Show personality — be curious, strategic, sometimes bold
 
