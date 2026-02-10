@@ -154,7 +154,7 @@ export async function GET() {
         description: tx.description,
         explorerUrl: explorerUrl(tx.txHash),
         timestamp: tx.timestamp,
-        amount: tx.metadata?.wager || tx.metadata?.price || null,
+        amount: tx.metadata?.wager || tx.metadata?.price || tx.amount || null,
       })),
     });
   } catch (error) {
