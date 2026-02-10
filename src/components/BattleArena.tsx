@@ -166,14 +166,14 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
             <button
               onClick={() => setSelectedMove({ action: 'skill' })}
               disabled={myActiveCard.ability.currentCooldown !== undefined && myActiveCard.ability.currentCooldown > 0}
-              className={`p-4 rounded-lg border-2 transition ${
+              className={`p-2 sm:p-4 rounded-lg border-2 transition ${
                 selectedMove?.action === 'skill'
                   ? 'border-purple-500 bg-purple-500/20'
                   : 'border-gray-600 hover:border-gray-500'
               } ${myActiveCard.ability.currentCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">✨</span>
-              <span className="font-medium">{myActiveCard.ability.name}</span>
+              <span className="text-xs sm:text-sm font-medium truncate block">{myActiveCard.ability.name}</span>
               <span className="text-[10px] sm:text-xs text-gray-400 block">
                 {myActiveCard.ability.currentCooldown
                   ? `Cooldown: ${myActiveCard.ability.currentCooldown}`
@@ -185,7 +185,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
             {/* GUARD - beats STRIKE */}
             <button
               onClick={() => setSelectedMove({ action: 'guard' })}
-              className={`p-4 rounded-lg border-2 transition ${
+              className={`p-2 sm:p-4 rounded-lg border-2 transition ${
                 selectedMove?.action === 'guard'
                   ? 'border-blue-500 bg-blue-500/20'
                   : 'border-gray-600 hover:border-gray-500'
@@ -208,7 +208,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
                 }
               }}
               disabled={!myState.cards.some((c, i) => i !== myState.activeCardIndex && c.currentHp > 0)}
-              className={`p-4 rounded-lg border-2 transition ${
+              className={`p-2 sm:p-4 rounded-lg border-2 transition ${
                 selectedMove?.action === 'switch'
                   ? 'border-yellow-500 bg-yellow-500/20'
                   : 'border-gray-600 hover:border-gray-500'
@@ -223,7 +223,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
               <button
                 onClick={handleAIMove}
                 disabled={isSubmitting}
-                className="p-4 rounded-lg border-2 border-blue-600 hover:border-blue-500 bg-blue-500/10 transition"
+                className="p-2 sm:p-4 rounded-lg border-2 border-blue-600 hover:border-blue-500 bg-blue-500/10 transition"
               >
                 <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">🤖</span>
                 <span className="font-medium">AI Suggest</span>
@@ -256,11 +256,11 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
 
       {/* Battle log */}
       {events.length > 0 && (
-        <div className="mt-8 bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-medium mb-3">Battle Log</h3>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+        <div className="mt-4 sm:mt-8 bg-gray-800 rounded-xl p-3 sm:p-4">
+          <h3 className="text-sm sm:text-lg font-medium mb-2 sm:mb-3">Battle Log</h3>
+          <div className="space-y-1.5 sm:space-y-2 max-h-36 sm:max-h-48 overflow-y-auto">
             {events.map((event, index) => (
-              <div key={index} className="text-sm text-gray-300">
+              <div key={index} className="text-xs sm:text-sm text-gray-300">
                 {event.message}
               </div>
             ))}

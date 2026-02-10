@@ -190,65 +190,69 @@ export default function AgentPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center">
-          <div className="animate-spin text-4xl mb-4">⏳</div>
-          <p className="text-gray-400">Loading AI Agent...</p>
+      <div className="page-container">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="spinner mb-4" />
+          <p className="text-gray-400 animate-pulse">Loading AI Agent...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">AI Agent</h1>
-      <p className="text-gray-400 mb-8">
-        Let Claude AI make strategic decisions for you
-      </p>
+    <div className="page-container page-transition">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+          AI Agent
+        </h1>
+        <p className="text-sm sm:text-base text-gray-400">
+          Let Claude AI make strategic decisions for you
+        </p>
+      </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-8">
         {/* Controls */}
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-6">
           {/* Auto mode toggle */}
-          <div className="bg-gray-800 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="section-card">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
               <div>
-                <h2 className="text-lg font-bold">Auto-Play Mode</h2>
-                <p className="text-sm text-gray-400">
+                <h2 className="text-base sm:text-lg font-bold">Auto-Play Mode</h2>
+                <p className="text-xs sm:text-sm text-gray-400">
                   AI plays your battles automatically
                 </p>
               </div>
               <button
                 onClick={() => setAutoMode(!autoMode)}
                 disabled={!activeBattle}
-                className={`relative w-14 h-8 rounded-full transition ${
+                className={`relative w-12 h-7 sm:w-14 sm:h-8 rounded-full transition flex-shrink-0 ${
                   autoMode ? 'bg-green-500' : 'bg-gray-600'
                 } ${!activeBattle ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div
-                  className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform ${
-                    autoMode ? 'translate-x-7' : 'translate-x-1'
+                  className={`absolute top-1 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full transition-transform ${
+                    autoMode ? 'translate-x-6 sm:translate-x-7' : 'translate-x-1'
                   }`}
                 />
               </button>
             </div>
 
             {!activeBattle && (
-              <p className="text-yellow-400 text-sm">
+              <p className="text-yellow-400 text-xs sm:text-sm">
                 No active battle. Start a battle first!
               </p>
             )}
           </div>
 
           {/* Manual actions */}
-          <div className="bg-gray-800 rounded-xl p-6">
-            <h2 className="text-lg font-bold mb-4">Manual Actions</h2>
+          <div className="section-card">
+            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Manual Actions</h2>
 
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <button
                 onClick={runAgentTurn}
                 disabled={!activeBattle || processing || autoMode}
-                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed py-3 rounded-lg font-medium transition"
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed min-h-[44px] py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition"
               >
                 {processing ? 'Processing...' : 'AI Make One Move'}
               </button>
@@ -256,7 +260,7 @@ export default function AgentPage() {
               <button
                 onClick={runFullAutoBattle}
                 disabled={!activeBattle || processing}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed py-3 rounded-lg font-medium transition"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed min-h-[44px] py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition"
               >
                 AI Play Full Battle
               </button>
@@ -264,7 +268,7 @@ export default function AgentPage() {
               <button
                 onClick={getPackDecision}
                 disabled={processing}
-                className="w-full bg-gray-700 hover:bg-gray-600 disabled:bg-gray-600 disabled:cursor-not-allowed py-3 rounded-lg font-medium transition"
+                className="w-full bg-gray-700 hover:bg-gray-600 disabled:bg-gray-600 disabled:cursor-not-allowed min-h-[44px] py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition"
               >
                 Ask AI: Should I Buy Packs?
               </button>
@@ -272,9 +276,9 @@ export default function AgentPage() {
           </div>
 
           {/* Status */}
-          <div className="bg-gray-800 rounded-xl p-6">
-            <h2 className="text-lg font-bold mb-4">Status</h2>
-            <div className="space-y-2 text-sm">
+          <div className="section-card">
+            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Status</h2>
+            <div className="space-y-2 text-xs sm:text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">Cards Owned</span>
                 <span>{cards.length}</span>
@@ -296,32 +300,32 @@ export default function AgentPage() {
         </div>
 
         {/* Decision log */}
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-bold mb-4">Decision Log</h2>
+        <div className="section-card">
+          <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Decision Log</h2>
 
           {logs.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="text-4xl mb-2">🤖</div>
-              <p>No decisions yet. Run an action to see AI reasoning.</p>
+            <div className="text-center py-6 sm:py-8 text-gray-500">
+              <div className="text-3xl sm:text-4xl mb-2">🤖</div>
+              <p className="text-xs sm:text-sm">No decisions yet. Run an action to see AI reasoning.</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[500px] overflow-y-auto">
               {logs.map((log, index) => (
                 <div
                   key={index}
-                  className={`p-3 rounded-lg text-sm ${
+                  className={`p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm ${
                     log.type === 'decision'
                       ? 'bg-purple-500/20 border border-purple-500/30'
                       : log.type === 'error'
                       ? 'bg-red-500/20 border border-red-500/30'
                       : log.type === 'action'
                       ? 'bg-blue-500/20 border border-blue-500/30'
-                      : 'bg-gray-700'
+                      : 'glass-light'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span
-                      className={`text-xs font-medium ${
+                      className={`text-[10px] sm:text-xs font-medium ${
                         log.type === 'decision'
                           ? 'text-purple-400'
                           : log.type === 'error'
@@ -333,13 +337,13 @@ export default function AgentPage() {
                     >
                       {log.type.toUpperCase()}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-[10px] sm:text-xs text-gray-500">
                       {log.timestamp.toLocaleTimeString()}
                     </span>
                   </div>
-                  <p>{log.message}</p>
+                  <p className="break-words">{log.message}</p>
                   {log.decision?.reasoning && (
-                    <p className="text-xs text-gray-400 mt-1 italic">
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-1 italic break-words">
                       Reasoning: {log.decision.reasoning}
                     </p>
                   )}
