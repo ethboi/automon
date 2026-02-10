@@ -413,9 +413,10 @@ async function tryJoinBattle(): Promise<boolean> {
     try {
       const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
       const battleIdBytes = ethers.id(openBattle.battleId);
-      const wagerWei = ethers.parseEther(openBattle.wager || '0.01');
+      const wagerStr = String(openBattle.wager || '0.01');
+      const wagerWei = ethers.parseEther(wagerStr);
       console.log(`[${ts()}]   💰 Joining escrow with ${openBattle.wager} MON...`);
-      const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei });
+      const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei, gasLimit: 200000 });
       const receipt = await tx.wait();
       txHash = receipt.hash;
       console.log(`[${ts()}]   ✅ Escrow joined: ${txHash.slice(0, 12)}...`);
@@ -493,7 +494,7 @@ async function createAndWaitForBattle(): Promise<void> {
       const battleIdBytes = ethers.id(battleIdPreview);
       const wagerWei = ethers.parseEther(wager);
       console.log(`[${ts()}] ⚔️ Creating battle with ${wager} MON wager (on-chain)...`);
-      const tx = await escrow.createBattle(battleIdBytes, { value: wagerWei });
+      const tx = await escrow.createBattle(battleIdBytes, { value: wagerWei, gasLimit: 200000 });
       const receipt = await tx.wait();
       txHash = receipt.hash;
       console.log(`[${ts()}]   ✅ Escrow created: ${txHash.slice(0, 12)}...`);
