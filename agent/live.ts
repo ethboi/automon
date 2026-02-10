@@ -15,7 +15,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 import { ethers } from 'ethers';
-import { decideNextAction, selectBattleCards } from './strategy';
+import { decideNextAction, selectBattleCards, agentChat } from './strategy';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -140,6 +140,7 @@ let cardCount = 0;
 let totalMinted = 0;
 let isRunning = true;
 let agentHealth = 100;
+let agentBalance = '0';
 let agentMaxHealth = 100;
 const recentActions: string[] = [];
 let lastBattleTime = 0;
@@ -203,7 +204,7 @@ async function updatePosition(): Promise<void> {
     const timeout = setTimeout(() => controller.abort(), 5000);
     await api('/api/agents/move', {
       method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME, activity, balance: balance.toFixed(4) }),
+      body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME, activity, balance: agentBalance }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -723,10 +724,40 @@ async function tick(): Promise<void> {
   } else if (dwellTicks > 0) {
     // Dwelling at location — performing the action
     dwellTicks--;
+
+    // Occasionally chat with nearby agents (~20% chance per tick while dwelling)
+    if (USE_AI && Math.random() < 0.05) {
+      try {
+        const dashRes = await api('/api/dashboard');
+        if (dashRes.ok) {
+          const dash = await dashRes.json();
+          const nearby = (dash.agents || []).filter((a: { address: string; currentLocation?: string; online?: boolean }) =>
+            a.address?.toLowerCase() !== ADDRESS.toLowerCase() &&
+            a.currentLocation === target.name &&
+            a.online
+          );
+          if (nearby.length > 0) {
+            const other = nearby[Math.floor(Math.random() * nearby.length)];
+            // Get recent chat at this location
+            const chatRes = await api(`/api/chat?location=${encodeURIComponent(target.name)}&limit=6`);
+            const recentChat = chatRes.ok ? (await chatRes.json()).messages?.map((m: { fromName: string; message: string }) => `${m.fromName}: ${m.message}`) || [] : [];
+
+            const msg = await agentChat(AGENT_NAME, other.name, target.name, AI_PERSONALITY, recentChat);
+            if (msg) {
+              console.log(`[${ts()}] 💬 ${AGENT_NAME} → ${other.name}: "${msg}"`);
+              await api('/api/chat', {
+                method: 'POST',
+                body: JSON.stringify({ from: ADDRESS, fromName: AGENT_NAME, to: other.address, toName: other.name, message: msg, location: target.name }),
+              });
+            }
+          }
+        }
+      } catch { /* silent */ }
+    }
   } else {
 
     // Only buy packs if balance > 0.2 MON (pack costs 0.1) and < 10 cards
-    if (cardCount < 10 && balance > 0.2 && Math.random() < 0.15 && NFT_ADDRESS) {
+    if (cardCount < 10 && parseFloat(agentBalance) > 0.2 && Math.random() < 0.15 && NFT_ADDRESS) {
       await buyPack();
     }
 
@@ -769,6 +800,7 @@ async function tick(): Promise<void> {
         const cardsData = cardsRes.ok ? await cardsRes.json() : { cards: [] };
 
         const balance = ethers.formatEther(await provider.getBalance(wallet.address));
+        agentBalance = parseFloat(balance).toFixed(4);
 
         const decision = await decideNextAction(
           target.name,
@@ -843,7 +875,8 @@ async function main() {
   console.log(`  AI:       ${USE_AI ? '✅ Claude (Anthropic)' : '❌ Random (no API key)'}`);
 
   const balance = ethers.formatEther(await provider.getBalance(wallet.address));
-  console.log(`  Balance:  ${parseFloat(balance).toFixed(4)} MON`);
+  agentBalance = parseFloat(balance).toFixed(4);
+  console.log(`  Balance:  ${agentBalance} MON`);
   console.log();
 
   // Register

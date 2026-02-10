@@ -13,6 +13,7 @@ interface WorldUIProps {
   totalBattles?: number;
   totalCards?: number;
   battles?: BattleData[];
+  chat?: ChatMessage[];
 }
 
 interface OnlineAgent {
@@ -37,6 +38,16 @@ interface EventData {
   location: string | null;
   healthDelta?: number;
   healthAfter?: number;
+  timestamp: string;
+}
+
+interface ChatMessage {
+  from: string;
+  fromName: string;
+  to?: string;
+  toName?: string;
+  message: string;
+  location?: string;
   timestamp: string;
 }
 
@@ -115,7 +126,7 @@ const TX_ICONS: Record<string, string> = {
 
 export function WorldUI({
   nearbyBuilding, onEnterBuilding, onSelectAgent, onFlyToAgent,
-  onlineAgents = [], events = [], transactions = [], battles = [],
+  onlineAgents = [], events = [], transactions = [], battles = [], chat = [],
   totalBattles: _totalBattles = 0, totalCards: _totalCards = 0,
 }: WorldUIProps) {
   const [tab, setTab] = useState<Tab>('agents');
@@ -244,37 +255,65 @@ export function WorldUI({
                 );
               })()}
 
-              {/* Feed Tab (AI Activity Log) */}
-              {tab === 'feed' && (
-                events.length === 0 ? (
+              {/* Feed Tab (AI Activity + Chat) */}
+              {tab === 'feed' && (() => {
+                // Interleave events and chat by timestamp
+                type FeedItem = { type: 'event'; data: EventData } | { type: 'chat'; data: ChatMessage };
+                const feed: FeedItem[] = [
+                  ...events.slice(0, 15).map(e => ({ type: 'event' as const, data: e })),
+                  ...chat.slice(0, 15).map(c => ({ type: 'chat' as const, data: c })),
+                ].sort((a, b) => new Date(b.data.timestamp).getTime() - new Date(a.data.timestamp).getTime()).slice(0, 20);
+
+                return feed.length === 0 ? (
                   <Empty text="Waiting for agent actions..." />
                 ) : (
                   <div className="divide-y divide-white/5">
-                    {events.slice(0, 15).map((e, i) => {
+                    {feed.map((item, i) => {
+                      if (item.type === 'chat') {
+                        const c = item.data;
+                        return (
+                          <div key={`chat-${i}`} className="px-2 py-1.5 hover:bg-white/5 transition-colors">
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm flex-shrink-0 mt-0.5">💬</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-semibold text-cyan-400">{c.fromName}</span>
+                                  <span className="text-[10px] text-gray-600">→</span>
+                                  <span className="text-xs font-semibold text-purple-400">{c.toName || 'everyone'}</span>
+                                  <span className="text-[10px] text-gray-700 ml-auto flex-shrink-0">{timeAgo(c.timestamp)}</span>
+                                </div>
+                                <div className="text-xs text-gray-300 mt-0.5 leading-snug">{c.message}</div>
+                                {c.location && <div className="text-[10px] text-gray-600 mt-0.5">📍 {c.location}</div>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      const e = item.data;
                       const agentName = onlineAgents.find(a => a.address?.toLowerCase() === e.agent?.toLowerCase())?.name || shortAddr(e.agent);
                       const badge = activityBadge(e.action);
                       return (
-                        <div key={i} className="px-2 py-1.5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => onFlyToAgent?.(e.agent)}>
+                        <div key={`ev-${i}`} className="px-2 py-1.5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => onFlyToAgent?.(e.agent)}>
                           <div className="flex items-start gap-2">
-                            <span className="text-base flex-shrink-0 mt-0.5">{badge.icon}</span>
+                            <span className="text-sm flex-shrink-0 mt-0.5">{badge.icon}</span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-semibold text-cyan-400">{agentName}</span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full ${badge.cls}`}>{e.action}</span>
+                                <span className="text-xs font-semibold text-cyan-400">{agentName}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${badge.cls}`}>{e.action}</span>
                                 {e.healthDelta != null && e.healthDelta !== 0 && (
-                                  <span className={`text-xs font-mono ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  <span className={`text-[10px] font-mono ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                     {e.healthDelta > 0 ? '+' : ''}{e.healthDelta}HP
                                   </span>
                                 )}
-                                <span className="text-xs text-gray-600 ml-auto flex-shrink-0">{timeAgo(e.timestamp)}</span>
+                                <span className="text-[10px] text-gray-700 ml-auto flex-shrink-0">{timeAgo(e.timestamp)}</span>
                               </div>
                               {(e.reasoning || e.reason) && (
-                                <div className="text-sm text-gray-400 mt-0.5 leading-tight">
+                                <div className="text-xs text-gray-400 mt-0.5 leading-tight line-clamp-2">
                                   💭 {e.reasoning || e.reason}
                                 </div>
                               )}
                               {e.location && (
-                                <div className="text-xs text-purple-400/60 mt-0.5">📍 {e.location}</div>
+                                <div className="text-[10px] text-purple-400/60 mt-0.5">📍 {e.location}</div>
                               )}
                             </div>
                           </div>
@@ -282,8 +321,8 @@ export function WorldUI({
                       );
                     })}
                   </div>
-                )
-              )}
+                );
+              })()}
 
               {/* Battles Tab */}
               {tab === 'battles' && (
