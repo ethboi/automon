@@ -3,6 +3,77 @@ import { getDb } from '@/lib/mongodb';
 import { explorerUrl } from '@/lib/transactions';
 
 export const dynamic = 'force-dynamic';
+const AMBIENT_CHAT_COOLDOWN_MS = 45_000;
+const AGENT_CHAT_COOLDOWN_MS = 120_000;
+
+function pick<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function buildAmbientLine(agentName: string, action?: string | null, location?: string | null): string {
+  const lines = [
+    `${agentName}: Gotta mint em all. No breaks.`,
+    `${agentName}: Just theory-crafted a weird combo and it somehow works.`,
+    `${agentName}: If I lose this next battle, it was lag.`,
+    `${agentName}: Pack luck today feels suspiciously good.`,
+    `${agentName}: Who keeps training at midnight? Respect.`,
+    `${agentName}: I need one more card to finish this build.`,
+    `${agentName}: The arena crowd is loud tonight.`,
+    `${agentName}: My AI says "high confidence". I don't trust it.`,
+    `${agentName}: Somebody run it back. That match was close.`,
+    `${agentName}: I came for cards, stayed for chaos.`,
+  ];
+
+  if (action) {
+    lines.push(`${agentName}: I'm ${action}${location ? ` at ${location}` : ''}.`);
+  }
+  if (location) {
+    lines.push(`${agentName}: ${location} has the best vibes right now.`);
+  }
+
+  return pick(lines);
+}
+
+async function maybeEmitAmbientAgentChat(
+  db: Awaited<ReturnType<typeof getDb>>,
+  agents: Array<{ address?: string; name?: string; online?: boolean; currentAction?: string | null; currentLocation?: string | null; lastSeen?: Date }>
+) {
+  const onlineAgents = agents.filter(a => a.online && a.address && a.name);
+  if (onlineAgents.length === 0) return;
+
+  const now = Date.now();
+  const latestGlobal = await db.collection('chat')
+    .find({})
+    .sort({ timestamp: -1 })
+    .limit(1)
+    .toArray();
+  const latestTs = latestGlobal[0]?.timestamp ? new Date(latestGlobal[0].timestamp).getTime() : 0;
+  if (latestTs && now - latestTs < AMBIENT_CHAT_COOLDOWN_MS) return;
+
+  // Only emit some of the time even when cooldown passed.
+  if (Math.random() > 0.55) return;
+
+  const candidate = pick(onlineAgents);
+  const from = String(candidate.address).toLowerCase();
+
+  const lastFrom = await db.collection('chat')
+    .find({ from })
+    .sort({ timestamp: -1 })
+    .limit(1)
+    .toArray();
+  const lastFromTs = lastFrom[0]?.timestamp ? new Date(lastFrom[0].timestamp).getTime() : 0;
+  if (lastFromTs && now - lastFromTs < AGENT_CHAT_COOLDOWN_MS) return;
+
+  await db.collection('chat').insertOne({
+    from,
+    fromName: candidate.name,
+    to: null,
+    toName: null,
+    message: buildAmbientLine(candidate.name || 'Agent', candidate.currentAction || null, candidate.currentLocation || null),
+    location: candidate.currentLocation || null,
+    timestamp: new Date(now),
+  });
+}
 
 export async function GET() {
   try {
@@ -11,7 +82,7 @@ export async function GET() {
     const oneDayAgo = new Date(Date.now() - 86400000);
     const fiveMinAgo = new Date(Date.now() - 300000);
 
-    const [agents, recentActions, recentBattles, totalCards, recentTxs, recentChat] = await Promise.all([
+    const [agents, recentActions, recentBattles, totalCards, recentTxs] = await Promise.all([
       db.collection('agents')
         .find({ lastSeen: { $gte: oneDayAgo } })
         .toArray(),
@@ -35,13 +106,15 @@ export async function GET() {
         .sort({ timestamp: -1, createdAt: -1 })
         .limit(20)
         .toArray(),
-
-      db.collection('chat')
-        .find({ timestamp: { $gte: oneDayAgo } })
-        .sort({ timestamp: -1 })
-        .limit(30)
-        .toArray(),
     ]);
+
+    await maybeEmitAmbientAgentChat(db, agents);
+
+    const recentChat = await db.collection('chat')
+      .find({ timestamp: { $gte: oneDayAgo } })
+      .sort({ timestamp: -1 })
+      .limit(30)
+      .toArray();
 
     // Get battle stats per agent
     const completeBattles = await db.collection('battles')
