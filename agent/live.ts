@@ -366,7 +366,7 @@ async function syncCards(): Promise<void> {
     // Send to server for upsert into MongoDB
     const syncRes = await api('/api/agents/cards/sync', {
       method: 'POST',
-      body: JSON.stringify({ cards: validCards }),
+      body: JSON.stringify({ cards: validCards, address: ADDRESS }),
     });
     if (syncRes.ok) {
       const data = await syncRes.json();
