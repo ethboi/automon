@@ -276,12 +276,19 @@ async function syncCards(): Promise<void> {
     const tokenIds = await contract.getCardsOf(wallet.address);
     cardCount = tokenIds.length;
 
-    // Sync to server
-    await api('/api/agents/cards/sync', {
+    // Sync to server — reads on-chain data and writes to MongoDB with proper stats
+    const syncRes = await api('/api/agents/cards/sync', {
       method: 'POST',
       body: JSON.stringify({ tokenIds: tokenIds.map(Number), address: ADDRESS }),
     });
-  } catch { /* silent */ }
+    if (syncRes.ok) {
+      const data = await syncRes.json();
+      console.log(`[${ts()}] 📦 Synced ${data.synced || data.cards?.length || 0} cards to DB`);
+    } else {
+      const err = await syncRes.text().catch(() => '');
+      console.log(`[${ts()}] ⚠️ Card sync failed: ${syncRes.status} ${err.slice(0, 100)}`);
+    }
+  } catch (e) { console.log(`[${ts()}] ⚠️ Card sync error: ${(e as Error).message?.slice(0, 80)}`); }
 }
 
 // ─── Battle Logic ──────────────────────────────────────────────────────────────
