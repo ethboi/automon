@@ -17,12 +17,12 @@ export default function ShopPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPacks();
-  }, []);
+    if (address) fetchPacks();
+  }, [address]);
 
   const fetchPacks = async () => {
     try {
-      const res = await fetch('/api/packs');
+      const res = await fetch(`/api/packs?address=${address}`);
       const data = await res.json();
       setPacks(data.packs || []);
     } catch (error) {
