@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ cards, synced: cards.length });
   } catch (error) {
     console.error('Sync NFT cards error:', error);
-    return NextResponse.json({ error: 'Failed to sync cards' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: 'Failed to sync cards', detail: msg }, { status: 500 });
   }
 }

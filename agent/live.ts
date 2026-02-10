@@ -286,7 +286,7 @@ async function syncCards(): Promise<void> {
       console.log(`[${ts()}] 📦 Synced ${data.synced || data.cards?.length || 0} cards to DB`);
     } else {
       const err = await syncRes.text().catch(() => '');
-      console.log(`[${ts()}] ⚠️ Card sync failed: ${syncRes.status} ${err.slice(0, 100)}`);
+      console.log(`[${ts()}] ⚠️ Card sync failed: ${syncRes.status} ${err.slice(0, 200)}`);
     }
   } catch (e) { console.log(`[${ts()}] ⚠️ Card sync error: ${(e as Error).message?.slice(0, 80)}`); }
 }
