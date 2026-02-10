@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
+
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const { tournamentId, address } = await request.json();
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
-    const { tournamentId } = await request.json();
+    
 
     if (!tournamentId) {
       return NextResponse.json({ error: 'Tournament ID required' }, { status: 400 });
@@ -31,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Tournament full' }, { status: 400 });
     }
 
-    if (tournament.participants.includes(session.address.toLowerCase())) {
+    if (tournament.participants.includes(address.toLowerCase())) {
       return NextResponse.json({ error: 'Already registered' }, { status: 400 });
     }
 
@@ -48,7 +45,7 @@ export async function POST(request: NextRequest) {
       },
       {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        $push: { participants: session.address.toLowerCase() } as any,
+        $push: { participants: address.toLowerCase() } as any,
         $set: {
           prizePool: newPool.toString(),
         },

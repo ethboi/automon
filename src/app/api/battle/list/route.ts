@@ -1,26 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { getSession } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const type = searchParams.get('type');
+    const address = searchParams.get('address');
 
     const db = await getDb();
     let query: Record<string, unknown> = {};
 
     // If type=my, fetch user's battles
-    if (type === 'my') {
-      const session = await getSession();
-      if (!session) {
-        return NextResponse.json({ battles: [] });
-      }
+    if (type === 'my' && address) {
       query = {
         $or: [
-          { 'player1.address': session.address.toLowerCase() },
-          { 'player2.address': session.address.toLowerCase() },
+          { 'player1.address': address.toLowerCase() },
+          { 'player2.address': address.toLowerCase() },
         ],
       };
     } else if (status) {

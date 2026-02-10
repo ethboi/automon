@@ -13,7 +13,7 @@ interface AgentLog {
 }
 
 export default function AgentPage() {
-  const { address, isAuthenticated, balance } = useWallet();
+  const { address, balance } = useWallet();
   const router = useRouter();
   const [autoMode, setAutoMode] = useState(false);
   const [cards, setCards] = useState<CardType[]>([]);
@@ -23,13 +23,13 @@ export default function AgentPage() {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!address) {
       router.push('/');
       return;
     }
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, router]);
+  }, [address, router]);
 
   useEffect(() => {
     if (autoMode && activeBattle?.status === 'active') {
