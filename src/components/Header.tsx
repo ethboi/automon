@@ -64,7 +64,6 @@ export default function Header() {
     { href: '/collection', label: 'Collection', icon: '📚' },
     { href: '/shop', label: 'Shop', icon: '🛒' },
     { href: '/battle', label: 'Battle', icon: '⚔️' },
-    { href: '/tournament', label: 'Tournaments', icon: '🏆' },
     { href: '/agent', label: 'AI Agent', icon: '🤖' },
   ];
 
