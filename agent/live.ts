@@ -417,7 +417,7 @@ async function tryJoinBattle(): Promise<boolean> {
       const onChain = await escrowRead.battles(battleIdBytes);
       const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
       const wagerWei = onChain[2];
-      if (wagerWei === 0n) { console.log(`[${ts()}]   ⚠️ Battle not on-chain, skipping`); return false; }
+      if (wagerWei.toString() === '0') { console.log(`[${ts()}]   ⚠️ Battle not on-chain, skipping`); return false; }
       console.log(`[${ts()}]   💰 Joining escrow with ${ethers.formatEther(wagerWei)} MON (on-chain verified)...`);
       console.log(`[${ts()}]   💰 Joining escrow with ${openBattle.wager} MON...`);
       const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei, gasLimit: 200000 });

@@ -35,18 +35,16 @@ export default function BattlePage() {
   }, [currentBattle]);
 
   const fetchData = async () => {
-    if (!address) return;
     try {
-      const [battlesRes, cardsRes] = await Promise.all([
-        fetch('/api/battle/list?type=all'),
-        fetch(`/api/cards?address=${address}`),
-      ]);
-
+      const battlesRes = await fetch('/api/battle/list?type=all');
       const battlesData = await battlesRes.json();
-      const cardsData = await cardsRes.json();
-
       setBattles(battlesData.battles || []);
-      setMyCards(cardsData.cards || []);
+
+      if (address) {
+        const cardsRes = await fetch(`/api/cards?address=${address}`);
+        const cardsData = await cardsRes.json();
+        setMyCards(cardsData.cards || []);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
