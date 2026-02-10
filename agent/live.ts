@@ -341,6 +341,81 @@ async function tryJoinBattle(): Promise<boolean> {
   }
 }
 
+async function createAndWaitForBattle(): Promise<void> {
+  try {
+    const wager = (0.01 + Math.random() * 0.04).toFixed(3);
+    const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+
+    console.log(`[${ts()}] ⚔️ Creating battle with ${wager} MON wager...`);
+    const res = await api('/api/battle/create', {
+      method: 'POST',
+      body: JSON.stringify({ wager, txHash, address: ADDRESS }),
+    });
+    if (!res.ok) { console.log(`[${ts()}]   ❌ Create failed`); return; }
+    const { battle } = await res.json();
+    const battleId = battle.battleId;
+
+    await logAction('battling', `Created battle (${wager} MON wager) — waiting for opponent...`, 'Town Arena');
+
+    // Select our cards immediately
+    const cardsRes = await api(`/api/cards?address=${ADDRESS}`);
+    if (!cardsRes.ok) return;
+    const { cards } = await cardsRes.json();
+    if (!cards || cards.length < 3) return;
+    const sorted = cards.sort((a: { attack: number; defense: number }, b: { attack: number; defense: number }) =>
+      (b.attack + b.defense) - (a.attack + a.defense)
+    );
+    const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
+    await api('/api/battle/select-cards', {
+      method: 'POST',
+      body: JSON.stringify({ battleId, cardIds, address: ADDRESS }),
+    });
+    console.log(`[${ts()}]   🎴 Cards selected, waiting up to 5 min for opponent...`);
+
+    // Wait up to 5 minutes (75 ticks @ 4s), checking every 20s
+    const WAIT_TICKS = 75;
+    const CHECK_INTERVAL = 5; // check every 20s
+    for (let i = 0; i < WAIT_TICKS; i++) {
+      await new Promise(r => setTimeout(r, TICK_MS));
+      await updatePosition(); // keep position updating while waiting
+
+      if (i % CHECK_INTERVAL === 0 && i > 0) {
+        const checkRes = await api(`/api/battle/${battleId}`);
+        if (checkRes.ok) {
+          const data = await checkRes.json();
+          if (data.battle?.status === 'complete') {
+            const result = data.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+            console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+            await logAction('battling', `Battle ${result}!`, 'Town Arena');
+            return;
+          }
+          if (data.battle?.status === 'active') {
+            console.log(`[${ts()}]   ⚡ Opponent joined! Battle in progress...`);
+            // Wait a bit for simulation to finish
+            await new Promise(r => setTimeout(r, 5000));
+            const finalRes = await api(`/api/battle/${battleId}`);
+            if (finalRes.ok) {
+              const finalData = await finalRes.json();
+              if (finalData.battle?.status === 'complete') {
+                const result = finalData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+                console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+                await logAction('battling', `Battle ${result}!`, 'Town Arena');
+              }
+            }
+            return;
+          }
+        }
+        const remaining = ((WAIT_TICKS - i) * TICK_MS / 1000).toFixed(0);
+        console.log(`[${ts()}]   ⏳ Still waiting for opponent... (${remaining}s left)`);
+      }
+    }
+    console.log(`[${ts()}]   ⏰ No opponent joined after 5 min — moving on`);
+    await logAction('battling', 'Battle expired — no opponent joined', 'Town Arena');
+  } catch (err) {
+    console.error(`[${ts()}] Create battle error:`, (err as Error).message?.slice(0, 80));
+  }
+}
+
 // ─── Main Loop ─────────────────────────────────────────────────────────────────
 
 async function tick(): Promise<void> {
@@ -363,12 +438,23 @@ async function tick(): Promise<void> {
   } else if (pendingAction) {
     // Just arrived — log the action and start dwelling
     console.log(`[${ts()}] 📍 ${target.name}: ${pendingAction.action} — "${pendingAction.reason}"`);
-    await logAction(pendingAction.action, pendingAction.reason, target.name);
-    recentActions.push(`${pendingAction.action}@${target.name}`);
-    if (recentActions.length > 10) recentActions.shift();
-    pendingAction = null;
-    dwellTicks = DWELL_MIN + Math.floor(Math.random() * (DWELL_MAX - DWELL_MIN));
-    console.log(`[${ts()}] ⏳ Staying at ${target.name} for ~${(dwellTicks * TICK_MS / 1000).toFixed(0)}s`);
+
+    // If battling at arena, create a battle and wait for opponent
+    if (pendingAction.action === 'battling' && target.name === 'Town Arena' && cardCount >= 3) {
+      await logAction(pendingAction.action, pendingAction.reason, target.name);
+      recentActions.push(`${pendingAction.action}@${target.name}`);
+      if (recentActions.length > 10) recentActions.shift();
+      pendingAction = null;
+      await createAndWaitForBattle();
+      // After battle (or timeout), continue normally — no extra dwell
+    } else {
+      await logAction(pendingAction.action, pendingAction.reason, target.name);
+      recentActions.push(`${pendingAction.action}@${target.name}`);
+      if (recentActions.length > 10) recentActions.shift();
+      pendingAction = null;
+      dwellTicks = DWELL_MIN + Math.floor(Math.random() * (DWELL_MAX - DWELL_MIN));
+      console.log(`[${ts()}] ⏳ Staying at ${target.name} for ~${(dwellTicks * TICK_MS / 1000).toFixed(0)}s`);
+    }
   } else if (dwellTicks > 0) {
     // Dwelling at location — performing the action
     dwellTicks--;
