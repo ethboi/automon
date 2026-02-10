@@ -20,31 +20,31 @@ export function LocationLabel({ icon, label, color }: { icon: string; label: str
 
   return (
     <Html
-      position={[0, isMobile ? 4.5 : 5.5, 0]}
+      position={[0, isMobile ? 5 : 6, 0]}
       center
-      distanceFactor={isMobile ? 12 : 18}
+      distanceFactor={isMobile ? 10 : 14}
       style={{ pointerEvents: 'none' }}
     >
       <div style={{
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
+        flexDirection: 'row',
         alignItems: 'center',
-        gap: isMobile ? 1 : 5,
-        background: 'rgba(8, 12, 24, 0.9)',
-        backdropFilter: 'blur(8px)',
-        padding: isMobile ? '4px 8px' : '5px 12px',
-        borderRadius: isMobile ? 8 : 10,
-        border: `1px solid ${color}40`,
-        boxShadow: `0 0 16px ${color}20, 0 2px 8px rgba(0,0,0,0.5)`,
+        gap: 6,
+        background: 'rgba(8, 12, 24, 0.95)',
+        backdropFilter: 'blur(12px)',
+        padding: isMobile ? '6px 12px' : '7px 14px',
+        borderRadius: 12,
+        border: `1.5px solid ${color}60`,
+        boxShadow: `0 0 20px ${color}30, 0 4px 12px rgba(0,0,0,0.6)`,
         whiteSpace: 'nowrap',
       }}>
-        <span style={{ fontSize: isMobile ? 16 : 13 }}>{icon}</span>
+        <span style={{ fontSize: isMobile ? 18 : 16 }}>{icon}</span>
         <span style={{
-          fontSize: isMobile ? 9 : 11,
+          fontSize: isMobile ? 12 : 13,
           fontWeight: 700,
-          color: '#e2e8f0',
-          letterSpacing: '0.3px',
-          textShadow: `0 0 8px ${color}40`,
+          color: '#f1f5f9',
+          letterSpacing: '0.4px',
+          textShadow: `0 0 10px ${color}50, 0 1px 3px rgba(0,0,0,0.8)`,
         }}>{label}</span>
       </div>
     </Html>
