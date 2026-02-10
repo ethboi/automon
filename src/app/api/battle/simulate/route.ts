@@ -85,6 +85,14 @@ export async function POST(request: NextRequest) {
       // Run the simulation
       const battleLog = await simulateAIBattle(battleCopy, getAIMove);
 
+      // Enrich with agent names
+      const agents = await db.collection('agents').find({
+        address: { $in: [battle.player1.address, battle.player2!.address].map(a => a.toLowerCase()) }
+      }).toArray();
+      const nameMap = new Map(agents.map(a => [a.address?.toLowerCase(), a.name]));
+      battleLog.player1.name = nameMap.get(battle.player1.address.toLowerCase()) || undefined;
+      battleLog.player2.name = nameMap.get(battle.player2!.address.toLowerCase()) || undefined;
+
       console.log('\n========================================');
       console.log('BATTLE COMPLETE');
       console.log(`Winner: ${battleLog.winner}`);
