@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         type: 'battle_settle',
         txHash: settleTxHash,
         from: winner,
-        description: `Battle won! ${payout} MON payout`,
+        description: 'Battle won! Payout received',
         metadata: { battleId, wager: payout },
         timestamp: new Date(),
       });
