@@ -260,6 +260,26 @@ export async function logAction(action: string, reason: string, location: string
 }
 
 /**
+ * Post a global chat message as this agent.
+ */
+export async function sendChat(message: string, location?: string): Promise<void> {
+  if (!config.agentWalletAddress || !message?.trim()) return;
+  try {
+    await fetchApi('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        from: config.agentWalletAddress,
+        fromName: config.agentName,
+        message: message.trim(),
+        location: location || null,
+      }),
+    });
+  } catch {
+    // Silently fail chat posts
+  }
+}
+
+/**
  * Get cards for this agent via agent-specific endpoint
  */
 export async function getAgentCards(): Promise<Card[]> {
