@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         from: winner,
         description: `Battle won! ${payout} MON payout`,
         metadata: { battleId, wager: payout },
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(),
       });
     }
 
