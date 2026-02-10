@@ -7,6 +7,7 @@ interface WorldUIProps {
   onEnterBuilding?: () => void;
   onSelectAgent?: (address: string) => void;
   onFlyToAgent?: (address: string) => void;
+  walletAddress?: string | null;
   onlineAgents?: OnlineAgent[];
   events?: EventData[];
   transactions?: TxData[];
@@ -81,7 +82,7 @@ interface TxData {
   amount?: string | null;
 }
 
-type Tab = 'agents' | 'feed' | 'chain';
+type Tab = 'agents' | 'feed' | 'chat' | 'chain';
 
 function timeAgo(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -126,11 +127,14 @@ const TX_ICONS: Record<string, string> = {
 
 export function WorldUI({
   nearbyBuilding, onEnterBuilding, onSelectAgent, onFlyToAgent,
+  walletAddress = null,
   onlineAgents = [], events = [], transactions = [], battles = [], chat = [],
   totalBattles: _totalBattles = 0, totalCards: _totalCards = 0,
 }: WorldUIProps) {
   const [tab, setTab] = useState<Tab>('agents');
   const [panelOpen, setPanelOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [sendingChat, setSendingChat] = useState(false);
   // aiLogOpen removed — feed is now a tab in the right panel
 
   const onlineCount = onlineAgents.filter(a => a.online).length;
@@ -144,6 +148,28 @@ export function WorldUI({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nearbyBuilding, onEnterBuilding]);
+
+  const sendChat = async () => {
+    if (!walletAddress || !chatInput.trim() || sendingChat) return;
+    setSendingChat(true);
+    try {
+      await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: walletAddress,
+          from: walletAddress,
+          fromName: shortAddr(walletAddress),
+          message: chatInput.trim(),
+        }),
+      });
+      setChatInput('');
+    } catch (error) {
+      console.error('Send chat failed:', error);
+    } finally {
+      setSendingChat(false);
+    }
+  };
 
   return (
     <div className="absolute inset-0 pointer-events-none">
@@ -182,7 +208,7 @@ export function WorldUI({
             <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
             <span className="text-base font-medium text-gray-300">{onlineCount} online</span>
             <span className="text-gray-600">|</span>
-            <span className="text-base text-gray-400">📡 ⚔️ ⛓️</span>
+            <span className="text-base text-gray-400">📡 💬 ⛓️</span>
           </button>
         ) : (
           <div className="w-[calc(100vw-24px)] sm:w-[420px] max-h-[70vh] sm:max-h-[75vh] bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in flex flex-col">
@@ -190,7 +216,8 @@ export function WorldUI({
             <div className="flex items-center border-b border-white/5 flex-shrink-0">
               {([
                 { id: 'agents' as Tab, label: '🤖', count: onlineCount },
-                { id: 'feed' as Tab, label: '📡', count: events.length + battles.length + chat.length },
+                { id: 'feed' as Tab, label: '📡', count: events.length + battles.length },
+                { id: 'chat' as Tab, label: '💬', count: chat.length },
                 { id: 'chain' as Tab, label: '⛓️', count: transactions.length },
               ]).map(t => (
                 <button
@@ -255,13 +282,12 @@ export function WorldUI({
                 );
               })()}
 
-              {/* Feed Tab (AI Activity + Chat + Battles) */}
+              {/* Feed Tab (AI Activity + Battles) */}
               {tab === 'feed' && (() => {
-                // Interleave events, chat, and battles by timestamp
-                type FeedItem = { type: 'event'; data: EventData } | { type: 'chat'; data: ChatMessage } | { type: 'battle'; data: BattleData };
+                // Interleave events and battles by timestamp
+                type FeedItem = { type: 'event'; data: EventData } | { type: 'battle'; data: BattleData };
                 const feed: FeedItem[] = [
                   ...events.slice(0, 15).map(e => ({ type: 'event' as const, data: e })),
-                  ...chat.slice(0, 15).map(c => ({ type: 'chat' as const, data: c })),
                   ...battles.slice(0, 10).map(b => ({ type: 'battle' as const, data: b })),
                 ].sort((a, b) => {
                   const tA = 'timestamp' in a.data ? a.data.timestamp : ('createdAt' in a.data ? a.data.createdAt : '');
@@ -274,26 +300,6 @@ export function WorldUI({
                 ) : (
                   <div className="divide-y divide-white/5">
                     {feed.map((item, i) => {
-                      if (item.type === 'chat') {
-                        const c = item.data;
-                        return (
-                          <div key={`chat-${i}`} className="px-2 py-1.5 hover:bg-white/5 transition-colors">
-                            <div className="flex items-start gap-2">
-                              <span className="text-sm flex-shrink-0 mt-0.5">💬</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-semibold text-cyan-400">{c.fromName}</span>
-                                  <span className="text-[10px] text-gray-600">→</span>
-                                  <span className="text-xs font-semibold text-purple-400">{c.toName || 'everyone'}</span>
-                                  <span className="text-[10px] text-gray-700 ml-auto flex-shrink-0">{timeAgo(c.timestamp)}</span>
-                                </div>
-                                <div className="text-xs text-gray-300 mt-0.5 leading-snug">{c.message}</div>
-                                {c.location && <div className="text-[10px] text-gray-600 mt-0.5">📍 {c.location}</div>}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
                       if (item.type === 'battle') {
                         const b = item.data;
                         const p1 = onlineAgents.find(a => a.address?.toLowerCase() === b.player1?.toLowerCase())?.name || shortAddr(b.player1);
@@ -373,7 +379,64 @@ export function WorldUI({
                 );
               })()}
 
-                            {/* Chain Tab */}
+              {/* Chat Tab */}
+              {tab === 'chat' && (
+                <div className="flex flex-col gap-2 h-full">
+                  <div className="flex-1 overflow-y-auto divide-y divide-white/5 min-h-[220px]">
+                    {chat.length === 0 ? (
+                      <Empty text="No chat yet" hint="Say hi in Global Chat" />
+                    ) : (
+                      chat.slice().reverse().map((c, i) => (
+                        <div key={`${c.from}-${c.timestamp}-${i}`} className="px-2 py-2 hover:bg-white/5 transition-colors">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-cyan-400">{c.fromName || shortAddr(c.from)}</span>
+                            {c.toName && (
+                              <>
+                                <span className="text-[10px] text-gray-600">→</span>
+                                <span className="text-xs font-semibold text-purple-400">{c.toName}</span>
+                              </>
+                            )}
+                            <span className="text-[10px] text-gray-700 ml-auto">{timeAgo(c.timestamp)}</span>
+                          </div>
+                          <div className="text-xs text-gray-300 mt-0.5 leading-snug break-words">{c.message}</div>
+                          {c.location && <div className="text-[10px] text-gray-600 mt-0.5">📍 {c.location}</div>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="border-t border-white/10 pt-2">
+                    {!walletAddress ? (
+                      <div className="text-xs text-gray-500 px-1">Connect wallet to chat</div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              void sendChat();
+                            }
+                          }}
+                          placeholder="Message global chat..."
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/40"
+                          maxLength={240}
+                        />
+                        <button
+                          onClick={() => void sendChat()}
+                          disabled={sendingChat || !chatInput.trim()}
+                          className="px-3 py-2 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Chain Tab */}
               {tab === 'chain' && (
                 transactions.length === 0 ? (
                   <Empty text="No on-chain activity yet" />
