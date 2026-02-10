@@ -60,7 +60,7 @@ const AUTOMON_NAMES: Record<number, string> = {
 const LOCATIONS = [
   { name: 'Home',    x:   0, z:   0 },
   { name: 'Town Arena',      x:   0, z: -30 },
-  { name: 'Town Market',     x:  28, z:   0 },
+  { name: 'Shop',     x:  28, z:   0 },
   { name: 'Community Farm',  x: -28, z:   0 },
   { name: 'Old Pond',        x: -36, z: -14 },
   { name: 'Dark Forest',     x: -36, z:  22 },
@@ -77,7 +77,7 @@ const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> 
     { action: 'battling', reasons: ['Challenged a rival trainer!', 'Arena match started', 'Testing new strategy'] },
     { action: 'training', reasons: ['Sparring at the arena', 'Practicing type matchups', 'Grinding XP'] },
   ],
-  'Town Market': [
+  'Shop': [
     { action: 'trading', reasons: ['Looking for good deals', 'Checking the marketplace', 'Swapping duplicates'] },
     { action: 'shopping', reasons: ['Buying potions', 'Browsing rare cards', 'Stocking up supplies'] },
   ],
@@ -671,7 +671,7 @@ async function tick(): Promise<void> {
     console.log(`[${ts()}] 📍 ${target.name}: ${pendingAction.action} — "${pendingAction.reason}"`);
 
     // If shopping at market, buy a pack
-    if ((pendingAction.action === 'shopping' || pendingAction.action === 'trading') && target.name === 'Town Market') {
+    if ((pendingAction.action === 'shopping' || pendingAction.action === 'trading') && target.name === 'Shop') {
       await logAction(pendingAction.action, pendingAction.reason, target.name);
       recentActions.push(`${pendingAction.action}@${target.name}`);
       if (recentActions.length > 10) recentActions.shift();
