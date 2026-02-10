@@ -150,7 +150,7 @@ function Scene({
       <CameraController flyTarget={cameraFlyTarget} />
 
       {/* Soft fog at edges */}
-      <fog attach="fog" args={['#b8d8f0', 100, 200]} />
+      <fog attach="fog" args={['#b8d8f0', 120, 220]} />
 
       {/* Sky dome */}
       <Sky />
@@ -173,6 +173,8 @@ function Scene({
       />
       {/* Fill light */}
       <directionalLight position={[-20, 20, -15]} intensity={0.5} color="#ffe4b5" />
+      {/* Warm sun glow from top-right */}
+      <pointLight position={[62, 58, 28]} intensity={0.65} color="#ffd08a" distance={220} decay={1.6} />
       {/* Subtle location accent lights */}
       <pointLight position={[0, 4, -30]} intensity={0.6} color="#ef4444" distance={20} />
       <pointLight position={[-28, 4, 0]} intensity={0.5} color="#84cc16" distance={20} />
@@ -313,40 +315,62 @@ function Roads() {
   );
 }
 
-/* Sky dome — gradient from blue to light horizon */
+/* Sky dome — warm gradient with lightweight cloud forms */
 function Sky() {
+  const clouds: Array<{ p: [number, number, number]; s: [number, number, number] }> = [
+    { p: [-62, 96, -42], s: [12, 5, 7] },
+    { p: [-18, 88, 18], s: [10, 4.2, 6] },
+    { p: [34, 106, -16], s: [13, 5.2, 7.5] },
+    { p: [70, 92, 38], s: [11, 4.8, 6.2] },
+    { p: [4, 116, 68], s: [15, 5.8, 8] },
+    { p: [-74, 102, 46], s: [9, 3.8, 5.4] },
+  ];
+
   return (
-    <mesh scale={[-1, 1, 1]}>
-      <sphereGeometry args={[180, 32, 16]} />
-      <shaderMaterial
-        side={2}
-        uniforms={{
-          topColor: { value: new THREE.Color('#4a90d9') },
-          bottomColor: { value: new THREE.Color('#c8e0f4') },
-          offset: { value: 10 },
-          exponent: { value: 0.5 },
-        }}
-        vertexShader={`
-          varying vec3 vWorldPosition;
-          void main() {
-            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-            vWorldPosition = worldPosition.xyz;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `}
-        fragmentShader={`
-          uniform vec3 topColor;
-          uniform vec3 bottomColor;
-          uniform float offset;
-          uniform float exponent;
-          varying vec3 vWorldPosition;
-          void main() {
-            float h = normalize(vWorldPosition + offset).y;
-            gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
-          }
-        `}
-      />
-    </mesh>
+    <group>
+      <mesh scale={[-1, 1, 1]}>
+        <sphereGeometry args={[180, 32, 16]} />
+        <shaderMaterial
+          side={2}
+          uniforms={{
+            topColor: { value: new THREE.Color('#4a90d9') },
+            bottomColor: { value: new THREE.Color('#f7d8a0') },
+            offset: { value: 10 },
+            exponent: { value: 0.56 },
+          }}
+          vertexShader={`
+            varying vec3 vWorldPosition;
+            void main() {
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              vWorldPosition = worldPosition.xyz;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `}
+          fragmentShader={`
+            uniform vec3 topColor;
+            uniform vec3 bottomColor;
+            uniform float offset;
+            uniform float exponent;
+            varying vec3 vWorldPosition;
+            void main() {
+              float h = normalize(vWorldPosition + offset).y;
+              gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+            }
+          `}
+        />
+      </mesh>
+
+      {clouds.map((cloud, i) => (
+        <group key={`cloud-${i}`} position={cloud.p}>
+          {[-0.35, 0, 0.4].map((offset, j) => (
+            <mesh key={`cloud-part-${i}-${j}`} position={[offset * cloud.s[0], j % 2 === 0 ? 0 : 1.1, (0.2 - j * 0.2) * cloud.s[2]]} scale={cloud.s}>
+              <sphereGeometry args={[1, 12, 12]} />
+              <meshStandardMaterial color="#ffffff" transparent opacity={0.5} roughness={1} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+    </group>
   );
 }
 
