@@ -41,6 +41,12 @@ const NFT_ABI = [
   'event CardMinted(uint256 indexed tokenId, uint8 automonId, uint8 rarity)',
 ];
 
+const ESCROW_ADDRESS = process.env.ESCROW_CONTRACT_ADDRESS || '0x2aD1D15658A86290123CdEAe300E9977E2c49364';
+const ESCROW_ABI = [
+  'function createBattle(bytes32 battleId) external payable',
+  'function joinBattle(bytes32 battleId) external payable',
+];
+
 const AUTOMON_NAMES: Record<number, string> = {
   1: 'Blazeon', 2: 'Emberwing', 3: 'Magmor', 4: 'Cindercat',
   5: 'Aquaris', 6: 'Tidalon', 7: 'Coralix', 8: 'Frostfin',
@@ -401,7 +407,22 @@ async function tryJoinBattle(): Promise<boolean> {
     if (!openBattle) return false;
 
     console.log(`[${ts()}] ⚔️ Found open battle ${openBattle.battleId} — joining!`);
-    const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+
+    // Join on-chain escrow
+    let txHash: string;
+    try {
+      const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
+      const battleIdBytes = ethers.id(openBattle.battleId);
+      const wagerWei = ethers.parseEther(openBattle.wager || '0.01');
+      console.log(`[${ts()}]   💰 Joining escrow with ${openBattle.wager} MON...`);
+      const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei });
+      const receipt = await tx.wait();
+      txHash = receipt.hash;
+      console.log(`[${ts()}]   ✅ Escrow joined: ${txHash.slice(0, 12)}...`);
+    } catch (err) {
+      console.log(`[${ts()}]   ❌ Escrow join failed: ${(err as Error).message?.slice(0, 80)}`);
+      return false;
+    }
 
     const joinRes = await api('/api/battle/join', {
       method: 'POST',
@@ -462,12 +483,28 @@ async function tryJoinBattle(): Promise<boolean> {
 async function createAndWaitForBattle(): Promise<void> {
   try {
     const wager = (0.01 + Math.random() * 0.04).toFixed(3);
-    const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 
-    console.log(`[${ts()}] ⚔️ Creating battle with ${wager} MON wager...`);
+    // Create on-chain escrow first
+    let txHash: string;
+    // Pre-generate battleId so it matches on-chain
+    const battleIdPreview = crypto.randomUUID();
+    try {
+      const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
+      const battleIdBytes = ethers.id(battleIdPreview);
+      const wagerWei = ethers.parseEther(wager);
+      console.log(`[${ts()}] ⚔️ Creating battle with ${wager} MON wager (on-chain)...`);
+      const tx = await escrow.createBattle(battleIdBytes, { value: wagerWei });
+      const receipt = await tx.wait();
+      txHash = receipt.hash;
+      console.log(`[${ts()}]   ✅ Escrow created: ${txHash.slice(0, 12)}...`);
+    } catch (err) {
+      console.log(`[${ts()}]   ❌ Escrow create failed: ${(err as Error).message?.slice(0, 80)}`);
+      return;
+    }
+
     const res = await api('/api/battle/create', {
       method: 'POST',
-      body: JSON.stringify({ wager, txHash, address: ADDRESS }),
+      body: JSON.stringify({ wager, txHash, address: ADDRESS, battleId: battleIdPreview }),
     });
     if (!res.ok) { console.log(`[${ts()}]   ❌ Create failed`); return; }
     const { battle } = await res.json();
