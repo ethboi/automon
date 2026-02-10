@@ -407,10 +407,18 @@ async function tryJoinBattle(): Promise<boolean> {
     const { cards } = await cardsRes.json();
     if (!cards || cards.length < 3) { console.log(`[${ts()}]   ❌ Not enough cards`); return false; }
 
-    // Sort by attack+defense desc, pick top 3
-    const sorted = cards.sort((a: { attack: number; defense: number }, b: { attack: number; defense: number }) =>
-      (b.attack + b.defense) - (a.attack + a.defense)
-    );
+    // Sort by total stats desc, pick top 3 (handle both flat and nested stats)
+    const getStats = (c: Record<string, unknown>) => {
+      const s = c.stats as Record<string, number> | undefined;
+      return {
+        attack: s?.attack ?? (c.attack as number) ?? 30,
+        defense: s?.defense ?? (c.defense as number) ?? 30,
+      };
+    };
+    const sorted = cards.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      const sa = getStats(a), sb = getStats(b);
+      return (sb.attack + sb.defense) - (sa.attack + sa.defense);
+    });
     const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
 
     console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards: ${cardIds.join(', ')}`);
@@ -464,9 +472,14 @@ async function createAndWaitForBattle(): Promise<void> {
     if (!cardsRes.ok) return;
     const { cards } = await cardsRes.json();
     if (!cards || cards.length < 3) return;
-    const sorted = cards.sort((a: { attack: number; defense: number }, b: { attack: number; defense: number }) =>
-      (b.attack + b.defense) - (a.attack + a.defense)
-    );
+    const getStats2 = (c: Record<string, unknown>) => {
+      const s = c.stats as Record<string, number> | undefined;
+      return { attack: s?.attack ?? (c.attack as number) ?? 30, defense: s?.defense ?? (c.defense as number) ?? 30 };
+    };
+    const sorted = cards.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      const sa = getStats2(a), sb = getStats2(b);
+      return (sb.attack + sb.defense) - (sa.attack + sa.defense);
+    });
     const cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
     console.log(`[${ts()}]   🎴 Selecting cards: ${cardIds.join(', ')}`);
     const selectRes = await api('/api/battle/select-cards', {
@@ -548,13 +561,25 @@ async function tick(): Promise<void> {
     // Just arrived — log the action and start dwelling
     console.log(`[${ts()}] 📍 ${target.name}: ${pendingAction.action} — "${pendingAction.reason}"`);
 
-    // If battling at arena, create a battle and wait for opponent
+    // If battling at arena, try joining first, then create
     if (pendingAction.action === 'battling' && target.name === 'Town Arena' && cardCount >= 3) {
       await logAction(pendingAction.action, pendingAction.reason, target.name);
       recentActions.push(`${pendingAction.action}@${target.name}`);
       if (recentActions.length > 10) recentActions.shift();
       pendingAction = null;
-      await createAndWaitForBattle();
+      // Try joining an existing battle first
+      const joined = await tryJoinBattle();
+      if (!joined) {
+        // Random delay 2-6s so agents don't all create at once
+        const delay = 2000 + Math.random() * 4000;
+        console.log(`[${ts()}] ⏳ No open battles, waiting ${(delay/1000).toFixed(1)}s before creating...`);
+        await new Promise(r => setTimeout(r, delay));
+        // Check again after delay — someone else might have created
+        const joined2 = await tryJoinBattle();
+        if (!joined2) {
+          await createAndWaitForBattle();
+        }
+      }
       // After battle (or timeout), continue normally — no extra dwell
     } else {
       await logAction(pendingAction.action, pendingAction.reason, target.name);
