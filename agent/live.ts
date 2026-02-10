@@ -886,6 +886,30 @@ async function main() {
   // Sync existing cards
   await syncCards();
   console.log(`[${ts()}] 🎴 ${cardCount} cards on-chain`);
+
+  // Cancel stale pending battles and settle unsettled completed ones
+  try {
+    const staleRes = await api(`/api/battle/list?address=${ADDRESS}&status=pending`);
+    if (staleRes.ok) {
+      const { battles: staleBattles } = await staleRes.json();
+      for (const b of (staleBattles || [])) {
+        console.log(`[${ts()}] 🧹 Cancelling stale pending battle ${b.battleId?.slice(0, 8)}`);
+        await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId: b.battleId }) });
+      }
+    }
+    // Settle any unsettled completed battles
+    const unsettledRes = await api(`/api/battle/list?address=${ADDRESS}&status=complete`);
+    if (unsettledRes.ok) {
+      const { battles: unsettled } = await unsettledRes.json();
+      for (const b of (unsettled || [])) {
+        if (!b.settleTxHash && b.winner) {
+          console.log(`[${ts()}] 💰 Settling unsettled battle ${b.battleId?.slice(0, 8)}`);
+          await trySettleBattle(b.battleId, b.winner);
+        }
+      }
+    }
+  } catch { /* startup cleanup is best-effort */ }
+
   console.log(`[${ts()}] 🚀 Running (${TICK_MS}ms ticks). Ctrl+C to stop.\n`);
 
   // Graceful shutdown
