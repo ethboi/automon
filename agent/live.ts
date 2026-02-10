@@ -411,10 +411,14 @@ async function tryJoinBattle(): Promise<boolean> {
     // Join on-chain escrow
     let txHash: string;
     try {
-      const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
       const battleIdBytes = ethers.id(openBattle.battleId);
-      const wagerStr = String(openBattle.wager || '0.01');
-      const wagerWei = ethers.parseEther(wagerStr);
+      // Read exact wager from on-chain to ensure match
+      const escrowRead = new ethers.Contract(ESCROW_ADDRESS, [...ESCROW_ABI, 'function battles(bytes32) view returns (address,address,uint256,bool)'], provider);
+      const onChain = await escrowRead.battles(battleIdBytes);
+      const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
+      const wagerWei = onChain[2];
+      if (wagerWei === 0n) { console.log(`[${ts()}]   ⚠️ Battle not on-chain, skipping`); return false; }
+      console.log(`[${ts()}]   💰 Joining escrow with ${ethers.formatEther(wagerWei)} MON (on-chain verified)...`);
       console.log(`[${ts()}]   💰 Joining escrow with ${openBattle.wager} MON...`);
       const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei, gasLimit: 200000 });
       const receipt = await tx.wait();
@@ -483,7 +487,7 @@ async function tryJoinBattle(): Promise<boolean> {
 
 async function createAndWaitForBattle(): Promise<void> {
   try {
-    const wager = (0.01 + Math.random() * 0.04).toFixed(3);
+    const wager = (0.005 + Math.random() * 0.015).toFixed(4);
 
     // Create on-chain escrow first
     let txHash: string;
