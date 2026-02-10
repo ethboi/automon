@@ -269,6 +269,48 @@ async function buyPack(): Promise<void> {
   }
 }
 
+// AutoMon base stats for deriving card stats from on-chain data
+const AUTOMON_DATA: Record<number, { name: string; element: string; baseAttack: number; baseDefense: number; baseSpeed: number; baseHp: number; ability: string }> = {
+  1: { name: 'Blazeon', element: 'fire', baseAttack: 45, baseDefense: 30, baseSpeed: 40, baseHp: 100, ability: 'Inferno' },
+  2: { name: 'Emberwing', element: 'fire', baseAttack: 38, baseDefense: 35, baseSpeed: 45, baseHp: 95, ability: 'Burn' },
+  3: { name: 'Magmor', element: 'fire', baseAttack: 50, baseDefense: 40, baseSpeed: 25, baseHp: 110, ability: 'Inferno' },
+  4: { name: 'Cindercat', element: 'fire', baseAttack: 35, baseDefense: 25, baseSpeed: 55, baseHp: 85, ability: 'Burn' },
+  5: { name: 'Aquaris', element: 'water', baseAttack: 40, baseDefense: 40, baseSpeed: 35, baseHp: 105, ability: 'Tsunami' },
+  6: { name: 'Tidalon', element: 'water', baseAttack: 45, baseDefense: 35, baseSpeed: 38, baseHp: 100, ability: 'Heal' },
+  7: { name: 'Coralix', element: 'water', baseAttack: 30, baseDefense: 50, baseSpeed: 30, baseHp: 115, ability: 'Tsunami' },
+  8: { name: 'Frostfin', element: 'water', baseAttack: 42, baseDefense: 32, baseSpeed: 45, baseHp: 90, ability: 'Heal' },
+  9: { name: 'Terrox', element: 'earth', baseAttack: 35, baseDefense: 55, baseSpeed: 20, baseHp: 120, ability: 'Earthquake' },
+  10: { name: 'Bouldern', element: 'earth', baseAttack: 40, baseDefense: 50, baseSpeed: 25, baseHp: 115, ability: 'Fortify' },
+  11: { name: 'Crysthorn', element: 'earth', baseAttack: 48, baseDefense: 45, baseSpeed: 22, baseHp: 105, ability: 'Earthquake' },
+  12: { name: 'Mossback', element: 'earth', baseAttack: 32, baseDefense: 60, baseSpeed: 18, baseHp: 125, ability: 'Fortify' },
+  13: { name: 'Gustal', element: 'air', baseAttack: 42, baseDefense: 28, baseSpeed: 55, baseHp: 90, ability: 'Cyclone' },
+  14: { name: 'Zephyrix', element: 'air', baseAttack: 38, baseDefense: 30, baseSpeed: 60, baseHp: 85, ability: 'Haste' },
+  15: { name: 'Aurorix', element: 'air', baseAttack: 45, baseDefense: 25, baseSpeed: 50, baseHp: 88, ability: 'Cyclone' },
+  16: { name: 'Cloudwisp', element: 'air', baseAttack: 35, baseDefense: 35, baseSpeed: 48, baseHp: 95, ability: 'Haste' },
+  17: { name: 'Shadowmere', element: 'dark', baseAttack: 50, baseDefense: 30, baseSpeed: 42, baseHp: 95, ability: 'Void Strike' },
+  18: { name: 'Nocturne', element: 'dark', baseAttack: 45, baseDefense: 35, baseSpeed: 38, baseHp: 100, ability: 'Curse' },
+  19: { name: 'Solaris', element: 'light', baseAttack: 42, baseDefense: 40, baseSpeed: 35, baseHp: 105, ability: 'Radiance' },
+  20: { name: 'Luminara', element: 'light', baseAttack: 38, baseDefense: 45, baseSpeed: 32, baseHp: 110, ability: 'Purify' },
+};
+
+const RARITY_NAMES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.15, rare: 1.3, epic: 1.5, legendary: 1.8 };
+
+const ABILITY_DEFS: Record<string, { effect: string; power: number; cooldown: number; description: string }> = {
+  Inferno: { effect: 'damage', power: 40, cooldown: 3, description: 'Deals heavy fire damage' },
+  Burn: { effect: 'dot', power: 10, cooldown: 4, description: 'Burns target for 3 turns' },
+  Tsunami: { effect: 'damage', power: 35, cooldown: 3, description: 'Crashes a wave of water' },
+  Heal: { effect: 'heal', power: 30, cooldown: 4, description: 'Restores HP' },
+  Earthquake: { effect: 'damage', power: 38, cooldown: 3, description: 'Shakes the ground violently' },
+  Fortify: { effect: 'buff', power: 20, cooldown: 4, description: 'Increases defense' },
+  Cyclone: { effect: 'damage', power: 32, cooldown: 2, description: 'Summons a devastating cyclone' },
+  Haste: { effect: 'buff', power: 15, cooldown: 3, description: 'Increases speed' },
+  'Void Strike': { effect: 'damage', power: 45, cooldown: 4, description: 'Strikes from the void' },
+  Curse: { effect: 'debuff', power: 15, cooldown: 4, description: 'Curses target, reducing stats' },
+  Radiance: { effect: 'damage', power: 36, cooldown: 3, description: 'Blasts with pure light' },
+  Purify: { effect: 'heal', power: 20, cooldown: 3, description: 'Removes debuffs and heals' },
+};
+
 async function syncCards(): Promise<void> {
   try {
     if (!NFT_ADDRESS) return;
@@ -276,14 +318,50 @@ async function syncCards(): Promise<void> {
     const tokenIds = await contract.getCardsOf(wallet.address);
     cardCount = tokenIds.length;
 
-    // Sync to server — reads on-chain data and writes to MongoDB with proper stats
+    if (cardCount === 0) return;
+
+    // Read on-chain data locally (fast — direct RPC) and build full card objects
+    const cards = await Promise.all(tokenIds.map(async (tid: bigint) => {
+      const tokenId = Number(tid);
+      const [automonId, rarityIndex] = await contract.getCard(tokenId);
+      const aId = Number(automonId);
+      const automon = AUTOMON_DATA[aId];
+      if (!automon) return null;
+
+      const rarity = RARITY_NAMES[Number(rarityIndex)] || 'common';
+      const mult = RARITY_MULT[rarity] || 1.0;
+      const hp = Math.floor(automon.baseHp * mult);
+      const abil = ABILITY_DEFS[automon.ability] || { effect: 'damage', power: 30, cooldown: 3, description: 'Attack' };
+
+      return {
+        tokenId, automonId: aId, owner: ADDRESS.toLowerCase(),
+        name: automon.name, element: automon.element, rarity,
+        stats: {
+          attack: Math.floor(automon.baseAttack * mult),
+          defense: Math.floor(automon.baseDefense * mult),
+          speed: Math.floor(automon.baseSpeed * mult),
+          hp, maxHp: hp,
+        },
+        ability: {
+          name: automon.ability, effect: abil.effect,
+          power: Math.floor(abil.power * mult),
+          cooldown: abil.cooldown, description: abil.description,
+          currentCooldown: 0,
+        },
+        level: 1, xp: 0,
+      };
+    }));
+
+    const validCards = cards.filter(Boolean);
+
+    // Send to server for upsert into MongoDB
     const syncRes = await api('/api/agents/cards/sync', {
       method: 'POST',
-      body: JSON.stringify({ tokenIds: tokenIds.map(Number), address: ADDRESS }),
+      body: JSON.stringify({ cards: validCards }),
     });
     if (syncRes.ok) {
       const data = await syncRes.json();
-      console.log(`[${ts()}] 📦 Synced ${data.synced || data.cards?.length || 0} cards to DB`);
+      console.log(`[${ts()}] 📦 Synced ${data.synced} new / ${data.total} total cards to DB`);
     } else {
       const err = await syncRes.text().catch(() => '');
       console.log(`[${ts()}] ⚠️ Card sync failed: ${syncRes.status} ${err.slice(0, 200)}`);
