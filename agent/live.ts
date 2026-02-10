@@ -455,16 +455,22 @@ async function tick(): Promise<void> {
     pendingAction = { action: nextAction, reason: nextReason };
 
     // Set next destination
-    if (nextLocationName && nextLocationName !== target.name) {
-      const aiTarget = LOCATIONS.find(l => l.name === nextLocationName);
-      if (aiTarget) { target = aiTarget; }
-      else { let next; do { next = pick(LOCATIONS); } while (next.name === target.name); target = next; }
+    if (nextLocationName) {
+      if (nextLocationName === target.name) {
+        // AI wants to stay at the same location — don't move
+        console.log(`[${ts()}]    → staying at ${target.name}`);
+      } else {
+        const aiTarget = LOCATIONS.find(l => l.name === nextLocationName);
+        if (aiTarget) { target = aiTarget; }
+        else { let next; do { next = pick(LOCATIONS); } while (next.name === target.name); target = next; }
+        console.log(`[${ts()}]    → heading to ${target.name}`);
+      }
     } else {
       let next;
       do { next = pick(LOCATIONS); } while (next.name === target.name);
       target = next;
+      console.log(`[${ts()}]    → heading to ${target.name}`);
     }
-    console.log(`[${ts()}]    → heading to ${target.name}`);
   }
 
   // Update position on server
