@@ -13,7 +13,17 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const packs = await db
       .collection('packs')
-      .find({ owner: address.toLowerCase() })
+      .find({
+        owner: address.toLowerCase(),
+        $or: [
+          { opened: true },
+          {
+            opened: false,
+            onchainVerified: true,
+            purchaseTxHash: { $type: 'string' },
+          },
+        ],
+      })
       .sort({ createdAt: -1 })
       .toArray();
 
