@@ -92,8 +92,9 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
 
       {/* Sheet — sits below header on mobile, centered on desktop */}
       <div
-        className="absolute bottom-0 left-0 right-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-sm sm:rounded-2xl
-          bg-gray-950 border-t sm:border border-white/10 rounded-t-2xl max-h-[calc(100vh-4rem)] sm:max-h-[80vh] overflow-hidden"
+        className="absolute bottom-0 left-0 right-0 top-16 sm:top-auto sm:bottom-auto sm:left-1/2 sm:-translate-x-1/2 sm:max-w-sm sm:rounded-2xl sm:max-h-[80vh]
+          bg-gray-950 border-t sm:border border-white/10 rounded-t-2xl overflow-hidden"
+        style={{ zIndex: 61 }}
         onClick={e => e.stopPropagation()}
       >
         {loading ? (
@@ -101,14 +102,14 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
         ) : !d ? (
           <div className="text-center py-12 text-gray-500 text-sm">Failed to load</div>
         ) : (
-          <>
+          <div className="flex flex-col h-full overflow-hidden">
             {/* ── Drag handle (mobile) ── */}
             <div className="flex justify-center pt-2 pb-1 sm:hidden">
               <div className="w-10 h-1 bg-white/20 rounded-full" />
             </div>
 
             {/* ── Header ── */}
-            <div className="px-3 pt-1 pb-2 sm:px-4 sm:pt-3 sm:pb-3">
+            <div className="px-3 pt-1 pb-2 sm:px-4 sm:pt-3 sm:pb-3 shrink-0">
               {/* Close btn desktop */}
               <button onClick={onClose} className="hidden sm:flex absolute top-2 right-2 w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center">
                 <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,7 +157,7 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
             </div>
 
             {/* ── Stats strip ── */}
-            <div className="grid grid-cols-4 border-y border-white/5">
+            <div className="grid grid-cols-4 border-y border-white/5 shrink-0">
               {[
                 { v: d.stats.cards, l: 'Cards', c: 'text-purple-400' },
                 { v: d.stats.battles, l: 'Battles', c: 'text-gray-300' },
@@ -171,7 +172,7 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex border-b border-white/5">
+            <div className="flex border-b border-white/5 shrink-0">
               {([
                 { id: 'log' as const, l: `📝 Log` },
                 { id: 'cards' as const, l: `🎴 ${d.cards.length}` },
@@ -187,7 +188,7 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
             </div>
 
             {/* ── Content ── */}
-            <div className="overflow-y-auto max-h-[calc(100vh-4rem-220px)] sm:max-h-[calc(80vh-240px)]">
+            <div className="overflow-y-auto flex-1">
 
               {/* Log */}
               {tab === 'log' && (
@@ -224,9 +225,11 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                 d.cards.length === 0 ? (
                   <div className="text-center py-8 text-gray-700 text-[10px]">No cards yet</div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-1.5 p-2">
+                  <div className="grid grid-cols-3 gap-1 p-2">
                     {d.cards.map(card => (
-                      <CardComponent key={card.id || card._id?.toString()} card={card} size="sm" showStats={true} />
+                      <div key={card.id || card._id?.toString()} className="transform scale-90 origin-top">
+                        <CardComponent card={card} size="sm" showStats={false} />
+                      </div>
                     ))}
                   </div>
                 )
@@ -260,11 +263,11 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
 
             {/* Personality footer */}
             {d.agent.personality && (
-              <div className="border-t border-white/5 px-3 py-1.5">
+              <div className="border-t border-white/5 px-3 py-1.5 shrink-0">
                 <p className="text-[9px] text-gray-700 italic text-center">&ldquo;{d.agent.personality}&rdquo;</p>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
