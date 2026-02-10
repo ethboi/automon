@@ -13,20 +13,22 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     let query: Record<string, unknown> = {};
 
-    // If type=my, fetch user's battles
-    if (type === 'my' && address) {
-      query = {
-        $or: [
-          { 'player1.address': address.toLowerCase() },
-          { 'player2.address': address.toLowerCase() },
-        ],
-      };
-    } else if (type === 'all') {
-      query = {};
+    // If address provided, filter by participant
+    if (address) {
+      const addrLower = address.toLowerCase();
+      query.$or = [
+        { 'player1.address': addrLower },
+        { 'player2.address': addrLower },
+      ];
+    }
+
+    if (type === 'all') {
+      // no status filter
     } else if (status) {
-      query.status = status;
-    } else {
-      // Default: show pending battles
+      // Support comma-separated: "pending,active"
+      const statuses = status.split(',').map(s => s.trim());
+      query.status = statuses.length === 1 ? statuses[0] : { $in: statuses };
+    } else if (!address) {
       query.status = 'pending';
     }
 

@@ -519,6 +519,16 @@ async function tryJoinBattle(): Promise<boolean> {
 
 async function createAndWaitForBattle(aiWager?: string): Promise<void> {
   try {
+    // Check if we already have a pending/active battle
+    const myBattlesRes = await api(`/api/battle/list?address=${ADDRESS}&status=pending,active`);
+    if (myBattlesRes.ok) {
+      const { battles: myBattles } = await myBattlesRes.json();
+      if (myBattles?.length > 0) {
+        console.log(`[${ts()}]   ⏭️ Already have ${myBattles.length} pending/active battle(s), skipping create`);
+        return;
+      }
+    }
+
     const wager = aiWager || (0.005 + Math.random() * 0.015).toFixed(4);
 
     // Create on-chain escrow first
