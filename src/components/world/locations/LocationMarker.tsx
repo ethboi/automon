@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
@@ -14,7 +14,21 @@ interface LocationMarkerProps {
   variant?: 'building' | 'nature' | 'water' | 'dark' | 'farm';
 }
 
-export function LocationLabel({ icon, label, color }: { icon: string; label: string; color: string }) {
+export function LocationLabel({
+  icon,
+  label,
+  color,
+  clickable = false,
+  hovered = false,
+  hint = 'Click to interact',
+}: {
+  icon: string;
+  label: string;
+  color: string;
+  clickable?: boolean;
+  hovered?: boolean;
+  hint?: string;
+}) {
   const { size } = useThree();
   const isMobile = size.width < 768;
 
@@ -30,14 +44,18 @@ export function LocationLabel({ icon, label, color }: { icon: string; label: str
           display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 6,
-          background: 'rgba(8, 12, 24, 0.95)',
+          gap: 8,
+          background: hovered ? 'rgba(12, 18, 36, 0.98)' : 'rgba(8, 12, 24, 0.95)',
           backdropFilter: 'blur(12px)',
           padding: isMobile ? '6px 12px' : '7px 14px',
           borderRadius: 12,
-          border: `1.5px solid ${color}60`,
-          boxShadow: `0 0 20px ${color}30, 0 4px 12px rgba(0,0,0,0.6)`,
+          border: `1.5px solid ${hovered ? `${color}cc` : `${color}60`}`,
+          boxShadow: hovered
+            ? `0 0 28px ${color}66, 0 8px 20px rgba(0,0,0,0.65)`
+            : `0 0 20px ${color}30, 0 4px 12px rgba(0,0,0,0.6)`,
           whiteSpace: 'nowrap',
+          transform: hovered ? 'translateY(-1px) scale(1.03)' : 'translateY(0) scale(1)',
+          transition: 'all 150ms ease',
         }}
       >
         <span style={{ fontSize: isMobile ? 18 : 16 }}>{icon}</span>
@@ -52,6 +70,23 @@ export function LocationLabel({ icon, label, color }: { icon: string; label: str
         >
           {label}
         </span>
+        {clickable && (
+          <span
+            style={{
+              fontSize: isMobile ? 10 : 11,
+              fontWeight: 700,
+              color: hovered ? '#ffffff' : '#cbd5e1',
+              border: `1px solid ${hovered ? '#ffffff99' : '#94a3b855'}`,
+              background: hovered ? '#ffffff22' : '#00000020',
+              borderRadius: 999,
+              padding: isMobile ? '2px 6px' : '2px 7px',
+              letterSpacing: '0.2px',
+              textTransform: 'uppercase',
+            }}
+          >
+            {hovered ? hint : 'Clickable'}
+          </span>
+        )}
       </div>
     </Html>
   );
@@ -63,6 +98,7 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
   const waterRef = useRef<THREE.Mesh>(null);
   const orbRefs = useRef<(THREE.Mesh | null)[]>([]);
   const smokeRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const [hovered, setHovered] = useState(false);
 
   const seed = useMemo(() => {
     let h = 0;
@@ -127,13 +163,35 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
         e.stopPropagation();
         onClick?.();
       }}
+      onPointerEnter={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+        if (onClick) document.body.style.cursor = 'pointer';
+      }}
+      onPointerLeave={() => {
+        setHovered(false);
+        document.body.style.cursor = 'default';
+      }}
     >
-      <LocationLabel icon={icon} label={label} color={color} />
+      <LocationLabel
+        icon={icon}
+        label={label}
+        color={color}
+        clickable={!!onClick}
+        hovered={hovered}
+        hint={variant === 'building' ? 'Click to enter' : 'Click to inspect'}
+      />
 
       {/* Invisible hitbox for reliable click detection */}
       <mesh visible={false}>
         <boxGeometry args={[10, 12, 10]} />
         <meshBasicMaterial />
+      </mesh>
+
+      {/* Interaction ring */}
+      <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[3.2, hovered ? 4.15 : 3.9, 40]} />
+        <meshBasicMaterial color={color} transparent opacity={hovered ? 0.45 : 0.2} />
       </mesh>
 
       {variant === 'building' && (
