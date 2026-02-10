@@ -92,9 +92,7 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
   const roofColor = useMemo(() => baseColor.clone().offsetHSL(0.01, -0.12, -0.2), [baseColor]);
 
   useFrame((state) => {
-    if (glowRef.current) {
-      glowRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 2) * 0.08);
-    }
+    // glow pulse removed
     if (waterRef.current) {
       waterRef.current.position.y = 0.08 + Math.sin(state.clock.elapsedTime * 1.8) * 0.03;
       const mat = waterRef.current.material;
@@ -725,10 +723,7 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
         </>
       )}
 
-      <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <cylinderGeometry args={[3.45, 3.45, 0.025, 24]} />
-        <meshBasicMaterial color={color} transparent opacity={0.16} />
-      </mesh>
+      {/* glow circle removed */}
     </group>
   );
 }

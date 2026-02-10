@@ -26,16 +26,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
     [22, -18], [18, 14], [2, 34], [38, -8],
   ], []);
 
-  const streamSegments = useMemo(() => [
-    { p: [-35.2, 0.02, -13.6], r: 0.35, w: 5.2 },
-    { p: [-31.8, 0.02, -11.4], r: 0.5, w: 5.6 },
-    { p: [-27.8, 0.02, -8.4], r: 0.38, w: 6.0 },
-    { p: [-23.6, 0.02, -5.0], r: 0.6, w: 5.8 },
-    { p: [-19.4, 0.02, -1.4], r: 0.34, w: 5.5 },
-    { p: [-15.2, 0.02, 2.2], r: 0.52, w: 5.2 },
-    { p: [-10.6, 0.02, 5.8], r: 0.36, w: 4.8 },
-    { p: [-6.5, 0.02, 8.8], r: 0.48, w: 4.2 },
-  ], []);
+  // stream removed
 
   const hillDomes = useMemo(() => [
     [-12, 0.15, -16, 3.2, 1.0, 0.85],
@@ -116,19 +107,7 @@ export function Ground({ size = 80, onClick }: GroundProps) {
         </mesh>
       </group>
 
-      {/* Winding stream from Old Pond toward south-east */}
-      {streamSegments.map((seg, i) => (
-        <group key={`stream-${i}`} position={seg.p as [number, number, number]} rotation={[-Math.PI / 2, seg.r, 0]}>
-          <mesh>
-            <planeGeometry args={[seg.w, 1.45]} />
-            <meshStandardMaterial color="#60a5fa" transparent opacity={0.48} roughness={0.18} metalness={0.18} />
-          </mesh>
-          <mesh position={[0, -0.004, 0]}>
-            <planeGeometry args={[seg.w + 0.5, 1.8]} />
-            <meshStandardMaterial color="#bfdbfe" transparent opacity={0.18} roughness={0.7} />
-          </mesh>
-        </group>
-      ))}
+      {/* stream removed */}
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-36, 0.008, 22]}>
         <circleGeometry args={[7, 24]} />
