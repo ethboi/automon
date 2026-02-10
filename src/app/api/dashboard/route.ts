@@ -128,6 +128,8 @@ export async function GET() {
         player2Cards: (b.player2?.cards || []).map((c: { name: string }) => c.name),
         winner: b.winner,
         wager: b.wager,
+        settleTxHash: b.settleTxHash || null,
+        payout: b.winner && b.wager ? (Number(b.wager) * 2 * 0.95).toFixed(4) : null,
         lastRound: b.rounds?.length
           ? (() => {
               const r = b.rounds[b.rounds.length - 1];
