@@ -37,6 +37,17 @@ function timeAgo(d: string | Date): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
+function formatDuration(start: string | Date, end?: string | Date | null): string {
+  const startMs = new Date(start).getTime();
+  const endMs = end ? new Date(end).getTime() : Date.now();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return '0s';
+  const total = Math.floor((endMs - startMs) / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (m <= 0) return `${s}s`;
+  return `${m}m ${s}s`;
+}
+
 type View = 'list' | 'create' | 'select-cards' | 'battle' | 'replay';
 
 export default function BattlePage() {
@@ -173,7 +184,13 @@ export default function BattlePage() {
 
   const openBattles = battles.filter(b => b.status === 'pending' && b.player1.address.toLowerCase() !== address?.toLowerCase());
   const myBattles = battles.filter(b => b.player1.address.toLowerCase() === address?.toLowerCase() || b.player2?.address.toLowerCase() === address?.toLowerCase());
-  const recentBattles = battles.filter(b => b.status === 'complete' || b.status === 'active');
+  const activeBattles = battles.filter(b => b.status === 'active');
+  const recentBattles = battles.filter(b => b.status === 'complete');
+
+  const openBattleView = (battle: Battle) => {
+    setCurrentBattle(battle);
+    setView('battle');
+  };
 
   if (loading) return (
     <div className="page-container flex items-center justify-center min-h-[60vh]">
@@ -290,10 +307,27 @@ export default function BattlePage() {
 
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
-        <StatCard label="Active" value={battles.filter(b => b.status === 'active').length} color="text-yellow-400" icon="⚡" />
+        <StatCard label="Active" value={activeBattles.length} color="text-yellow-400" icon="⚡" />
         <StatCard label="Open" value={openBattles.length} color="text-emerald-400" icon="🏟️" />
-        <StatCard label="Completed" value={recentBattles.filter(b => b.status === 'complete').length} color="text-purple-400" icon="🏆" />
+        <StatCard label="Completed" value={recentBattles.length} color="text-purple-400" icon="🏆" />
       </div>
+
+      {/* Active Battles */}
+      {activeBattles.length > 0 && (
+        <Section title="Active Battles" count={activeBattles.length} pulse>
+          <div className="grid gap-2">
+            {activeBattles.map((battle, i) => (
+              <BattleCard
+                key={battle.battleId}
+                battle={battle}
+                index={i}
+                onReplay={watchReplay}
+                onOpen={() => openBattleView(battle)}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Open Battles */}
       {openBattles.length > 0 && (
@@ -327,7 +361,9 @@ export default function BattlePage() {
           <EmptyState icon="📺" title="No battles yet" desc="Create one or wait for agents!" />
         ) : (
           <div className="grid gap-2">
-            {recentBattles.map((battle, i) => <BattleCard key={battle.battleId} battle={battle} index={i} onReplay={watchReplay} />)}
+            {recentBattles.map((battle, i) => (
+              <BattleCard key={battle.battleId} battle={battle} index={i} onReplay={watchReplay} />
+            ))}
           </div>
         )}
       </Section>
@@ -374,7 +410,7 @@ export default function BattlePage() {
 
 /* ─── Battle Card Component ─── */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function BattleCard({ battle, index, onReplay }: { battle: any; index: number; onReplay: (id: string) => void }) {
+function BattleCard({ battle, index, onReplay, onOpen }: { battle: any; index: number; onReplay: (id: string) => void; onOpen?: () => void }) {
   const p1 = battle.player1;
   const p2 = battle.player2;
   const p1Name = playerName(p1);
@@ -386,9 +422,14 @@ function BattleCard({ battle, index, onReplay }: { battle: any; index: number; o
   const p2Cards = p2?.selectedCards || [];
   const payout = (parseFloat(battle.wager || '0') * 2 * 0.95).toFixed(4);
   const _lastRound = battle.lastRound;
+  const duration = battle.createdAt ? formatDuration(battle.createdAt, battle.status === 'complete' ? battle.updatedAt || null : null) : null;
 
   return (
-    <div className="bg-gray-900/60 border border-white/5 hover:border-white/10 rounded-xl p-3 sm:p-4 transition animate-fade-in-up opacity-0" style={{ animationDelay: `${index * 0.04}s` }}>
+    <div
+      className={`bg-gray-900/60 border border-white/5 hover:border-white/10 rounded-xl p-3 sm:p-4 transition animate-fade-in-up opacity-0 ${isActive && onOpen ? 'cursor-pointer' : ''}`}
+      style={{ animationDelay: `${index * 0.04}s` }}
+      onClick={isActive && onOpen ? onOpen : undefined}
+    >
       {/* Players + cards — centered layout */}
       <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3">
         {/* Player 1 side */}
@@ -426,6 +467,19 @@ function BattleCard({ battle, index, onReplay }: { battle: any; index: number; o
         <span className="text-yellow-400 font-semibold">💰 {battle.wager} MON</span>
         {winner && <span className="text-emerald-400">🏆 {winnerName} +{payout}</span>}
         {isActive && <span className="bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-semibold animate-pulse text-[10px]">LIVE</span>}
+        {duration && (
+          <span className={`${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
+            ⏱️ {duration}{isActive ? ' running' : ''}
+          </span>
+        )}
+        {isActive && onOpen && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpen(); }}
+            className="bg-yellow-500/20 hover:bg-yellow-500/35 text-yellow-300 px-2 py-0.5 rounded-lg transition font-medium text-[10px]"
+          >
+            👁️ Watch Live
+          </button>
+        )}
         {battle.status === 'complete' && <button onClick={() => onReplay(battle.battleId)} className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 px-2 py-0.5 rounded-lg transition font-medium text-[10px]">📺 Replay</button>}
         {battle.createdAt && <span className="text-gray-600">{timeAgo(battle.createdAt)}</span>}
       </div>
