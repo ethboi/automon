@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { logTransaction } from '@/lib/transactions';
 import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
+import { ethers } from 'ethers';
+import { getProvider } from '@/lib/blockchain';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -34,6 +36,20 @@ export async function POST(request: NextRequest) {
     if (battle.player2) {
       return NextResponse.json({ error: 'Battle already has two players' }, { status: 400 });
     }
+
+    const wager = Number(battle.wager);
+    if (!Number.isFinite(wager) || wager <= 0) {
+      return NextResponse.json({ error: 'Invalid battle wager' }, { status: 400 });
+    }
+
+    // Enforce on-chain affordability so 0 MON agents cannot join battles.
+    const provider = getProvider();
+    const balanceWei = await provider.getBalance(address);
+    const wagerWei = ethers.parseEther(String(battle.wager));
+    if (balanceWei < wagerWei) {
+      return NextResponse.json({ error: 'Insufficient MON balance for wager' }, { status: 400 });
+    }
+
     const playerAgent = await db.collection('agents').findOne({ address: address.toLowerCase() });
     const p2Mood = clampMood(typeof playerAgent?.mood === 'number' ? playerAgent.mood : DEFAULT_MOOD);
 

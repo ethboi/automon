@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { logTransaction } from '@/lib/transactions';
 import { Battle } from '@/lib/types';
 import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
+import { ethers } from 'ethers';
+import { getProvider } from '@/lib/blockchain';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -21,6 +23,18 @@ export async function POST(request: NextRequest) {
 
     if (!wager) {
       return NextResponse.json({ error: 'Wager amount required' }, { status: 400 });
+    }
+    const wagerValue = Number(wager);
+    if (!Number.isFinite(wagerValue) || wagerValue <= 0) {
+      return NextResponse.json({ error: 'Invalid wager amount' }, { status: 400 });
+    }
+
+    // Enforce on-chain affordability so 0 MON agents cannot create battles.
+    const provider = getProvider();
+    const balanceWei = await provider.getBalance(address);
+    const wagerWei = ethers.parseEther(String(wager));
+    if (balanceWei < wagerWei) {
+      return NextResponse.json({ error: 'Insufficient MON balance for wager' }, { status: 400 });
     }
 
     const db = await getDb();
