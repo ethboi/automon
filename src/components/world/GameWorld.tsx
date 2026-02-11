@@ -581,11 +581,24 @@ function Roads() {
           <boxGeometry args={[4, 2.4, 3.5]} />
           <meshStandardMaterial color="#d4a574" roughness={0.85} />
         </mesh>
-        {/* Roof */}
-        <mesh position={[0, 3.5, 0]} castShadow rotation={[0, Math.PI / 2, 0]}>
-          <coneGeometry args={[3.2, 2.2, 4]} />
-          <meshStandardMaterial color="#8B4513" roughness={0.9} />
-        </mesh>
+        {/* Roof — two tilted planes */}
+        {(() => {
+          const w = 4.2, h = 1.6, d = 3.8;
+          const angle = Math.atan2(h, w / 2);
+          const slope = Math.sqrt((w / 2) ** 2 + h ** 2);
+          return (
+            <>
+              <mesh position={[-w / 4, 2.4 + h / 2, 0]} rotation={[0, 0, angle]} castShadow>
+                <boxGeometry args={[slope, 0.12, d]} />
+                <meshStandardMaterial color="#8B4513" roughness={0.9} />
+              </mesh>
+              <mesh position={[w / 4, 2.4 + h / 2, 0]} rotation={[0, 0, -angle]} castShadow>
+                <boxGeometry args={[slope, 0.12, d]} />
+                <meshStandardMaterial color="#8B4513" roughness={0.9} />
+              </mesh>
+            </>
+          );
+        })()}
         {/* Door */}
         <mesh position={[0, 0.7, 1.76]}>
           <boxGeometry args={[0.8, 1.4, 0.05]} />
