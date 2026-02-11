@@ -390,6 +390,8 @@ export async function runAutoLoop(): Promise<void> {
   let wanderX = 0;
   let wanderZ = 8;
   let currentHealth = 100;
+  let currentMood = 60;
+  let currentMoodLabel = 'steady';
   const LOCATIONS = [
     { name: 'Starter Town', x: 0, z: 0 },
     { name: 'Town Arena', x: 0, z: -20 },
@@ -411,6 +413,8 @@ export async function runAutoLoop(): Promise<void> {
     const agentData = await actions.fetchAgent();
     if (agentData && typeof agentData.health === 'number') {
       currentHealth = agentData.health;
+      currentMood = typeof agentData.mood === 'number' ? agentData.mood : currentMood;
+      currentMoodLabel = agentData.moodLabel || currentMoodLabel;
     }
 
     // Move toward target location
@@ -434,6 +438,8 @@ export async function runAutoLoop(): Promise<void> {
           targetLoc.name,
           currentHealth,
           100,
+          currentMood,
+          currentMoodLabel,
           balance,
           cards,
           recentActionLog,
@@ -500,6 +506,8 @@ export async function runAutoLoop(): Promise<void> {
         targetLoc.name,
         currentHealth,
         100,
+        currentMood,
+        currentMoodLabel,
         balance,
         cards,
         recentActionLog,

@@ -44,6 +44,8 @@ interface EventData {
   location: string | null;
   healthDelta?: number;
   healthAfter?: number;
+  moodDelta?: number;
+  moodAfter?: number;
   timestamp: string;
 }
 
@@ -418,6 +420,11 @@ export function WorldUI({
                                 {e.healthDelta != null && e.healthDelta !== 0 && (
                                   <span className={`text-[10px] font-mono ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                     {e.healthDelta > 0 ? '+' : ''}{e.healthDelta}HP
+                                  </span>
+                                )}
+                                {e.moodDelta != null && e.moodDelta !== 0 && (
+                                  <span className={`text-[10px] font-mono ${e.moodDelta > 0 ? 'text-pink-300' : 'text-purple-300'}`}>
+                                    {e.moodDelta > 0 ? '+' : ''}{e.moodDelta} mood
                                   </span>
                                 )}
                                 <span className="text-[10px] text-gray-700 ml-auto flex-shrink-0">{timeAgo(e.timestamp)}</span>

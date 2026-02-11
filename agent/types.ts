@@ -64,6 +64,8 @@ export interface Agent {
   online?: boolean;
   health?: number;
   maxHealth?: number;
+  mood?: number;
+  moodLabel?: string;
   currentAction?: string;
   currentLocation?: string;
 }

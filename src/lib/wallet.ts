@@ -104,7 +104,7 @@ export function getEscrowContract() {
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
-  const contractAddress = getEscrowContractAddress();
+  const contractAddress = ethers.getAddress(getEscrowContractAddress());
 
   const abi = [
     'function createBattle(bytes32 battleId) external payable',
@@ -137,7 +137,7 @@ export async function getNFTContract() {
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
-  const contractAddress = await resolveNFTContractAddress();
+  const contractAddress = ethers.getAddress(await resolveNFTContractAddress());
 
   const abi = [
     'function buyPack() external payable',

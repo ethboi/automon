@@ -523,6 +523,8 @@ export async function decideNextAction(
   currentLocation: string,
   health: number,
   maxHealth: number,
+  mood: number,
+  moodLabel: string,
   balance: string,
   cards: Card[],
   recentActions: string[],
@@ -549,6 +551,7 @@ ${personalityLine}
 ## CURRENT STATE
 - Location: ${currentLocation}
 - Health: ${health}/${maxHealth} HP
+- Mood: ${mood}/100 (${moodLabel})
 - Balance: ${balance} MON
 ${tokenBalance && parseFloat(tokenBalance) > 0 ? `- $AUTOMON tokens: ${tokenBalance}\n` : ''}- Cards: ${cardSummary}
 - Pending battles available: ${pendingBattles}
@@ -587,6 +590,9 @@ ${locationList}
 - Attempt taming regularly in wild zones (Old Pond, Dark Forest, Crystal Caves, Community Farm), especially when HP > 35
 - Visit the Trading Post occasionally (every 5-8 actions) to trade $AUTOMON tokens
 - Trading is speculative — small amounts, don't go broke. Keep at least 0.15 MON for gameplay
+- Mood effects:
+  - Mood <= 30 (tilted/doom): avoid high-risk battles, prioritize recovery/fishing/farming/resting
+  - Mood >= 75 (hyped/ecstatic): you can take bolder battles and slightly higher wagers
 - Show personality — be curious, strategic, sometimes bold
 
 Respond with JSON only:
