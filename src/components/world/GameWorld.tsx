@@ -187,6 +187,7 @@ function Scene({
   onAgentClick,
   walletAddress,
   playerPositionRef,
+  cameraMode,
 }: {
   onLocationClick: (route: string) => void;
   onGroundClick: (point: THREE.Vector3) => void;
@@ -198,6 +199,7 @@ function Scene({
   onAgentClick: (address: string) => void;
   walletAddress?: string;
   playerPositionRef: React.MutableRefObject<THREE.Vector3 | null>;
+  cameraMode: CameraMode;
 }) {
   const buildingsArray = Object.values(WORLD_LOCATIONS).map((b) => ({
     position: b.position,
@@ -207,7 +209,12 @@ function Scene({
   return (
     <>
       <color attach="background" args={['#87CEEB']} />
-      <CameraController flyTarget={cameraFlyTarget} />
+      <CameraController
+        flyTarget={cameraFlyTarget}
+        cameraMode={cameraMode}
+        playerPositionRef={playerPositionRef}
+        moveTarget={targetPosition}
+      />
 
       {/* Soft fog at edges */}
       <fog attach="fog" args={['#b8d8f0', 120, 220]} />
@@ -922,6 +929,7 @@ export function GameWorld() {
   const [transactions, setTransactions] = useState<{ txHash: string; type: string; from: string; description: string; explorerUrl: string; timestamp: string }[]>([]);
   const [chatMessages, setChatMessages] = useState<{ from: string; fromName: string; to?: string; toName?: string; message: string; location?: string; timestamp: string }[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [cameraMode, setCameraMode] = useState<CameraMode>('isometric');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -944,6 +952,25 @@ export function GameWorld() {
     fetchData();
     const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'v') return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      setCameraMode(prev => (prev === 'isometric' ? 'shoulder' : 'isometric'));
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   const handleLocationClick = useCallback((route: string) => { router.push(route); }, [router]);
@@ -1001,9 +1028,14 @@ export function GameWorld() {
             onAgentClick={handleSelectAgent}
             walletAddress={address || undefined}
             playerPositionRef={playerPositionRef}
+            cameraMode={cameraMode}
           />
         </Suspense>
       </Canvas>
+
+      <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-md border border-white/10 bg-black/50 px-2 py-1 text-[10px] sm:text-xs text-white/85">
+        Camera: {cameraMode === 'shoulder' ? 'Shoulder (V)' : 'Isometric (V)'}
+      </div>
 
       <WorldUI
         nearbyBuilding={nearbyBuilding}
