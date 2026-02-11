@@ -308,7 +308,10 @@ export default function BattlePage() {
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-8">
-        {myCards.map((card, i) => (
+        {[...myCards].sort((a, b) => {
+          const order: Record<string, number> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
+          return (order[a.rarity || 'common'] ?? 5) - (order[b.rarity || 'common'] ?? 5);
+        }).map((card, i) => (
           <div key={card._id?.toString() || card.id} className="animate-fade-in-up opacity-0" style={{ animationDelay: `${Math.min(i * 0.05, 0.3)}s` }}>
             <Card card={card} selected={selectedCards.includes(card._id?.toString() || card.id || '')} onClick={() => toggleCardSelection(card._id?.toString() || card.id || '')} size="md" />
           </div>
