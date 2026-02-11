@@ -15,10 +15,8 @@ function getNetworkSuffix(network: AutomonNetwork): string {
 
 function envForNetwork(baseKey: string, network: AutomonNetwork): string | undefined {
   const suffix = getNetworkSuffix(network);
-  return (
-    process.env[`${baseKey}_${suffix}`] ||
-    process.env[baseKey]
-  );
+  const val = process.env[`${baseKey}_${suffix}`] || process.env[baseKey];
+  return val?.trim();
 }
 
 export function getRpcUrl(): string {
