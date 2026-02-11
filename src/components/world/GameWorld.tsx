@@ -44,10 +44,10 @@ export const WORLD_LOCATIONS = {
   starter_town:   { position: [0, 0, 0] as [number, number, number],      label: 'Home',    icon: '🏠', color: '#f59e0b', variant: 'none' as const, route: '/collection' },
   town_arena:     { position: [0, 0, -30] as [number, number, number],     label: 'Town Arena',      icon: '⚔️', color: '#ef4444', variant: 'building' as const, route: '/battle' },
   town_market:    { position: [28, 0, 0] as [number, number, number],      label: 'Shop',     icon: '🏪', color: '#f97316', variant: 'none' as const, route: '/shop', hideLabel: true },
-  community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
-  old_pond:       { position: [-36, 0, -14] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
-  dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'none' as const,     route: null },
-  crystal_caves:  { position: [32, 0, 24] as [number, number, number],  label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'none' as const,       route: null },
+  community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: '/locations/community-farm' },
+  old_pond:       { position: [-36, 0, -14] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: '/locations/old-pond' },
+  dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'none' as const,     route: '/locations/dark-forest' },
+  crystal_caves:  { position: [32, 0, 24] as [number, number, number],  label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'none' as const,       route: '/locations/crystal-caves' },
   trading_post:   { position: [20, 0, -20] as [number, number, number],   label: 'Trading Post',    icon: '📈', color: '#10b981', variant: 'none' as const,       route: '/trading', hideLabel: true },
 };
 
