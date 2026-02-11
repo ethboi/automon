@@ -193,7 +193,7 @@ export default function BattlePage() {
   const getAIDecision = async (): Promise<BattleMove> => {
     const res = await fetch('/api/agent/decide', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ battleId: currentBattle?.battleId }),
+      body: JSON.stringify({ battleId: currentBattle?.battleId, address }),
     });
     return (await res.json()).decision;
   };
