@@ -4,7 +4,7 @@
  * 
  * Real agent with wallet, on-chain transactions, server connectivity.
  * Wanders the world, buys packs, mints NFTs, logs everything.
- * Uses simple heuristics (no Anthropic API calls = lightweight).
+ * Uses Claude for autonomous decisions.
  *
  * Usage:
  *   npm run agent:live
@@ -108,6 +108,7 @@ const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> 
   ],
   'Community Farm': [
     { action: 'farming', reasons: ['Tending the crops', 'Harvesting berries', 'Helping at the farm'] },
+    { action: 'catching', reasons: ['Field rustle! Trying a tame', 'Spotted a wild mon near the rows', 'Setting up a tame attempt by the barns'] },
     { action: 'resting', reasons: ['Relaxing in the fields', 'Enjoying the countryside', 'Picnic break'] },
   ],
   'Old Pond': [
@@ -218,7 +219,26 @@ function isBoringChat(msg: string): boolean {
   if (/^(hey|hello|hi|good luck|nice|great)\b/.test(m)) return true;
   if (m.includes('how can i help')) return true;
   if (m.includes('as an ai')) return true;
+  if (/^\w+\s+really\s+said\b/.test(m)) return true;
+  if (/^\w+\s+out here\b/.test(m)) return true;
   return false;
+}
+
+function normalizeAction(action: string): string {
+  const a = (action || '').trim().toLowerCase();
+  if (!a) return 'exploring';
+  if (a.includes('tame') || a === 'catch' || a.includes('catch')) return 'catching';
+  if (a.includes('battle') || a === 'duel') return 'battling';
+  if (a.includes('explore') || a === 'wander' || a === 'move') return 'exploring';
+  if (a.includes('fish')) return 'fishing';
+  if (a.includes('farm')) return 'farming';
+  if (a.includes('forage')) return 'foraging';
+  if (a.includes('rest') || a.includes('sleep') || a.includes('heal')) return 'resting';
+  if (a.includes('train')) return 'training';
+  if (a.includes('shop')) return 'shopping';
+  if (a.includes('trade token') || a.includes('token')) return 'trading_token';
+  if (a.includes('trade')) return 'trading';
+  return a;
 }
 
 const WILD_SPECIES_BY_LOCATION: Record<string, string[]> = {
@@ -637,6 +657,25 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
 
     console.log(`[${ts()}] ⚔️ Found open battle ${openBattle.battleId} — joining!`);
 
+    // Select cards with AI before joining escrow (avoid on-chain joins when AI is unavailable).
+    const cardsRes = await api(`/api/cards?address=${ADDRESS}`);
+    if (!cardsRes.ok) return false;
+    const { cards } = await cardsRes.json();
+    if (!cards || cards.length < 3) { console.log(`[${ts()}]   ❌ Not enough cards`); return false; }
+    const aiPick = await selectBattleCards(cards);
+    if (!aiPick?.indices?.length || aiPick.indices.length !== 3) {
+      console.log(`[${ts()}]   ❌ AI card selection unavailable, skipping join`);
+      return false;
+    }
+    const cardIds = aiPick.indices.map((i: number) => cards[i]?._id).filter(Boolean);
+    const selectionReasoning = aiPick.reasoning;
+    if (cardIds.length !== 3) {
+      console.log(`[${ts()}]   ❌ AI returned invalid card ids, skipping join`);
+      return false;
+    }
+    console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
+    if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
+
     // Join on-chain escrow
     let txHash: string;
     try {
@@ -663,35 +702,6 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
       body: JSON.stringify({ battleId: openBattle.battleId, txHash, address: ADDRESS }),
     });
     if (!joinRes.ok) { console.log(`[${ts()}]   ❌ Join failed`); return false; }
-
-    // Select cards — pick our best 3
-    const cardsRes = await api(`/api/cards?address=${ADDRESS}`);
-    if (!cardsRes.ok) return false;
-    const { cards } = await cardsRes.json();
-    if (!cards || cards.length < 3) { console.log(`[${ts()}]   ❌ Not enough cards`); return false; }
-
-    // Sort by total stats desc, pick top 3 (handle both flat and nested stats)
-        // AI card selection
-    let cardIds: string[];
-    let selectionReasoning: string | undefined;
-    try {
-      const aiPick = await selectBattleCards(cards);
-      if (aiPick?.indices?.length === 3) {
-        cardIds = aiPick.indices.map((i: number) => cards[i]?._id).filter(Boolean);
-        selectionReasoning = aiPick.reasoning;
-        console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
-        if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
-      } else throw new Error('fallback');
-    } catch {
-      // Fallback: sort by total stats
-      const sorted = [...cards].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-        const sa = (a.stats as Record<string, number>) || {}, sb = (b.stats as Record<string, number>) || {};
-        return ((sb.attack || 30) + (sb.defense || 30)) - ((sa.attack || 30) + (sa.defense || 30));
-      });
-      cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
-      selectionReasoning = `Picked strongest cards by combined stats: ${sorted.slice(0, 3).map((c: { name: string }) => c.name).join(', ')}`;
-      console.log(`[${ts()}]   🎴 Fallback: top 3 by stats`);
-    }
 
     console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards: ${cardIds.join(', ')}`);
     const selectRes = await apiLong('/api/battle/select-cards', {
@@ -742,8 +752,12 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
       }
     }
 
+    if (!aiWager) {
+      console.log(`[${ts()}]   ⚠️ AI did not provide wager, skipping create`);
+      return;
+    }
     const maxWager = Math.max(0.005, parseFloat(agentBalance) * 0.10); // cap at 10% of balance
-    let wager = aiWager || (0.005 + Math.random() * 0.015).toFixed(4);
+    let wager = aiWager;
     if (parseFloat(wager) > maxWager) wager = maxWager.toFixed(4);
 
     // Create on-chain escrow first
@@ -779,26 +793,19 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
     if (!cardsRes.ok) return;
     const { cards } = await cardsRes.json();
     if (!cards || cards.length < 3) return;
-    // AI card selection
-    let cardIds: string[];
-    let selectionReasoning2: string | undefined;
-    try {
-      const aiPick = await selectBattleCards(cards);
-      if (aiPick?.indices?.length === 3) {
-        cardIds = aiPick.indices.map((i: number) => cards[i]?._id).filter(Boolean);
-        selectionReasoning2 = aiPick.reasoning;
-        console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
-        if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
-      } else throw new Error('fallback');
-    } catch {
-      const sorted = [...cards].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-        const sa = (a.stats as Record<string, number>) || {}, sb = (b.stats as Record<string, number>) || {};
-        return ((sb.attack || 30) + (sb.defense || 30)) - ((sa.attack || 30) + (sa.defense || 30));
-      });
-      cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
-      selectionReasoning2 = `Picked strongest cards by combined stats: ${sorted.slice(0, 3).map((c: { name: string }) => c.name).join(', ')}`;
-      console.log(`[${ts()}]   🎴 Fallback: top 3 by stats`);
+    const aiPick = await selectBattleCards(cards);
+    if (!aiPick?.indices?.length || aiPick.indices.length !== 3) {
+      console.log(`[${ts()}]   ❌ AI card selection unavailable for created battle`);
+      return;
     }
+    const cardIds = aiPick.indices.map((i: number) => cards[i]?._id).filter(Boolean);
+    const selectionReasoning2 = aiPick.reasoning;
+    if (cardIds.length !== 3) {
+      console.log(`[${ts()}]   ❌ AI returned invalid card ids for created battle`);
+      return;
+    }
+    console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
+    if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
     console.log(`[${ts()}]   🎴 Selecting cards: ${cardIds.join(', ')}`);
     const selectRes = await apiLong('/api/battle/select-cards', {
       method: 'POST',
@@ -930,8 +937,7 @@ async function tick(): Promise<void> {
       // Try joining an existing battle first
       const joined = await tryJoinBattle(battleReason);
       if (!joined) {
-        // Random delay 2-6s so agents don't all create at once
-        const delay = 2000 + Math.random() * 4000;
+        const delay = 3000;
         console.log(`[${ts()}] ⏳ No open battles, waiting ${(delay/1000).toFixed(1)}s before creating...`);
         await new Promise(r => setTimeout(r, delay));
         // Check again after delay — someone else might have created
@@ -961,15 +967,6 @@ async function tick(): Promise<void> {
     // Dwelling at location — performing the action
     dwellTicks--;
 
-    // Occasional wild tame attempts while dwelling in wild-heavy zones.
-    if (
-      ['Old Pond', 'Dark Forest', 'Crystal Caves', 'Community Farm'].includes(target.name) &&
-      Date.now() - lastTameAttemptAt > TAME_ATTEMPT_COOLDOWN_MS &&
-      Math.random() < 0.1
-    ) {
-      await attemptTameWild('Saw movement in the wild and took a tame attempt');
-    }
-
     // Occasionally post global entertaining chatter (not proximity-based).
     if (USE_AI && Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.28) {
       try {
@@ -996,85 +993,63 @@ async function tick(): Promise<void> {
     }
   } else {
 
-    // Buy packs if balance > 0.2 MON — always try to improve collection
-    if (parseFloat(agentBalance) > 0.2 && Math.random() < 0.12 && NFT_ADDRESS) {
-      await buyPack();
-    }
-
-    // Always check for open battles if we have enough cards
-    if (cardCount >= 3) {
-      await tryJoinBattle('Spotted an open battle and jumped in to test my deck');
-    }
-
     // Now decide NEXT move — where to go and what to do there
     let nextLocationName: string | undefined;
     let nextAction: string;
     let nextReason: string;
     let nextWager: string | undefined;
 
-    if (USE_AI) {
-      try {
-        // Fetch current health from server
-        const agentRes = await api(`/api/agents/${ADDRESS}`);
-        if (agentRes.ok) {
-          const data = await agentRes.json();
-          agentHealth = data.agent?.health ?? agentHealth;
-          agentMaxHealth = data.agent?.maxHealth ?? agentMaxHealth;
-        }
-
-        // Get pending battle count
-        let pendingBattles = 0;
-        try {
-          const bRes = await api('/api/battle/list');
-          if (bRes.ok) {
-            const bData = await bRes.json();
-            pendingBattles = (bData.battles || []).filter(
-              (b: { status: string; player1: { address: string } }) =>
-                b.status === 'pending' && b.player1.address.toLowerCase() !== ADDRESS.toLowerCase()
-            ).length;
-          }
-        } catch { /* ignore */ }
-
-        // Get cards for context
-        const cardsRes = await api(`/api/cards?address=${ADDRESS}`);
-        const cardsData = cardsRes.ok ? await cardsRes.json() : { cards: [] };
-
-        const balance = ethers.formatEther(await provider.getBalance(wallet.address));
-        agentBalance = parseFloat(balance).toFixed(4);
-
-        const decision = await decideNextAction(
-          target.name,
-          agentHealth,
-          agentMaxHealth,
-          balance,
-          cardsData.cards || [],
-          recentActions,
-          pendingBattles,
-          AI_PERSONALITY,
-          agentTokenBalance,
-        );
-
-        nextAction = decision.action;
-        nextReason = decision.reasoning || decision.action;
-        nextLocationName = decision.location;
-        nextWager = decision.wager;
-
-        console.log(`[${ts()}] 🧠 AI decided: ${nextAction} @ ${nextLocationName || target.name}${nextWager ? ` (wager: ${nextWager} MON)` : ''} — "${nextReason}"`);
-      } catch (err) {
-        console.error(`[${ts()}] ⚠ AI error, falling back:`, (err as Error).message?.slice(0, 60));
-        const locationActions = LOCATION_ACTIONS[target.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
-        const event = pick(locationActions);
-        nextAction = event.action;
-        nextReason = pick(event.reasons);
+    try {
+      // Fetch current health from server
+      const agentRes = await api(`/api/agents/${ADDRESS}`);
+      if (agentRes.ok) {
+        const data = await agentRes.json();
+        agentHealth = data.agent?.health ?? agentHealth;
+        agentMaxHealth = data.agent?.maxHealth ?? agentMaxHealth;
       }
-    } else {
-      // Random fallback — pick action for next location
-      let next; do { next = pick(LOCATIONS); } while (next.name === target.name);
-      nextLocationName = next.name;
-      const locationActions = LOCATION_ACTIONS[next.name] || [{ action: 'exploring', reasons: ['Looking around'] }];
-      const event = pick(locationActions);
-      nextAction = event.action;
-      nextReason = pick(event.reasons);
+
+      // Get pending battle count
+      let pendingBattles = 0;
+      try {
+        const bRes = await api('/api/battle/list');
+        if (bRes.ok) {
+          const bData = await bRes.json();
+          pendingBattles = (bData.battles || []).filter(
+            (b: { status: string; player1: { address: string } }) =>
+              b.status === 'pending' && b.player1.address.toLowerCase() !== ADDRESS.toLowerCase()
+          ).length;
+        }
+      } catch { /* ignore */ }
+
+      // Get cards for context
+      const cardsRes = await api(`/api/cards?address=${ADDRESS}`);
+      const cardsData = cardsRes.ok ? await cardsRes.json() : { cards: [] };
+
+      const balance = ethers.formatEther(await provider.getBalance(wallet.address));
+      agentBalance = parseFloat(balance).toFixed(4);
+
+      const decision = await decideNextAction(
+        target.name,
+        agentHealth,
+        agentMaxHealth,
+        balance,
+        cardsData.cards || [],
+        recentActions,
+        pendingBattles,
+        AI_PERSONALITY,
+        agentTokenBalance,
+      );
+
+      nextAction = normalizeAction(decision.action);
+      nextReason = decision.reasoning || decision.action;
+      nextLocationName = decision.location;
+      nextWager = decision.wager;
+
+      console.log(`[${ts()}] 🧠 AI decided: ${nextAction} @ ${nextLocationName || target.name}${nextWager ? ` (wager: ${nextWager} MON)` : ''} — "${nextReason}"`);
+    } catch (err) {
+      console.error(`[${ts()}] ⚠ AI decision unavailable, skipping tick:`, (err as Error).message?.slice(0, 80));
+      await updatePosition();
+      return;
     }
 
     // Store the action to perform on arrival
@@ -1087,15 +1062,13 @@ async function tick(): Promise<void> {
         console.log(`[${ts()}]    → staying at ${target.name}`);
       } else {
         const aiTarget = LOCATIONS.find(l => l.name === nextLocationName);
-        if (aiTarget) { target = makeTargetPoint(aiTarget); }
-        else { let next; do { next = pick(LOCATIONS); } while (next.name === target.name); target = makeTargetPoint(next); }
+        if (!aiTarget) {
+          console.log(`[${ts()}]   ⚠ AI returned unknown location "${nextLocationName}", staying put`);
+        } else {
+          target = makeTargetPoint(aiTarget);
+        }
         console.log(`[${ts()}]    → heading to ${target.name}`);
       }
-    } else {
-      let next;
-      do { next = pick(LOCATIONS); } while (next.name === target.name);
-      target = makeTargetPoint(next);
-      console.log(`[${ts()}]    → heading to ${target.name}`);
     }
   }
 
@@ -1113,7 +1086,12 @@ async function main() {
   console.log(`  API:      ${API_URL}`);
   console.log(`  NFT:      ${NFT_ADDRESS || 'not set'}`);
   console.log(`  RPC:      ${RPC_URL}`);
-  console.log(`  AI:       ${USE_AI ? '✅ Claude (Anthropic)' : '❌ Random (no API key)'}`);
+  console.log(`  AI:       ${USE_AI ? '✅ Claude (Anthropic)' : '❌ Missing ANTHROPIC_API_KEY'}`);
+
+  if (!USE_AI) {
+    console.error(`[${ts()}] ❌ ANTHROPIC_API_KEY is required. Exiting (AI-only mode).`);
+    process.exit(1);
+  }
 
   const balance = ethers.formatEther(await provider.getBalance(wallet.address));
   agentBalance = parseFloat(balance).toFixed(4);

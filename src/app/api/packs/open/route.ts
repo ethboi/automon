@@ -4,6 +4,7 @@ import { ethers } from 'ethers';
 import { AUTOMONS, RARITY_MULTIPLIERS } from '@/lib/automons';
 import { Rarity, Card } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { getNftContractAddress, getRpcUrl } from '@/lib/network';
 export const dynamic = 'force-dynamic';
 
 const NFT_ABI = [
@@ -56,14 +57,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ cards, alreadyOpened: true });
     }
 
-    const contractAddress =
-      process.env.AUTOMON_NFT_ADDRESS ||
-      process.env.NEXT_PUBLIC_AUTOMON_NFT_ADDRESS ||
-      process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS;
-    const rpcUrl = process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz';
-    if (!contractAddress) {
-      return NextResponse.json({ error: 'NFT contract not configured' }, { status: 500 });
-    }
+    const contractAddress = getNftContractAddress();
+    const rpcUrl = getRpcUrl();
 
     const tokenIds = Array.isArray(pack.onchainTokenIds)
       ? (pack.onchainTokenIds as number[])

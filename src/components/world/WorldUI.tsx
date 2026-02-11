@@ -26,6 +26,8 @@ interface OnlineAgent {
   currentAction?: string | null;
   currentReason?: string | null;
   currentLocation?: string | null;
+  mood?: number;
+  moodLabel?: string;
   stats?: { wins: number; losses: number; cards: number };
   balance?: string | null;
   model?: string;
@@ -85,6 +87,14 @@ interface TxData {
 }
 
 type Tab = 'agents' | 'feed' | 'chat' | 'trades' | 'chain';
+const PUBLIC_NETWORK = (process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase();
+const PUBLIC_EXPLORER_BASE = (
+  (PUBLIC_NETWORK === 'mainnet'
+    ? process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL_MAINNET
+    : process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL_TESTNET) ||
+  process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL ||
+  'https://testnet.monadexplorer.com'
+).replace(/\/+$/, '');
 
 function timeAgo(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -282,6 +292,15 @@ export function WorldUI({
                             )}
                           </div>
                         </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-pink-400"
+                              style={{ width: `${Math.max(0, Math.min(100, agent.mood ?? 60))}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-pink-300 capitalize">{agent.moodLabel || 'steady'}</span>
+                        </div>
                       </button>
                     )})}
                   </div>
@@ -337,7 +356,7 @@ export function WorldUI({
                                     <span className="text-[10px] text-yellow-400">🏆 {winner}</span>
                                     {b.payout && <span className="text-[10px] font-mono text-emerald-400">+{b.payout} MON</span>}
                                     {b.settleTxHash && b.settleTxHash !== 'pre-escrow-fix' && (
-                                      <a href={`https://testnet.monadexplorer.com/tx/${b.settleTxHash}`} target="_blank" rel="noopener noreferrer"
+                                      <a href={`${PUBLIC_EXPLORER_BASE}/tx/${b.settleTxHash}`} target="_blank" rel="noopener noreferrer"
                                         className="text-[10px] text-purple-500 hover:text-purple-400 font-mono ml-auto" onClick={e => e.stopPropagation()}>
                                         settled ↗
                                       </a>
@@ -402,6 +421,12 @@ export function WorldUI({
                         <div key={`${c.from}-${c.timestamp}-${i}`} className="px-2 py-2 hover:bg-white/5 transition-colors">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-semibold text-cyan-400">{c.fromName || shortAddr(c.from)}</span>
+                            {(() => {
+                              const sender = onlineAgents.find(a => a.address?.toLowerCase() === c.from?.toLowerCase());
+                              return sender?.model ? (
+                                <span className="text-[10px] text-violet-400/80">🧠 {sender.model}</span>
+                              ) : null;
+                            })()}
                             {c.toName && (
                               <>
                                 <span className="text-[10px] text-gray-600">→</span>

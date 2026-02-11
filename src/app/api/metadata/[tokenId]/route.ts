@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { AUTOMONS, RARITY_MULTIPLIERS } from '@/lib/automons';
+import { getNftContractAddress, getRpcUrl } from '@/lib/network';
 export const dynamic = 'force-dynamic';
 
 const RARITY_NAMES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'] as const;
@@ -21,15 +22,8 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token ID' }, { status: 400 });
     }
 
-    const contractAddress =
-      process.env.AUTOMON_NFT_ADDRESS ||
-      process.env.NEXT_PUBLIC_AUTOMON_NFT_ADDRESS ||
-      process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS;
-    const rpcUrl = process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz';
-
-    if (!contractAddress) {
-      return NextResponse.json({ error: 'Contract not configured' }, { status: 500 });
-    }
+    const contractAddress = getNftContractAddress();
+    const rpcUrl = getRpcUrl();
 
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     const contract = new ethers.Contract(contractAddress, NFT_CONTRACT_ABI, provider);

@@ -62,6 +62,8 @@ export interface PlayerState {
   cards: BattleCard[];
   activeCardIndex: number;
   ready: boolean;
+  mood?: number;
+  moodLabel?: string;
 }
 
 export interface BattleRound {

@@ -4,6 +4,7 @@ import { getAgentAuth } from '@/lib/agentAuth';
 import { v4 as uuidv4 } from 'uuid';
 import { logTransaction } from '@/lib/transactions';
 import { Battle } from '@/lib/types';
+import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -24,6 +25,8 @@ export async function POST(request: NextRequest) {
 
     const db = await getDb();
     const battleId = requestedBattleId || uuidv4();
+    const playerAgent = await db.collection('agents').findOne({ address: address.toLowerCase() });
+    const p1Mood = clampMood(typeof playerAgent?.mood === 'number' ? playerAgent.mood : DEFAULT_MOOD);
 
     const battle: Battle = {
       battleId,
@@ -32,6 +35,8 @@ export async function POST(request: NextRequest) {
         cards: [],
         activeCardIndex: 0,
         ready: false,
+        mood: p1Mood,
+        moodLabel: playerAgent?.moodLabel || getMoodTier(p1Mood),
       },
       player2: null,
       wager,

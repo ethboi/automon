@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { logTransaction } from '@/lib/transactions';
+import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -33,6 +34,8 @@ export async function POST(request: NextRequest) {
     if (battle.player2) {
       return NextResponse.json({ error: 'Battle already has two players' }, { status: 400 });
     }
+    const playerAgent = await db.collection('agents').findOne({ address: address.toLowerCase() });
+    const p2Mood = clampMood(typeof playerAgent?.mood === 'number' ? playerAgent.mood : DEFAULT_MOOD);
 
     const result = await db.collection('battles').updateOne(
       { battleId, player2: null },
@@ -43,6 +46,8 @@ export async function POST(request: NextRequest) {
             cards: [],
             activeCardIndex: 0,
             ready: false,
+            mood: p2Mood,
+            moodLabel: playerAgent?.moodLabel || getMoodTier(p2Mood),
           },
           status: 'selecting',
           updatedAt: new Date(),

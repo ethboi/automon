@@ -1,4 +1,5 @@
 import { getDb } from './mongodb';
+import { getExplorerBaseUrl } from './network';
 
 export type TxType = 'mint_pack' | 'open_pack' | 'battle_create' | 'battle_settle' | 'battle_join' | 'nft_mint' | 'escrow_deposit' | 'escrow_settle';
 
@@ -11,10 +12,8 @@ export interface TxLog {
   timestamp: Date;
 }
 
-const EXPLORER_BASE = 'https://testnet.monadexplorer.com/tx';
-
 export function explorerUrl(txHash: string): string {
-  return `${EXPLORER_BASE}/${txHash}`;
+  return `${getExplorerBaseUrl()}/tx/${txHash}`;
 }
 
 export async function logTransaction(tx: Omit<TxLog, 'timestamp'>): Promise<void> {

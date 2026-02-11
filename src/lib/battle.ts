@@ -222,7 +222,8 @@ export function calculateDamage(
   defender: BattleCard,
   basePower: number,
   triangleResult: TriangleResult,
-  pierceDefense: boolean = false
+  pierceDefense: boolean = false,
+  attackerMoodMultiplier: number = 1
 ): { damage: number; elementMultiplier: number; triangleMultiplier: number } {
   const attack = getEffectiveStat(attacker, 'attack');
   const defense = getEffectiveStat(defender, 'defense');
@@ -239,6 +240,9 @@ export function calculateDamage(
 
   // Apply triangle result
   damage *= triangleMultiplier;
+
+  // Mood impact: confident/hyped agents do slightly more, tilted slightly less.
+  damage *= attackerMoodMultiplier;
 
   // Apply defense reduction (unless piercing)
   if (!pierceDefense) {
@@ -443,6 +447,10 @@ export function resolveTurn(
 
   const card1 = getActiveCard(battle.player1);
   const card2 = getActiveCard(battle.player2!);
+  const mood1 = Math.max(0, Math.min(100, Math.round((battle.player1.mood ?? 60))));
+  const mood2 = Math.max(0, Math.min(100, Math.round((battle.player2?.mood ?? 60))));
+  const moodMultiplier1 = 1 + ((mood1 - 50) / 50) * 0.12;
+  const moodMultiplier2 = 1 + ((mood2 - 50) / 50) * 0.12;
 
   // Log the turn start
   const turnLog: BattleTurnLog = {
@@ -624,7 +632,7 @@ export function resolveTurn(
       message: `⚡ ${activeCard1.name}'s STRIKE interrupts ${activeCard2.name}'s SKILL!`,
     });
 
-    const { damage, elementMultiplier } = calculateDamage(activeCard1, activeCard2, 30, 'win');
+    const { damage, elementMultiplier } = calculateDamage(activeCard1, activeCard2, 30, 'win', false, moodMultiplier1);
     if (elementMultiplier !== 1.0) {
       events.push({
         type: 'element_advantage',
@@ -660,7 +668,7 @@ export function resolveTurn(
       message: `⚡ ${activeCard2.name}'s STRIKE interrupts ${activeCard1.name}'s SKILL!`,
     });
 
-    const { damage, elementMultiplier } = calculateDamage(activeCard2, activeCard1, 30, 'win');
+    const { damage, elementMultiplier } = calculateDamage(activeCard2, activeCard1, 30, 'win', false, moodMultiplier2);
     if (elementMultiplier !== 1.0) {
       events.push({
         type: 'element_advantage',
@@ -719,7 +727,7 @@ export function resolveTurn(
     });
 
     // Reduced incoming damage
-    const { damage: incomingDamage } = calculateDamage(activeCard2, activeCard1, 30, 'lose');
+    const { damage: incomingDamage } = calculateDamage(activeCard2, activeCard1, 30, 'lose', false, moodMultiplier2);
     const reducedDamage = Math.floor(incomingDamage * 0.3);
     const actualDamage = applyDamage(activeCard1, reducedDamage);
     events.push({
@@ -731,7 +739,7 @@ export function resolveTurn(
     });
 
     // Counter attack (30% of normal strike)
-    const { damage: counterDamage } = calculateDamage(activeCard1, activeCard2, 30 * 0.3, 'win');
+    const { damage: counterDamage } = calculateDamage(activeCard1, activeCard2, 30 * 0.3, 'win', false, moodMultiplier1);
     const actualCounter = applyDamage(activeCard2, counterDamage);
     events.push({
       type: 'damage',
@@ -758,7 +766,7 @@ export function resolveTurn(
       message: `🛡️ ${activeCard2.name}'s GUARD blocks ${activeCard1.name}'s STRIKE!`,
     });
 
-    const { damage: incomingDamage } = calculateDamage(activeCard1, activeCard2, 30, 'lose');
+    const { damage: incomingDamage } = calculateDamage(activeCard1, activeCard2, 30, 'lose', false, moodMultiplier1);
     const reducedDamage = Math.floor(incomingDamage * 0.3);
     const actualDamage = applyDamage(activeCard2, reducedDamage);
     events.push({
@@ -769,7 +777,7 @@ export function resolveTurn(
       message: `${activeCard2.name} blocks and takes only ${actualDamage} damage!`,
     });
 
-    const { damage: counterDamage } = calculateDamage(activeCard2, activeCard1, 30 * 0.3, 'win');
+    const { damage: counterDamage } = calculateDamage(activeCard2, activeCard1, 30 * 0.3, 'win', false, moodMultiplier2);
     const actualCounter = applyDamage(activeCard1, counterDamage);
     events.push({
       type: 'damage',
@@ -801,7 +809,8 @@ export function resolveTurn(
 
     for (const attacker of [first, second]) {
       if (!isCardFainted(attacker.card) && !isCardFainted(attacker.opponent)) {
-        const { damage, elementMultiplier } = calculateDamage(attacker.card, attacker.opponent, 30, 'neutral');
+        const attackerMood = attacker.player === 'player1' ? moodMultiplier1 : moodMultiplier2;
+        const { damage, elementMultiplier } = calculateDamage(attacker.card, attacker.opponent, 30, 'neutral', false, attackerMood);
         if (elementMultiplier !== 1.0) {
           events.push({
             type: 'element_advantage',
@@ -850,7 +859,7 @@ export function resolveTurn(
   else if (move1.action === 'switch' && move2.action !== 'switch') {
     if (!activeCard2.isStunned) {
       if (move2.action === 'strike') {
-        const { damage, elementMultiplier } = calculateDamage(activeCard2, activeCard1, 30, 'neutral');
+        const { damage, elementMultiplier } = calculateDamage(activeCard2, activeCard1, 30, 'neutral', false, moodMultiplier2);
         if (elementMultiplier !== 1.0) {
           events.push({
             type: 'element_advantage',
@@ -894,7 +903,7 @@ export function resolveTurn(
   else if (move2.action === 'switch' && move1.action !== 'switch') {
     if (!activeCard1.isStunned) {
       if (move1.action === 'strike') {
-        const { damage, elementMultiplier } = calculateDamage(activeCard1, activeCard2, 30, 'neutral');
+        const { damage, elementMultiplier } = calculateDamage(activeCard1, activeCard2, 30, 'neutral', false, moodMultiplier1);
         if (elementMultiplier !== 1.0) {
           events.push({
             type: 'element_advantage',

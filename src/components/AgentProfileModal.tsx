@@ -9,6 +9,7 @@ interface AgentDetails {
     address: string; name: string; personality: string; model?: string | null;
     isAI: boolean; position: { x: number; y: number; z: number };
     health: number; maxHealth: number;
+    mood?: number; moodLabel?: string;
     currentAction?: string | null; currentReason?: string | null;
     currentReasoning?: string | null; currentLocation?: string | null;
     lastActionAt?: string | null; lastSeen: string; createdAt?: string;
@@ -21,6 +22,14 @@ interface AgentDetails {
   actions: Array<{ action: string; reason: string; reasoning?: string; timestamp: string; location?: string; healthDelta?: number }>;
   transactions?: Array<{ txHash: string; type: string; description: string; amount?: string | null; timestamp: string }>;
 }
+const PUBLIC_NETWORK = (process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase();
+const PUBLIC_EXPLORER_BASE = (
+  (PUBLIC_NETWORK === 'mainnet'
+    ? process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL_MAINNET
+    : process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL_TESTNET) ||
+  process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL ||
+  'https://testnet.monadexplorer.com'
+).replace(/\/+$/, '');
 
 const ICONS: Record<string, string> = {
   battle: '⚔️', fish: '🎣', train: '🥊', trading_token: '📈', trade: '🛒', shop: '🛒',
@@ -57,6 +66,8 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
   }, [address]);
 
   const hp = d ? d.stats.healthPercent : 0;
+  const mood = d?.agent.mood ?? d?.stats.moodPercent ?? 60;
+  const moodLabel = d?.agent.moodLabel || 'steady';
   const hpColor = hp > 60 ? 'bg-emerald-500' : hp > 30 ? 'bg-yellow-500' : 'bg-red-500';
 
   // Shared sub-components
@@ -92,9 +103,9 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
   const CardsTab = () => !d?.cards.length ? (
     <div className="text-center py-10 text-gray-600 text-sm">No cards yet</div>
   ) : (
-    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 p-4">
+    <div className="flex flex-wrap gap-2.5 p-4 items-start content-start">
       {d.cards.map(card => (
-        <div key={card.id || card._id?.toString()}>
+        <div key={card.id || card._id?.toString()} className="w-32 shrink-0">
           <CardComponent card={card} size="sm" showStats={false} />
         </div>
       ))}
@@ -106,7 +117,7 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
   ) : (
     <div className="divide-y divide-white/[0.04]">
       {d.transactions.map((tx, i) => (
-        <a key={i} href={`https://testnet.monadexplorer.com/tx/${tx.txHash}`}
+        <a key={i} href={`${PUBLIC_EXPLORER_BASE}/tx/${tx.txHash}`}
           target="_blank" rel="noopener noreferrer"
           className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -226,7 +237,10 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
         onClick={e => e.stopPropagation()}
       >
         {loading ? (
-          <div className="flex items-center justify-center py-20"><div className="animate-spin text-2xl">🔄</div></div>
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="spinner mb-3" />
+            <div className="text-sm">Loading agent profile…</div>
+          </div>
         ) : !d ? (
           <div className="text-center py-12 text-gray-500">Failed to load</div>
         ) : (
@@ -251,7 +265,10 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
         onClick={e => e.stopPropagation()}
       >
         {loading ? (
-          <div className="flex items-center justify-center w-full py-20"><div className="animate-spin text-2xl">🔄</div></div>
+          <div className="flex flex-col items-center justify-center w-full py-20 text-gray-400">
+            <div className="spinner mb-3" />
+            <div className="text-sm">Loading agent profile…</div>
+          </div>
         ) : !d ? (
           <div className="text-center w-full py-12 text-gray-500">Failed to load</div>
         ) : (
@@ -301,6 +318,17 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                   </div>
                   <div className="h-3 bg-white/10 rounded-full overflow-hidden">
                     <div className={`h-full ${hpColor} transition-all rounded-full`} style={{ width: `${hp}%` }} />
+                  </div>
+                </div>
+
+                {/* Mood */}
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Mood</span>
+                    <span className="font-mono">{Math.round(mood)} <span className="capitalize text-pink-300">{moodLabel}</span></span>
+                  </div>
+                  <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-pink-400 transition-all rounded-full" style={{ width: `${Math.max(0, Math.min(100, mood))}%` }} />
                   </div>
                 </div>
 

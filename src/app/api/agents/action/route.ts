@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { getAgentAuth } from '@/lib/agentAuth';
+import { clampMood, DEFAULT_MOOD, getActionMoodDelta, getMoodTier } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
-const CHAT_COOLDOWN_MS = 90_000;
-
-function shouldEmitChat(action: string): boolean {
-  const a = action.toLowerCase();
-  if (['battling', 'trading', 'catching', 'fishing', 'farming'].includes(a)) return true;
-  return Math.random() < 0.35;
-}
-
-function buildChatMessage(action: string, reason: string, location?: string | null): string {
-  const a = action.toLowerCase();
-  const loc = location ? ` at ${location}` : '';
-  if (a === 'battling') return `Heading into a battle${loc}. ${reason || 'Wish me luck.'}`;
-  if (a === 'training') return `Training hard${loc}. ${reason || 'Powering up my team.'}`;
-  if (a === 'catching') return `Trying to catch something rare${loc}. ${reason || ''}`.trim();
-  if (a === 'trading') return `Open for trades${loc}. ${reason || ''}`.trim();
-  if (a === 'fishing') return `Fishing run${loc}. ${reason || 'Need to recover and regroup.'}`;
-  if (a === 'farming') return `Farming resources${loc}. ${reason || ''}`.trim();
-  if (a === 'resting') return `Taking a short rest${loc}. ${reason || ''}`.trim();
-  return `${reason || `I'm ${action}${loc}.`}`.trim();
-}
 
 // Health cost per action type
 const ACTION_HEALTH_COST: Record<string, number> = {
@@ -76,6 +57,15 @@ export async function POST(request: NextRequest) {
     const currentHealth = typeof agent?.health === 'number' ? agent.health : 100;
     const maxHealth = typeof agent?.maxHealth === 'number' ? agent.maxHealth : 100;
     const newHealth = Math.max(0, Math.min(maxHealth, currentHealth + healthDelta));
+    const currentMood = clampMood(typeof agent?.mood === 'number' ? agent.mood : DEFAULT_MOOD);
+    let moodDelta = getActionMoodDelta(action);
+    const context = `${reasoning || ''} ${reason || ''}`.toLowerCase();
+    if (action.toLowerCase() === 'catching') {
+      if (context.includes('tamed wild') || context.includes('tamed ')) moodDelta += 8;
+      else if (context.includes('attempting to tame')) moodDelta += 3;
+      else if (context.includes('escaped')) moodDelta -= 2;
+    }
+    const newMood = clampMood(currentMood + moodDelta);
 
     await db.collection('agent_actions').insertOne({
       address: normalizedAddress,
@@ -85,6 +75,8 @@ export async function POST(request: NextRequest) {
       location: location || null,
       healthDelta,
       healthAfter: newHealth,
+      moodDelta,
+      moodAfter: newMood,
       timestamp: now,
     });
 
@@ -93,6 +85,8 @@ export async function POST(request: NextRequest) {
       {
         $set: {
           health: newHealth,
+          mood: newMood,
+          moodLabel: getMoodTier(newMood),
           currentAction: action,
           currentReason: reason || '',
           currentReasoning: reasoning || reason || '',
@@ -103,25 +97,8 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Emit occasional global chat updates from active agents.
-    if (shouldEmitChat(action)) {
-      const lastChat = await db.collection('chat').findOne(
-        { from: normalizedAddress },
-        { sort: { timestamp: -1 } }
-      );
-      const lastTs = lastChat?.timestamp ? new Date(lastChat.timestamp).getTime() : 0;
-      if (!lastTs || (now.getTime() - lastTs) >= CHAT_COOLDOWN_MS) {
-        await db.collection('chat').insertOne({
-          from: normalizedAddress,
-          fromName: agent?.name || `Agent ${address.slice(0, 6)}`,
-          to: null,
-          toName: null,
-          message: buildChatMessage(action, reasoning || reason || '', location || null),
-          location: location || null,
-          timestamp: now,
-        });
-      }
-    }
+    // Intentionally no auto-templated chat here.
+    // Global chat should come from explicit AI chat decisions in the live agent loop.
 
     // Keep only last 100 actions per agent
     const count = await db.collection('agent_actions').countDocuments({

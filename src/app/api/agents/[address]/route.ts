@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { ethers } from 'ethers';
+import { getRpcUrl } from '@/lib/network';
+import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -36,7 +38,7 @@ export async function GET(
     let balance = '0';
     try {
       const provider = new ethers.JsonRpcProvider(
-        process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz'
+        getRpcUrl()
       );
       const balanceWei = await provider.getBalance(address);
       balance = ethers.formatEther(balanceWei);
@@ -80,6 +82,7 @@ export async function GET(
     const lastActionAt = agent.lastActionAt || latestAction?.timestamp || null;
     const maxHealth = typeof agent.maxHealth === 'number' && agent.maxHealth > 0 ? agent.maxHealth : 100;
     const health = typeof agent.health === 'number' ? Math.max(0, Math.min(agent.health, maxHealth)) : maxHealth;
+    const mood = clampMood(typeof agent.mood === 'number' ? agent.mood : DEFAULT_MOOD);
 
     return NextResponse.json({
       agent: {
@@ -91,6 +94,8 @@ export async function GET(
         position: agent.position,
         health,
         maxHealth,
+        mood,
+        moodLabel: agent.moodLabel || getMoodTier(mood),
         currentAction,
         currentReason,
         currentReasoning,
@@ -108,6 +113,7 @@ export async function GET(
         losses,
         winRate: battles.length > 0 ? Math.round((wins / battles.length) * 100) : 0,
         healthPercent: Math.round((health / maxHealth) * 100),
+        moodPercent: mood,
       },
       cards: cardsData.map(c => ({
         id: c.id || c._id?.toString(),
@@ -126,6 +132,7 @@ export async function GET(
         timestamp: a.timestamp,
         location: a.location,
         healthDelta: a.healthDelta,
+        moodDelta: a.moodDelta,
       })),
       transactions: txs.map(tx => ({
         txHash: tx.txHash,

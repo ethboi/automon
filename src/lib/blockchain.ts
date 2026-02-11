@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { getAdminPrivateKey, getAutomonNetwork, getChainId, getEscrowContractAddress, getExplorerBaseUrl, getRpcUrl } from './network';
 
 const ESCROW_ABI = [
   'function createBattle(bytes32 battleId) external payable',
@@ -12,28 +13,17 @@ const ESCROW_ABI = [
 ];
 
 export function getProvider() {
-  const rpcUrl = process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz';
-  return new ethers.JsonRpcProvider(rpcUrl);
+  return new ethers.JsonRpcProvider(getRpcUrl());
 }
 
 export function getEscrowContract(signerOrProvider?: ethers.Signer | ethers.Provider) {
-  const contractAddress = process.env.ESCROW_CONTRACT_ADDRESS;
-
-  if (!contractAddress) {
-    throw new Error('ESCROW_CONTRACT_ADDRESS not configured');
-  }
-
+  const contractAddress = getEscrowContractAddress();
   const provider = signerOrProvider || getProvider();
   return new ethers.Contract(contractAddress, ESCROW_ABI, provider);
 }
 
 export function getAdminSigner() {
-  const privateKey = process.env.ADMIN_PRIVATE_KEY;
-
-  if (!privateKey) {
-    throw new Error('ADMIN_PRIVATE_KEY not configured');
-  }
-
+  const privateKey = getAdminPrivateKey();
   const provider = getProvider();
   return new ethers.Wallet(privateKey, provider);
 }
@@ -68,14 +58,14 @@ export async function getBalance(address: string): Promise<string> {
 }
 
 export const CHAIN_CONFIG = {
-  chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '10143'),
-  chainIdHex: `0x${(parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '10143')).toString(16)}`,
-  chainName: 'Monad',
+  chainId: getChainId(),
+  chainIdHex: `0x${getChainId().toString(16)}`,
+  chainName: `Monad ${getAutomonNetwork() === 'mainnet' ? 'Mainnet' : 'Testnet'}`,
   nativeCurrency: {
     name: 'MON',
     symbol: 'MON',
     decimals: 18,
   },
-  rpcUrls: [process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz'],
-  blockExplorerUrls: ['https://monadscan.com'],
+  rpcUrls: [getRpcUrl()],
+  blockExplorerUrls: [getExplorerBaseUrl()],
 };

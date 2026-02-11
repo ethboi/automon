@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
+import { getNftContractAddress } from '@/lib/network';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const address =
-    process.env.NEXT_PUBLIC_AUTOMON_NFT_ADDRESS ||
-    process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS ||
-    process.env.AUTOMON_NFT_ADDRESS;
-
-  if (!address) {
+  try {
+    return NextResponse.json({ address: getNftContractAddress() });
+  } catch (error) {
     return NextResponse.json(
-      { error: 'NFT contract not configured (set AUTOMON_NFT_ADDRESS or NEXT_PUBLIC_AUTOMON_NFT_ADDRESS)' },
+      { error: error instanceof Error ? error.message : 'NFT contract not configured' },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({ address });
 }

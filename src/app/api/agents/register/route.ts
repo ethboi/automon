@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { getAgentAuth } from '@/lib/agentAuth';
+import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
       position: existing?.position || { x: 0, y: 0, z: 8 },
       health: typeof existing?.health === 'number' ? existing.health : 100,
       maxHealth: typeof existing?.maxHealth === 'number' ? existing.maxHealth : 100,
+      mood: clampMood(typeof existing?.mood === 'number' ? existing.mood : DEFAULT_MOOD),
+      moodLabel: getMoodTier(typeof existing?.mood === 'number' ? existing.mood : DEFAULT_MOOD),
       currentAction: existing?.currentAction || 'wandering',
       currentReason: existing?.currentReason || 'Exploring the world',
       currentLocation: existing?.currentLocation || 'Starter Town',
