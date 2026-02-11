@@ -8,6 +8,7 @@ export interface TxLog {
   type: TxType;
   from: string;
   description: string;
+  amount?: string;
   metadata?: Record<string, unknown>;
   timestamp: Date;
 }
