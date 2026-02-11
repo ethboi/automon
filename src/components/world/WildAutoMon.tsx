@@ -1,12 +1,11 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
-import { createPortal } from 'react-dom';
 
-const WILD_SPECIES = [
+export const WILD_SPECIES = [
   { name: 'Emberfox', element: 'fire', bodyColor: '#ef4444', headColor: '#f87171', glowColor: '#ff6b6b', emoji: '🔥', level: 3 },
   { name: 'Aquafin', element: 'water', bodyColor: '#3b82f6', headColor: '#60a5fa', glowColor: '#4dabff', emoji: '💧', level: 4 },
   { name: 'Thornvine', element: 'earth', bodyColor: '#22c55e', headColor: '#4ade80', glowColor: '#50e879', emoji: '🌿', level: 2 },
@@ -15,13 +14,13 @@ const WILD_SPECIES = [
   { name: 'Lumiflare', element: 'light', bodyColor: '#facc15', headColor: '#fde68a', glowColor: '#ffe066', emoji: '✨', level: 4 },
 ];
 
-const SPAWN_ZONES: [number, number][] = [
+export const SPAWN_ZONES: [number, number][] = [
   [50, 50], [55, -10], [45, -45], [-50, 50], [-55, -15], [-45, -45],
   [20, 55], [-20, 55], [35, -55], [-35, -55], [60, 25], [-60, 20],
 ];
 
-const TAME_CHANCE = 0.10; // 10%
-const TAME_HP_COST = 15;  // HP lost per attempt
+export const TAME_CHANCE = 0.10; // 10%
+export const TAME_HP_COST = 15;  // HP lost per attempt
 
 interface WildCreatureProps {
   id: number;
@@ -185,30 +184,24 @@ function WildCreature({ id, species, spawnPosition, onCreatureClick, playerPosit
   );
 }
 
-interface WildAutoMonsProps {
-  playerPosition: THREE.Vector3 | null;
-  walletAddress?: string;
-}
-
-type TameState = 
+export type TameState = 
   | { phase: 'confirm'; creatureId: number; species: typeof WILD_SPECIES[number] }
   | { phase: 'attempting'; species: typeof WILD_SPECIES[number] }
   | { phase: 'result'; species: typeof WILD_SPECIES[number]; success: boolean; cardName?: string }
   | null;
 
-export function WildAutoMons({ playerPosition, walletAddress }: WildAutoMonsProps) {
-  const [creatures, setCreatures] = useState<Array<{ id: number; species: typeof WILD_SPECIES[number]; spawn: [number, number]; alive: boolean }>>([]);
-  const [tameState, setTameState] = useState<TameState>(null);
+interface WildAutoMonsProps {
+  playerPosition: THREE.Vector3 | null;
+  walletAddress?: string;
+  tameState: TameState;
+  setTameState: (s: TameState) => void;
+  setCreatures: React.Dispatch<React.SetStateAction<Array<{ id: number; species: typeof WILD_SPECIES[number]; spawn: [number, number]; alive: boolean }>>>;
+  creatures: Array<{ id: number; species: typeof WILD_SPECIES[number]; spawn: [number, number]; alive: boolean }>;
+}
 
-  useEffect(() => {
-    const spawned = SPAWN_ZONES.map((spawn, i) => ({
-      id: i,
-      species: WILD_SPECIES[i % WILD_SPECIES.length],
-      spawn,
-      alive: true,
-    }));
-    setCreatures(spawned);
-  }, []);
+export function WildAutoMons({ playerPosition, walletAddress: _walletAddress, tameState, setTameState, creatures, setCreatures: _setCreatures }: WildAutoMonsProps) {
+
+  // creatures initialized by parent
 
   const handleCreatureClick = useCallback((id: number) => {
     if (tameState) return; // busy
@@ -217,45 +210,6 @@ export function WildAutoMons({ playerPosition, walletAddress }: WildAutoMonsProp
 
     setTameState({ phase: 'confirm', creatureId: id, species: creature.species });
   }, [tameState, creatures, playerPosition]);
-
-  const handleTameAttempt = useCallback(async () => {
-    if (!tameState || tameState.phase !== 'confirm') return;
-    const { creatureId, species } = tameState;
-
-    setTameState({ phase: 'attempting', species });
-
-    // Simulate delay
-    await new Promise(r => setTimeout(r, 1500));
-
-    const success = Math.random() < TAME_CHANCE;
-
-    let cardName = '';
-    if (success && walletAddress) {
-      try {
-        const res = await fetch('/api/cards/tame', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: walletAddress, speciesName: species.name }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          cardName = data.card?.name || species.name;
-          setCreatures(prev => prev.map(c => c.id === creatureId ? { ...c, alive: false } : c));
-        }
-      } catch (err) {
-        console.error('Tame API error:', err);
-      }
-    }
-
-    setTameState({ phase: 'result', species, success, cardName });
-
-    // Auto-dismiss after 3s
-    setTimeout(() => setTameState(null), 3500);
-  }, [tameState, walletAddress]);
-
-  const handleCancel = useCallback(() => {
-    setTameState(null);
-  }, []);
 
   return (
     <>
@@ -270,109 +224,80 @@ export function WildAutoMons({ playerPosition, walletAddress }: WildAutoMonsProp
         />
       ))}
 
-      {/* Tame Dialog — screen-centered portal modal */}
-      {typeof document !== 'undefined' && tameState && createPortal(
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
-          {/* Backdrop */}
-          {tameState.phase === 'confirm' ? (
-            <button
-              type="button"
-              aria-label="Close tame dialog"
-              className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"
-              onClick={handleCancel}
-            />
-          ) : (
-            <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
-          )}
-
-          {/* Dialog */}
-          <div className="relative bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl p-6 w-full max-w-sm animate-scale-in">
-              
-              {/* Confirm Phase */}
-              {tameState.phase === 'confirm' && (
-                <>
-                  <div className="text-center mb-4">
-                    <div className="text-4xl mb-2">{tameState.species.emoji}</div>
-                    <h3 className="text-lg font-bold text-white">
-                      Wild {tameState.species.name}
-                    </h3>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Level {tameState.species.level} • {tameState.species.element}
-                    </p>
-                  </div>
-
-                  <div className="bg-white/5 rounded-xl p-3 mb-4 space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">Tame Chance</span>
-                      <span className="text-amber-400 font-bold">10%</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">HP Cost</span>
-                      <span className="text-red-400 font-bold">-{TAME_HP_COST} ❤️</span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-gray-500 text-center mb-4">
-                    Attempting to tame will cost health regardless of success
-                  </p>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleCancel}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-gray-300 text-sm font-medium hover:bg-white/15 transition-colors"
-                    >
-                      Walk Away
-                    </button>
-                    <button
-                      onClick={handleTameAttempt}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold hover:from-amber-400 hover:to-orange-400 transition-all active:scale-95"
-                    >
-                      Tame! 🎯
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* Attempting Phase */}
-              {tameState.phase === 'attempting' && (
-                <div className="text-center py-4">
-                  <div className="text-5xl mb-4 animate-bounce">{tameState.species.emoji}</div>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-ping" />
-                    <span className="text-white font-medium">Attempting to tame...</span>
-                  </div>
-                  <div className="text-xs text-red-400 mt-2">-{TAME_HP_COST} HP</div>
-                </div>
-              )}
-
-              {/* Result Phase */}
-              {tameState.phase === 'result' && (
-                <div className="text-center py-4">
-                  {tameState.success ? (
-                    <>
-                      <div className="text-5xl mb-3">🎉</div>
-                      <h3 className="text-xl font-bold text-emerald-400 mb-2">Tamed!</h3>
-                      <p className="text-sm text-gray-300">
-                        {tameState.species.emoji} <span className="font-semibold">{tameState.cardName}</span> joined your collection!
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2">Check your collection to see your new card</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-5xl mb-3">💨</div>
-                      <h3 className="text-xl font-bold text-red-400 mb-2">Escaped!</h3>
-                      <p className="text-sm text-gray-300">
-                        {tameState.species.name} broke free and ran away!
-                      </p>
-                      <p className="text-xs text-red-400 mt-2">-{TAME_HP_COST} HP lost</p>
-                    </>
-                  )}
-                </div>
-              )}
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* Tame dialog rendered by parent outside Canvas */}
     </>
+  );
+}
+
+// Exported TameDialog — render OUTSIDE Canvas in regular React DOM
+export function TameDialog({ tameState, onCancel, onTameAttempt }: {
+  tameState: TameState;
+  onCancel: () => void;
+  onTameAttempt: () => void;
+}) {
+  if (!tameState) return null;
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
+      {tameState.phase === 'confirm' ? (
+        <button type="button" aria-label="Close" className="absolute inset-0 bg-black/55 backdrop-blur-[1px]" onClick={onCancel} />
+      ) : (
+        <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
+      )}
+      <div className="relative bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl p-6 w-full max-w-sm animate-scale-in">
+        {tameState.phase === 'confirm' && (
+          <>
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">{tameState.species.emoji}</div>
+              <h3 className="text-lg font-bold text-white">Wild {tameState.species.name}</h3>
+              <p className="text-sm text-gray-400 mt-1">Level {tameState.species.level} • {tameState.species.element}</p>
+            </div>
+            <div className="bg-white/5 rounded-xl p-3 mb-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">Tame Chance</span>
+                <span className="text-amber-400 font-bold">10%</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">HP Cost</span>
+                <span className="text-red-400 font-bold">-{TAME_HP_COST} ❤️</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 text-center mb-4">Attempting to tame will cost health regardless of success</p>
+            <div className="flex gap-3">
+              <button onClick={onCancel} className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-gray-300 text-sm font-medium hover:bg-white/15 transition-colors">Walk Away</button>
+              <button onClick={onTameAttempt} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold hover:from-amber-400 hover:to-orange-400 transition-all active:scale-95">Tame! 🎯</button>
+            </div>
+          </>
+        )}
+        {tameState.phase === 'attempting' && (
+          <div className="text-center py-4">
+            <div className="text-5xl mb-4 animate-bounce">{tameState.species.emoji}</div>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-ping" />
+              <span className="text-white font-medium">Attempting to tame...</span>
+            </div>
+            <div className="text-xs text-red-400 mt-2">-{TAME_HP_COST} HP</div>
+          </div>
+        )}
+        {tameState.phase === 'result' && (
+          <div className="text-center py-4">
+            {tameState.success ? (
+              <>
+                <div className="text-5xl mb-3">🎉</div>
+                <h3 className="text-xl font-bold text-emerald-400 mb-2">Tamed!</h3>
+                <p className="text-sm text-gray-300">{tameState.species.emoji} <span className="font-semibold">{tameState.cardName}</span> joined your collection!</p>
+                <p className="text-xs text-gray-500 mt-2">Check your collection to see your new card</p>
+              </>
+            ) : (
+              <>
+                <div className="text-5xl mb-3">💨</div>
+                <h3 className="text-xl font-bold text-red-400 mb-2">Escaped!</h3>
+                <p className="text-sm text-gray-300">{tameState.species.name} broke free and ran away!</p>
+                <p className="text-xs text-red-400 mt-2">-{TAME_HP_COST} HP lost</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
