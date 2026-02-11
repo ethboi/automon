@@ -17,6 +17,7 @@ interface AgentDetails {
   stats: {
     balance: string; cards: number; battles: number;
     wins: number; losses: number; winRate: number; healthPercent: number;
+    moodPercent?: number;
   };
   cards: CardType[];
   actions: Array<{ action: string; reason: string; reasoning?: string; timestamp: string; location?: string; healthDelta?: number }>;
