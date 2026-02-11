@@ -105,17 +105,33 @@ function getActiveCard(player: Player): BattleCard {
   return player.cards.find(c => c.isActive && !c.fainted) || player.cards.find(c => !c.fainted) || player.cards[0];
 }
 
-function initCard(card: BattleCard): BattleCard {
+function initCard(card: any): BattleCard {
+  // Cards from MongoDB may have stats nested under .stats and ability.power instead of .damage
+  const stats = card.stats || {};
+  const attack = card.attack || stats.attack || 50;
+  const defense = card.defense || stats.defense || 30;
+  const speed = card.speed || stats.speed || 40;
+  const hp = card.hp || stats.hp || card.currentHp || 100;
+  const maxHp = card.maxHp || stats.maxHp || hp;
+  const rawAbility = card.ability;
+  const ability = rawAbility ? {
+    name: rawAbility.name || 'Power Strike',
+    damage: rawAbility.damage || rawAbility.power || 25,
+    effect: rawAbility.effect || 'damage',
+    cooldown: rawAbility.cooldown || 3,
+    currentCooldown: 0,
+  } : { name: 'Power Strike', damage: 25, effect: 'damage', cooldown: 3, currentCooldown: 0 };
+
   return {
-    ...card,
-    maxHp: card.maxHp || card.hp || 100,
-    hp: card.hp || 100,
+    id: card.id || card._id?.toString(),
+    name: card.name || 'Unknown',
+    element: card.element || 'fire',
+    rarity: card.rarity,
+    attack, defense, speed, hp, maxHp,
+    ability,
     statusEffects: [],
     isActive: false,
     fainted: false,
-    ability: card.ability ? { ...card.ability, currentCooldown: 0 } : {
-      name: 'Power Strike', damage: 25, effect: 'damage', cooldown: 3, currentCooldown: 0,
-    },
   };
 }
 
