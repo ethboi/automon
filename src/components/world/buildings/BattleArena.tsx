@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useState } from 'react';
 import { LocationLabel } from '../locations/LocationMarker';
@@ -141,6 +142,33 @@ export function BattleArena({ position, onClick }: BattleArenaProps) {
         <boxGeometry args={[5, 0.8, 0.3]} />
         <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.3} />
       </mesh>
+      {/* 3D sign text */}
+      <Text
+        position={[0, 9.46, baseRadius - 0.12]}
+        font="/fonts/GeistMonoVF.woff"
+        fontSize={0.44}
+        letterSpacing={0.04}
+        anchorX="center"
+        anchorY="middle"
+        color="#2b1205"
+        outlineWidth={0.015}
+        outlineColor="#140700"
+      >
+        AUTOMON ARENA
+      </Text>
+      <Text
+        position={[0, 9.58, baseRadius - 0.05]}
+        font="/fonts/GeistMonoVF.woff"
+        fontSize={0.44}
+        letterSpacing={0.04}
+        anchorX="center"
+        anchorY="middle"
+        color="#fde68a"
+        outlineWidth={0.02}
+        outlineColor="#7c2d12"
+      >
+        AUTOMON ARENA
+      </Text>
 
       {/* Rotating outer ring */}
       <mesh ref={ringRef} position={[0, 5, 0]}>
