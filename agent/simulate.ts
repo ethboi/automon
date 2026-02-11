@@ -407,6 +407,7 @@ export async function runBattleSimulation(
         rounds: battle.rounds,
         currentTurn: battle.currentTurn,
         battleLog,
+        address: battle.player1.address, // needed for agent auth
       }),
     });
     if (saveRes.ok) {
