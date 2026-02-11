@@ -32,6 +32,14 @@ const CHAT_CONTEXT_LIMIT = Math.max(
   2,
   parseInt(process.env.AI_CHAT_CONTEXT_LIMIT || (process.env.AI_LOW_TOKEN_MODE === 'true' ? '4' : '8'), 10) || 8
 );
+const GLOBAL_CHAT_COOLDOWN_MS = Math.max(
+  15000,
+  parseInt(process.env.AI_CHAT_COOLDOWN_MS || '90000', 10) || 90000
+);
+const GLOBAL_CHAT_CHANCE = Math.max(
+  0,
+  Math.min(1, parseFloat(process.env.AI_CHAT_CHANCE || '0.12') || 0.12)
+);
 
 if (!PRIVATE_KEY) { console.error('❌ AGENT_PRIVATE_KEY required'); process.exit(1); }
 
@@ -212,7 +220,6 @@ let dwellTicks = 0;
 const DWELL_MIN = 10; // ~40s minimum dwell
 const DWELL_MAX = 18; // ~72s maximum dwell
 let lastGlobalChatAt = 0;
-const GLOBAL_CHAT_COOLDOWN_MS = 45_000;
 const CHAT_OTHER_NAMES = ['Nexus', 'Atlas', 'Pyre', 'Rune', 'Shade', 'Coral', 'Spark'];
 
 function isBoringChat(msg: string): boolean {
@@ -972,7 +979,7 @@ async function tick(): Promise<void> {
     dwellTicks--;
 
     // Occasionally post global entertaining chatter (not proximity-based).
-    if (USE_AI && Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.28) {
+    if (USE_AI && Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < GLOBAL_CHAT_CHANCE) {
       try {
         const rival = CHAT_OTHER_NAMES[Math.floor(Math.random() * CHAT_OTHER_NAMES.length)];
         const chatRes = await api(`/api/chat?limit=${CHAT_CONTEXT_LIMIT}`);
