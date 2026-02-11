@@ -183,6 +183,16 @@ const GLOBAL_CHAT_FALLBACK_LINES = [
   'running low on MON but my pride won\'t let me stop battling 🔥',
 ];
 
+const WILD_SPECIES_BY_LOCATION: Record<string, string[]> = {
+  'Old Pond': ['Aquafin', 'Lumiflare'],
+  'Dark Forest': ['Shadewisp', 'Thornvine', 'Zephyrix'],
+  'Crystal Caves': ['Lumiflare', 'Zephyrix', 'Shadewisp'],
+  'Community Farm': ['Thornvine', 'Emberfox'],
+};
+const ALL_WILD_SPECIES = ['Emberfox', 'Aquafin', 'Thornvine', 'Zephyrix', 'Shadewisp', 'Lumiflare'];
+const TAME_ATTEMPT_COOLDOWN_MS = 120_000;
+let lastTameAttemptAt = 0;
+
 // ─── Actions ───────────────────────────────────────────────────────────────────
 
 async function fetchExistingName(): Promise<string | null> {
@@ -398,6 +408,39 @@ async function buyPack(aiReason?: string): Promise<void> {
     await logAction('minting', `Bought pack — got ${minted.join(', ')}`, target.name, aiReason);
   } catch (err) {
     console.error(`[${ts()}]    ❌ Pack buy failed:`, (err as Error).message?.slice(0, 80));
+  }
+}
+
+async function attemptTameWild(aiReason?: string): Promise<void> {
+  if (Date.now() - lastTameAttemptAt < TAME_ATTEMPT_COOLDOWN_MS) return;
+  lastTameAttemptAt = Date.now();
+
+  const pool = WILD_SPECIES_BY_LOCATION[target.name] || ALL_WILD_SPECIES;
+  const species = pool[Math.floor(Math.random() * pool.length)];
+  const reason = aiReason || `Tracking signs of a wild ${species} nearby`;
+
+  try {
+    console.log(`[${ts()}] 🐾 Attempting tame: ${species} @ ${target.name}`);
+    await logAction('catching', `Attempting to tame wild ${species}`, target.name, reason);
+
+    const res = await api('/api/cards/tame', {
+      method: 'POST',
+      body: JSON.stringify({ address: ADDRESS, speciesName: species }),
+    });
+
+    if (!res.ok) {
+      const errTxt = await res.text().catch(() => '');
+      console.log(`[${ts()}]   ❌ Tame failed (${res.status}) ${errTxt.slice(0, 80)}`);
+      await logAction('catching', `Wild ${species} escaped`, target.name, reason);
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    const cardName = data.card?.name || species;
+    console.log(`[${ts()}]   ✅ Tamed ${species} -> ${cardName}`);
+    await logAction('catching', `Tamed wild ${species} into ${cardName}`, target.name, reason);
+  } catch (err) {
+    console.log(`[${ts()}]   ⚠ Tame attempt error: ${(err as Error).message?.slice(0, 80)}`);
   }
 }
 
@@ -860,6 +903,14 @@ async function tick(): Promise<void> {
         }
       }
       // After battle (or timeout), continue normally — no extra dwell
+    } else if (pendingAction.action === 'catching') {
+      const tameReason = pendingAction.reason;
+      recentActions.push(`catching@${target.name}`);
+      if (recentActions.length > 10) recentActions.shift();
+      pendingAction = null;
+      await attemptTameWild(tameReason);
+      dwellTicks = DWELL_MIN + Math.floor(Math.random() * (DWELL_MAX - DWELL_MIN));
+      return;
     } else {
       await logAction(pendingAction.action, pendingAction.reason, target.name);
       recentActions.push(`${pendingAction.action}@${target.name}`);
@@ -871,6 +922,15 @@ async function tick(): Promise<void> {
   } else if (dwellTicks > 0) {
     // Dwelling at location — performing the action
     dwellTicks--;
+
+    // Occasional wild tame attempts while dwelling in wild-heavy zones.
+    if (
+      ['Old Pond', 'Dark Forest', 'Crystal Caves', 'Community Farm'].includes(target.name) &&
+      Date.now() - lastTameAttemptAt > TAME_ATTEMPT_COOLDOWN_MS &&
+      Math.random() < 0.1
+    ) {
+      await attemptTameWild('Saw movement in the wild and took a tame attempt');
+    }
 
     // Occasionally post global entertaining chatter (not proximity-based).
     if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.05) {
