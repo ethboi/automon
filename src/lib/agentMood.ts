@@ -10,18 +10,18 @@ export function clampMood(value: number): number {
 export function getActionMoodDelta(action: string): number {
   const a = (action || '').toLowerCase();
   if (a.includes('battle_result')) return 0; // explicit win/loss deltas are logged separately
-  if (a.includes('battle')) return -2;
-  if (a.includes('rest')) return 4;
-  if (a.includes('fish')) return 3;
-  if (a.includes('farm')) return 3;
-  if (a.includes('forag')) return 2;
+  if (a.includes('battle')) return -3;
+  if (a.includes('rest')) return 5;
+  if (a.includes('fish')) return 4;
+  if (a.includes('farm')) return 4;
+  if (a.includes('forag')) return 3;
   if (a.includes('catch')) return 2;
   if (a.includes('explor')) return 1;
   if (a.includes('wander') || a.includes('move')) return 1;
-  if (a.includes('trading_token')) return -2;
+  if (a.includes('trading_token')) return -3;
   if (a.includes('trade')) return -1;
   if (a.includes('shop')) return 1;
-  if (a.includes('train')) return -1;
+  if (a.includes('train')) return -2;
   if (a.includes('online')) return 1;
   return 0;
 }
@@ -62,8 +62,8 @@ export async function applyBattleMoodResult(
 
   const winnerBefore = clampMood(typeof winnerAgent?.mood === 'number' ? winnerAgent.mood : DEFAULT_MOOD);
   const loserBefore = clampMood(typeof loserAgent?.mood === 'number' ? loserAgent.mood : DEFAULT_MOOD);
-  const winnerDelta = 14;
-  const loserDelta = -12;
+  const winnerDelta = 18;
+  const loserDelta = -16;
   const winnerAfter = clampMood(winnerBefore + winnerDelta);
   const loserAfter = clampMood(loserBefore + loserDelta);
 
