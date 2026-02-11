@@ -1033,8 +1033,31 @@ export function GameWorld() {
         </Suspense>
       </Canvas>
 
-      <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-md border border-white/10 bg-black/50 px-2 py-1 text-[10px] sm:text-xs text-white/85">
-        Camera: {cameraMode === 'shoulder' ? 'Shoulder (V)' : 'Isometric (V)'}
+      <div className="pointer-events-none absolute right-3 top-3 z-20 w-[220px] sm:w-[250px] rounded-xl border border-cyan-400/20 bg-slate-950/70 p-2.5 shadow-[0_0_20px_rgba(34,211,238,0.15)] backdrop-blur-sm">
+        <div className="mb-1.5 text-[10px] sm:text-xs font-semibold tracking-wide text-cyan-300">
+          Controls
+        </div>
+        <div className="space-y-1 text-[10px] sm:text-xs text-slate-200/90">
+          <div className="flex items-center justify-between">
+            <span>Rotate Camera</span>
+            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">RMB Hold</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Move Character</span>
+            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">RMB Tap</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Zoom</span>
+            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">Mouse Wheel</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Enter Location</span>
+            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">E</span>
+          </div>
+          <div className="mt-1 border-t border-white/10 pt-1.5 text-[10px] text-cyan-200">
+            Camera Mode: {cameraMode === 'shoulder' ? 'Shoulder (V)' : 'Isometric (V)'}
+          </div>
+        </div>
       </div>
 
       <WorldUI

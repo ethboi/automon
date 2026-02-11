@@ -1,7 +1,8 @@
 'use client';
 
 import * as THREE from 'three';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { ThreeEvent } from '@react-three/fiber';
 
 interface GroundProps {
   size?: number;
@@ -9,10 +10,53 @@ interface GroundProps {
 }
 
 export function Ground({ size = 200, onClick }: GroundProps) {
-  const handleContextMenu = (event: { point: THREE.Vector3; stopPropagation: () => void; nativeEvent?: { preventDefault?: () => void } }) => {
+  const rightMouseRef = useRef({
+    down: false,
+    moved: false,
+    startX: 0,
+    startY: 0,
+    startAt: 0,
+  });
+
+  const handleContextMenu = (event: { stopPropagation: () => void; nativeEvent?: { preventDefault?: () => void } }) => {
     event.stopPropagation();
     event.nativeEvent?.preventDefault?.();
-    if (onClick) onClick(event.point);
+  };
+
+  const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
+    if (event.button !== 2) return;
+    rightMouseRef.current = {
+      down: true,
+      moved: false,
+      startX: event.clientX,
+      startY: event.clientY,
+      startAt: Date.now(),
+    };
+  };
+
+  const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
+    const state = rightMouseRef.current;
+    if (!state.down || state.moved) return;
+    const dx = event.clientX - state.startX;
+    const dy = event.clientY - state.startY;
+    if (Math.hypot(dx, dy) > 6) {
+      state.moved = true;
+    }
+  };
+
+  const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
+    if (event.button !== 2) return;
+    const state = rightMouseRef.current;
+    const pressMs = Date.now() - state.startAt;
+    const isTap = state.down && !state.moved && pressMs < 220;
+    rightMouseRef.current = {
+      down: false,
+      moved: false,
+      startX: 0,
+      startY: 0,
+      startAt: 0,
+    };
+    if (isTap && onClick) onClick(event.point);
   };
 
   const trees = useMemo(() => [
@@ -112,7 +156,15 @@ export function Ground({ size = 200, onClick }: GroundProps) {
 
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow onContextMenu={handleContextMenu} onDoubleClick={handleContextMenu}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0, 0]}
+        receiveShadow
+        onContextMenu={handleContextMenu}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      >
         <planeGeometry args={[size, size]} />
         <meshStandardMaterial color="#3d8b37" roughness={0.85} />
       </mesh>
