@@ -72,6 +72,7 @@ function CameraController({
   const targetLookAt = useRef(new THREE.Vector3());
   const currentLookAt = useRef(new THREE.Vector3(0, 0, -5));
   const shoulderForward = useRef(new THREE.Vector3(0, 0, -1));
+  const prevPlayerPos = useRef<THREE.Vector3 | null>(null);
 
   useEffect(() => {
     if (cameraMode === 'isometric') {
@@ -105,12 +106,27 @@ function CameraController({
       const playerPos = playerPositionRef?.current;
       if (!playerPos) return;
 
+      // Primary follow direction: actual player movement vector
+      if (!prevPlayerPos.current) {
+        prevPlayerPos.current = playerPos.clone();
+      } else {
+        const moveDelta = new THREE.Vector3().subVectors(playerPos, prevPlayerPos.current);
+        const moveDist = moveDelta.length();
+        if (moveDist > 0.02) {
+          moveDelta.y = 0;
+          moveDelta.normalize();
+          shoulderForward.current.lerp(moveDelta, 0.18);
+        }
+        prevPlayerPos.current.copy(playerPos);
+      }
+
+      // Fallback/anticipation: target direction while moving toward click target
       if (moveTarget) {
         const toTarget = new THREE.Vector3().subVectors(moveTarget, playerPos);
         if (toTarget.lengthSq() > 0.25) {
           toTarget.y = 0;
           toTarget.normalize();
-          shoulderForward.current.lerp(toTarget, 0.12);
+          shoulderForward.current.lerp(toTarget, 0.08);
         }
       }
 
@@ -139,6 +155,9 @@ function CameraController({
       camera.lookAt(currentLookAt.current);
       return;
     }
+
+    // Reset tracking when leaving shoulder mode.
+    prevPlayerPos.current = null;
 
     if (!flyingRef.current) return;
 
