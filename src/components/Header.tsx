@@ -113,31 +113,29 @@ export default function Header() {
             </Link>
 
             {/* Desktop Navigation */}
-            {address && (
-              <nav className="hidden lg:flex items-center gap-1">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`
-                      relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300
-                      ${isActive(link.href)
-                        ? 'text-white bg-white/10'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }
-                    `}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-base">{link.icon}</span>
-                      {link.label}
-                    </span>
-                    {isActive(link.href) && (
-                      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full" />
-                    )}
-                  </Link>
-                ))}
-              </nav>
-            )}
+            <nav className="hidden lg:flex items-center gap-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`
+                    relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300
+                    ${isActive(link.href)
+                      ? 'text-white bg-white/10'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-base">{link.icon}</span>
+                    {link.label}
+                  </span>
+                  {isActive(link.href) && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full" />
+                  )}
+                </Link>
+              ))}
+            </nav>
           </div>
 
           {/* On-chain ticker */}
