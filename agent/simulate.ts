@@ -1,0 +1,422 @@
+/**
+ * Agent-side battle simulation.
+ * Fetches battle data, runs deterministic sim with AI move decisions via Claude,
+ * then POSTs result back to the API. No Vercel timeout!
+ */
+import Anthropic from '@anthropic-ai/sdk';
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+// ─── Types (minimal, matching server) ───
+
+interface BattleCard {
+  id?: string;
+  name: string;
+  element: string;
+  rarity?: string;
+  attack: number;
+  defense: number;
+  speed: number;
+  hp: number;
+  maxHp: number;
+  ability?: { name: string; damage: number; effect: string; cooldown: number; currentCooldown?: number };
+  statusEffects?: { type: string; duration: number; value: number }[];
+  isActive?: boolean;
+  fainted?: boolean;
+}
+
+interface Player {
+  address: string;
+  cards: BattleCard[];
+  ready?: boolean;
+  selectedCards?: unknown[];
+  cardSelectionReasoning?: string;
+  name?: string;
+}
+
+interface Battle {
+  battleId: string;
+  player1: Player;
+  player2: Player;
+  wager: string;
+  status: string;
+  currentTurn: number;
+  rounds: Round[];
+}
+
+interface BattleMove {
+  action: 'attack' | 'defend' | 'skill' | 'switch';
+  switchTo?: number;
+  reasoning?: string;
+}
+
+interface BattleEvent {
+  type: string;
+  source: string;
+  target: string;
+  message: string;
+  value?: number;
+}
+
+interface Round {
+  turn: number;
+  player1Move: BattleMove;
+  player2Move: BattleMove;
+  triangleResult?: string;
+  events: BattleEvent[];
+  timestamp: Date;
+}
+
+interface TurnLog {
+  turn: number;
+  player1: { card: string; action: string; reasoning?: string };
+  player2: { card: string; action: string; reasoning?: string };
+  events: BattleEvent[];
+  triangleResult?: string;
+}
+
+interface BattleLog {
+  battleId: string;
+  player1: { address: string; cards: { id: string; name: string; element: string }[]; isAI: boolean; name?: string; cardSelectionReasoning?: string };
+  player2: { address: string; cards: { id: string; name: string; element: string }[]; isAI: boolean; name?: string; cardSelectionReasoning?: string };
+  wager: string;
+  turns: TurnLog[];
+  winner: string;
+  totalDamageDealt: { player1: number; player2: number };
+  cardsFainted: { player1: number; player2: number };
+  duration: number;
+  startedAt: Date;
+  endedAt: Date;
+}
+
+// ─── Element system ───
+
+const ELEMENT_CHART: Record<string, string[]> = {
+  fire: ['earth', 'air'], water: ['fire'], earth: ['water', 'light'],
+  air: ['earth'], light: ['dark'], dark: ['light', 'water'],
+};
+
+function getElementMultiplier(attacker: string, defender: string): number {
+  if (ELEMENT_CHART[attacker]?.includes(defender)) return 1.5;
+  if (ELEMENT_CHART[defender]?.includes(attacker)) return 0.75;
+  return 1.0;
+}
+
+// ─── Battle helpers ───
+
+function getActiveCard(player: Player): BattleCard {
+  return player.cards.find(c => c.isActive && !c.fainted) || player.cards.find(c => !c.fainted) || player.cards[0];
+}
+
+function initCard(card: BattleCard): BattleCard {
+  return {
+    ...card,
+    maxHp: card.maxHp || card.hp || 100,
+    hp: card.hp || 100,
+    statusEffects: [],
+    isActive: false,
+    fainted: false,
+    ability: card.ability ? { ...card.ability, currentCooldown: 0 } : {
+      name: 'Power Strike', damage: 25, effect: 'damage', cooldown: 3, currentCooldown: 0,
+    },
+  };
+}
+
+// ─── Triangle system (attack > skill > defend > attack) ───
+
+function triangleResult(m1: string, m2: string): { winner: 'p1' | 'p2' | 'tie'; label: string } {
+  if (m1 === m2) return { winner: 'tie', label: 'Clash!' };
+  const wins: Record<string, string> = { attack: 'skill', skill: 'defend', defend: 'attack' };
+  if (wins[m1] === m2) return { winner: 'p1', label: `${m1} beats ${m2}` };
+  if (wins[m2] === m1) return { winner: 'p2', label: `${m2} beats ${m1}` };
+  return { winner: 'tie', label: 'Neutral' };
+}
+
+// ─── Resolve a turn ───
+
+function resolveTurn(battle: Battle, move1: BattleMove, move2: BattleMove): { events: BattleEvent[]; winner: string | null; turnLog: TurnLog } {
+  const events: BattleEvent[] = [];
+  const p1Card = getActiveCard(battle.player1);
+  const p2Card = getActiveCard(battle.player2);
+
+  // Handle switches first
+  if (move1.action === 'switch' && move1.switchTo !== undefined) {
+    const target = battle.player1.cards[move1.switchTo];
+    if (target && !target.fainted) {
+      p1Card.isActive = false;
+      target.isActive = true;
+      events.push({ type: 'switch', source: p1Card.name, target: target.name, message: `${p1Card.name} switched to ${target.name}!` });
+    }
+  }
+  if (move2.action === 'switch' && move2.switchTo !== undefined) {
+    const target = battle.player2.cards[move2.switchTo];
+    if (target && !target.fainted) {
+      p2Card.isActive = false;
+      target.isActive = true;
+      events.push({ type: 'switch', source: p2Card.name, target: target.name, message: `${p2Card.name} switched to ${target.name}!` });
+    }
+  }
+
+  const active1 = getActiveCard(battle.player1);
+  const active2 = getActiveCard(battle.player2);
+  const tri = triangleResult(move1.action, move2.action);
+
+  // Calculate damage
+  const calcDamage = (attacker: BattleCard, defender: BattleCard, action: string, bonus: boolean): number => {
+    if (action === 'defend') return 0;
+    let baseDmg = action === 'skill' && attacker.ability ? attacker.ability.damage : attacker.attack * 0.8;
+    const elemMult = getElementMultiplier(attacker.element, defender.element);
+    baseDmg *= elemMult;
+    if (bonus) baseDmg *= 1.3; // triangle winner bonus
+    const defReduction = action === 'skill' ? 0.3 : 0.5;
+    const finalDmg = Math.max(1, Math.round(baseDmg - defender.defense * defReduction));
+    return finalDmg;
+  };
+
+  // Apply damage
+  const applyDmg = (attacker: BattleCard, defender: BattleCard, action: string, bonus: boolean, playerLabel: string) => {
+    if (action === 'defend') {
+      const heal = Math.round(defender.maxHp * 0.05);
+      defender.hp = Math.min(defender.maxHp, defender.hp + heal);
+      events.push({ type: 'defend', source: defender.name, target: defender.name, message: `${defender.name} defends! (+${heal} HP)`, value: heal });
+      return;
+    }
+    if (action === 'skill' && attacker.ability?.currentCooldown && attacker.ability.currentCooldown > 0) {
+      // Skill on cooldown, fallback to attack
+      const dmg = calcDamage(attacker, defender, 'attack', bonus);
+      defender.hp -= dmg;
+      events.push({ type: 'damage', source: attacker.name, target: defender.name, message: `${attacker.name}'s skill on cooldown — basic attack for ${dmg}!`, value: dmg });
+    } else {
+      const dmg = calcDamage(attacker, defender, action, bonus);
+      defender.hp -= dmg;
+      if (action === 'skill' && attacker.ability) {
+        attacker.ability.currentCooldown = attacker.ability.cooldown;
+        events.push({ type: 'damage', source: attacker.name, target: defender.name, message: `${attacker.name} uses ${attacker.ability.name} for ${dmg}!`, value: dmg });
+      } else {
+        events.push({ type: 'damage', source: attacker.name, target: defender.name, message: `${attacker.name} attacks for ${dmg}!`, value: dmg });
+      }
+    }
+  };
+
+  const p1Bonus = tri.winner === 'p1';
+  const p2Bonus = tri.winner === 'p2';
+
+  // Speed determines who goes first
+  if (active1.speed >= active2.speed) {
+    applyDmg(active1, active2, move1.action, p1Bonus, 'P1');
+    if (active2.hp > 0) applyDmg(active2, active1, move2.action, p2Bonus, 'P2');
+  } else {
+    applyDmg(active2, active1, move2.action, p2Bonus, 'P2');
+    if (active1.hp > 0) applyDmg(active1, active2, move1.action, p1Bonus, 'P1');
+  }
+
+  // Tick cooldowns
+  for (const c of [...battle.player1.cards, ...battle.player2.cards]) {
+    if (c.ability?.currentCooldown && c.ability.currentCooldown > 0) c.ability.currentCooldown--;
+  }
+
+  // Check faints
+  let winner: string | null = null;
+  for (const card of battle.player1.cards) {
+    if (card.hp <= 0 && !card.fainted) {
+      card.fainted = true;
+      card.isActive = false;
+      events.push({ type: 'faint', source: card.name, target: card.name, message: `${card.name} fainted!` });
+    }
+  }
+  for (const card of battle.player2.cards) {
+    if (card.hp <= 0 && !card.fainted) {
+      card.fainted = true;
+      card.isActive = false;
+      events.push({ type: 'faint', source: card.name, target: card.name, message: `${card.name} fainted!` });
+    }
+  }
+
+  // Auto-switch to next alive card
+  if (!battle.player1.cards.some(c => c.isActive && !c.fainted)) {
+    const next = battle.player1.cards.find(c => !c.fainted);
+    if (next) { next.isActive = true; events.push({ type: 'switch', source: 'auto', target: next.name, message: `${next.name} enters the fight!` }); }
+  }
+  if (!battle.player2.cards.some(c => c.isActive && !c.fainted)) {
+    const next = battle.player2.cards.find(c => !c.fainted);
+    if (next) { next.isActive = true; events.push({ type: 'switch', source: 'auto', target: next.name, message: `${next.name} enters the fight!` }); }
+  }
+
+  // Check if all cards fainted
+  if (battle.player1.cards.every(c => c.fainted)) winner = battle.player2.address;
+  if (battle.player2.cards.every(c => c.fainted)) winner = battle.player1.address;
+
+  const turnLog: TurnLog = {
+    turn: battle.currentTurn,
+    player1: { card: active1.name, action: move1.action, reasoning: move1.reasoning },
+    player2: { card: active2.name, action: move2.action, reasoning: move2.reasoning },
+    events,
+    triangleResult: tri.label,
+  };
+
+  return { events, winner, turnLog };
+}
+
+// ─── AI Move Decision via Claude ───
+
+async function getAIMove(battle: Battle, playerAddress: string): Promise<BattleMove> {
+  const isP1 = battle.player1.address.toLowerCase() === playerAddress.toLowerCase();
+  const myCards = isP1 ? battle.player1.cards : battle.player2.cards;
+  const oppCards = isP1 ? battle.player2.cards : battle.player1.cards;
+  const myActive = getActiveCard(isP1 ? battle.player1 : battle.player2);
+  const oppActive = getActiveCard(isP1 ? battle.player2 : battle.player1);
+
+  const prompt = `You're an AI battler in AutoMon. Pick the best move.
+
+YOUR ACTIVE: ${myActive.name} (${myActive.element}) HP:${myActive.hp}/${myActive.maxHp} ATK:${myActive.attack} DEF:${myActive.defense} SPD:${myActive.speed}
+Ability: ${myActive.ability?.name || 'none'} (${myActive.ability?.damage || 0} dmg, CD: ${myActive.ability?.currentCooldown || 0}/${myActive.ability?.cooldown || 0})
+
+OPPONENT: ${oppActive.name} (${oppActive.element}) HP:${oppActive.hp}/${oppActive.maxHp} ATK:${oppActive.attack} DEF:${oppActive.defense}
+
+Your bench: ${myCards.filter(c => !c.fainted && !c.isActive).map(c => `${c.name}(${c.element} HP:${c.hp})`).join(', ') || 'none'}
+
+TRIANGLE: attack > skill > defend > attack. Winner gets 1.3x damage bonus.
+Element chart: fire>earth/air, water>fire, earth>water/light, light>dark, dark>light/water
+
+Turn ${battle.currentTurn}. Reply ONLY with JSON: {"action":"attack"|"defend"|"skill"|"switch","switchTo":INDEX_OR_NULL,"reasoning":"brief why"}`;
+
+  try {
+    const res = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 150,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const text = (res.content[0] as { type: string; text: string }).text;
+    const json = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+    const action = ['attack', 'defend', 'skill', 'switch'].includes(json.action) ? json.action : 'attack';
+
+    // Validate
+    if (action === 'skill' && myActive.ability?.currentCooldown && myActive.ability.currentCooldown > 0) {
+      return { action: 'attack', reasoning: `${myActive.ability.name} on cooldown — attacking instead` };
+    }
+    if (action === 'switch') {
+      const bench = myCards.filter(c => !c.fainted && !c.isActive);
+      if (bench.length === 0) return { action: 'attack', reasoning: 'No bench cards to switch' };
+      const idx = json.switchTo ?? myCards.indexOf(bench[0]);
+      return { action: 'switch', switchTo: idx, reasoning: json.reasoning || 'Switching' };
+    }
+    return { action, reasoning: json.reasoning || '' };
+  } catch (e) {
+    console.log(`[simulate] AI move error: ${(e as Error).message?.slice(0, 60)}`);
+    // Fallback: random weighted
+    const r = Math.random();
+    if (r < 0.5) return { action: 'attack', reasoning: 'Fallback — going aggressive' };
+    if (r < 0.75) return { action: 'skill', reasoning: 'Fallback — using skill' };
+    return { action: 'defend', reasoning: 'Fallback — playing safe' };
+  }
+}
+
+// ─── Main simulation runner ───
+
+export async function runBattleSimulation(
+  battleData: Battle,
+  _apiBase: string,
+  apiFn: (path: string, init?: RequestInit) => Promise<Response>,
+): Promise<{ winner: string; battleLog: BattleLog } | null> {
+  console.log(`[simulate] Starting battle ${battleData.battleId}`);
+  console.log(`[simulate] P1: ${battleData.player1.address.slice(0, 10)} vs P2: ${battleData.player2.address.slice(0, 10)}`);
+
+  // Initialize cards
+  const battle: Battle = {
+    ...battleData,
+    player1: { ...battleData.player1, cards: battleData.player1.cards.map(initCard) },
+    player2: { ...battleData.player2, cards: battleData.player2.cards.map(initCard) },
+    rounds: [],
+    currentTurn: 0,
+  };
+
+  // Set first cards active
+  if (battle.player1.cards.length > 0) battle.player1.cards[0].isActive = true;
+  if (battle.player2.cards.length > 0) battle.player2.cards[0].isActive = true;
+
+  const startTime = Date.now();
+  const turns: TurnLog[] = [];
+  let totalDmgP1 = 0, totalDmgP2 = 0, faintsP1 = 0, faintsP2 = 0;
+  let winner: string | null = null;
+  const MAX_TURNS = 50;
+
+  while (!winner && battle.currentTurn < MAX_TURNS) {
+    battle.currentTurn++;
+
+    const [move1, move2] = await Promise.all([
+      getAIMove(battle, battle.player1.address),
+      getAIMove(battle, battle.player2.address),
+    ]);
+
+    const { events, winner: turnWinner, turnLog } = resolveTurn(battle, move1, move2);
+
+    for (const e of events) {
+      if (e.type === 'damage' && e.value) {
+        const p1Names = battle.player1.cards.map(c => c.name);
+        if (p1Names.includes(e.source)) totalDmgP1 += e.value; else totalDmgP2 += e.value;
+      }
+      if (e.type === 'faint') {
+        const p1Names = battle.player1.cards.map(c => c.name);
+        if (p1Names.includes(e.target)) faintsP1++; else faintsP2++;
+      }
+    }
+
+    turns.push(turnLog);
+    battle.rounds.push({ turn: battle.currentTurn, player1Move: move1, player2Move: move2, triangleResult: turnLog.triangleResult, events, timestamp: new Date() });
+    winner = turnWinner;
+
+    console.log(`[simulate] Turn ${battle.currentTurn}: ${move1.action} vs ${move2.action} → ${turnLog.triangleResult} ${winner ? `WINNER: ${winner.slice(0,8)}` : ''}`);
+  }
+
+  const finalWinner = winner || 'draw';
+  const duration = Date.now() - startTime;
+
+  const battleLog: BattleLog = {
+    battleId: battle.battleId,
+    player1: {
+      address: battle.player1.address, name: battle.player1.name,
+      cards: battleData.player1.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element })),
+      isAI: true, cardSelectionReasoning: battleData.player1.cardSelectionReasoning,
+    },
+    player2: {
+      address: battle.player2.address, name: battle.player2.name,
+      cards: battleData.player2.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element })),
+      isAI: true, cardSelectionReasoning: battleData.player2.cardSelectionReasoning,
+    },
+    wager: battle.wager,
+    turns,
+    winner: finalWinner,
+    totalDamageDealt: { player1: totalDmgP1, player2: totalDmgP2 },
+    cardsFainted: { player1: faintsP1, player2: faintsP2 },
+    duration,
+    startedAt: new Date(startTime),
+    endedAt: new Date(),
+  };
+
+  console.log(`[simulate] Battle complete! Winner: ${finalWinner} in ${turns.length} turns (${duration}ms)`);
+
+  // POST result back to API
+  try {
+    const saveRes = await apiFn('/api/battle/save-result', {
+      method: 'POST',
+      body: JSON.stringify({
+        battleId: battle.battleId,
+        winner: finalWinner,
+        rounds: battle.rounds,
+        currentTurn: battle.currentTurn,
+        battleLog,
+      }),
+    });
+    if (saveRes.ok) {
+      console.log(`[simulate] Result saved to API`);
+    } else {
+      console.log(`[simulate] Failed to save result: ${saveRes.status}`);
+    }
+  } catch (e) {
+    console.error(`[simulate] Save error:`, (e as Error).message);
+  }
+
+  return { winner: finalWinner, battleLog };
+}

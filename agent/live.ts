@@ -17,6 +17,7 @@ dotenv.config({ path: '.env.local' });
 import { ethers } from 'ethers';
 import { decideNextAction, selectBattleCards, agentChat } from './strategy';
 import { getTokenPrice, getTokenBalance, buyToken, sellToken } from './trading';
+import { runBattleSimulation } from './simulate';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -736,32 +737,24 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
         await trySettleBattle(openBattle.battleId, data.winner);
         await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
       } else {
-        console.log(`[${ts()}]   ✅ Cards selected, triggering simulation...`);
-        // Joiner triggers simulation since Vercel may have timed out
-        try {
-          await apiLong('/api/battle/simulate', {
-            method: 'POST',
-            body: JSON.stringify({ battleId: openBattle.battleId, action: 'start_simulation' }),
-          });
-        } catch { /* Vercel timeout expected */ }
-        // Poll for completion (up to 60s)
-        for (let j = 0; j < 6; j++) {
-          await new Promise(r => setTimeout(r, 10000));
-          const pollRes = await api(`/api/battle/${openBattle.battleId}`);
-          if (pollRes.ok) {
-            const pollData = await pollRes.json();
-            if (pollData.battle?.status === 'complete') {
-              const result = pollData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+        console.log(`[${ts()}]   ✅ Cards selected, running simulation locally...`);
+        // Fetch full battle data and simulate agent-side
+        const battleRes = await api(`/api/battle/${openBattle.battleId}`);
+        if (battleRes.ok) {
+          const { battle: fullBattle } = await battleRes.json();
+          if (fullBattle?.player1?.cards?.length && fullBattle?.player2?.cards?.length) {
+            const simResult = await runBattleSimulation(fullBattle, API_URL, api);
+            if (simResult) {
+              const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
               console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
               lastBattleTime = Date.now();
-              await trySettleBattle(openBattle.battleId, pollData.battle.winner);
+              await trySettleBattle(openBattle.battleId, simResult.winner);
               await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
               return true;
             }
           }
         }
-        console.log(`[${ts()}]   ⚠️ Simulation didn't complete, cancelling`);
-        await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId: openBattle.battleId, address: ADDRESS }) });
+        console.log(`[${ts()}]   ⚠️ Simulation failed`);
         lastBattleTime = Date.now();
         await logAction('battling', `Joined battle vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
       }
@@ -878,31 +871,35 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
             return;
           }
           if (data.battle?.status === 'active') {
-            console.log(`[${ts()}]   ⚡ Opponent joined! Triggering simulation...`);
-            // Try triggering simulation (may timeout on Vercel but still complete)
-            try {
-              await apiLong('/api/battle/simulate', {
-                method: 'POST',
-                body: JSON.stringify({ battleId, action: 'start_simulation' }),
-              });
-            } catch { /* Vercel timeout expected */ }
-            // Poll for completion (up to 60s)
-            for (let j = 0; j < 6; j++) {
-              await new Promise(r => setTimeout(r, 10000));
-              const finalRes = await api(`/api/battle/${battleId}`);
-              if (finalRes.ok) {
-                const finalData = await finalRes.json();
-                if (finalData.battle?.status === 'complete') {
-                  const result = finalData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+            console.log(`[${ts()}]   ⚡ Opponent joined! Running simulation locally...`);
+            // Check if already complete (joiner may have simulated)
+            await new Promise(r => setTimeout(r, 3000));
+            const checkFirst = await api(`/api/battle/${battleId}`);
+            if (checkFirst.ok) {
+              const checkData = await checkFirst.json();
+              if (checkData.battle?.status === 'complete') {
+                const result = checkData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+                console.log(`[${ts()}]   ⚔️ Battle already complete — ${result}!`);
+                lastBattleTime = Date.now();
+                await trySettleBattle(battleId, checkData.battle.winner);
+                await logAction('battling', `Battle ${result}!`, 'Town Arena', aiReason);
+                return;
+              }
+              // Run simulation locally
+              const fullBattle = checkData.battle;
+              if (fullBattle?.player1?.cards?.length && fullBattle?.player2?.cards?.length) {
+                const simResult = await runBattleSimulation(fullBattle, API_URL, api);
+                if (simResult) {
+                  const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
                   console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
                   lastBattleTime = Date.now();
-                  await trySettleBattle(battleId, finalData.battle.winner);
+                  await trySettleBattle(battleId, simResult.winner);
                   await logAction('battling', `Battle ${result}!`, 'Town Arena', aiReason);
                   return;
                 }
               }
             }
-            console.log(`[${ts()}]   ⚠️ Simulation didn't complete in 60s, cancelling`);
+            console.log(`[${ts()}]   ⚠️ Simulation failed, cancelling`);
             await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId, address: ADDRESS }) });
             lastBattleTime = Date.now();
             return;
