@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { initializeBattleCard, simulateAIBattle } from '@/lib/battle';
-import { getAgentDecision } from '@/lib/agent';
-import { settleBattleOnChain } from '@/lib/blockchain';
-import { Card, Battle, BattleMove, BattleLog } from '@/lib/types';
+import { initializeBattleCard } from '@/lib/battle';
+import { Card } from '@/lib/types';
 import { ObjectId } from 'mongodb';
-import { applyBattleMoodResult } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -82,103 +79,9 @@ export async function POST(request: NextRequest) {
         }
       );
 
-      // Run AI vs AI simulation immediately
-      console.log('\n========================================');
-      console.log('BOTH PLAYERS READY - STARTING AI SIMULATION');
-      console.log(`Battle ID: ${battleId}`);
-      console.log('========================================\n');
-
-      try {
-        // Prepare battle for simulation
-        const battleForSim: Battle = {
-          ...updatedBattle,
-          battleId: updatedBattle.battleId,
-          player1: {
-            ...updatedBattle.player1,
-            cards: updatedBattle.player1.cards.map((c: Card) => initializeBattleCard(c)),
-          },
-          player2: {
-            ...updatedBattle.player2!,
-            cards: updatedBattle.player2!.cards.map((c: Card) => initializeBattleCard(c)),
-          },
-          rounds: [],
-          currentTurn: 0,
-          wager: updatedBattle.wager,
-          status: 'active',
-          winner: null,
-          escrowTxHash: updatedBattle.escrowTxHash || null,
-          settleTxHash: null,
-          createdAt: updatedBattle.createdAt,
-          updatedAt: new Date(),
-        };
-
-        // Use real AI decisioning so replay reflects actual model reasoning
-        const getAIMove = async (b: Battle, playerAddress: string): Promise<BattleMove> => {
-          return getAgentDecision(b, playerAddress, 'balanced');
-        };
-
-        // Run the battle simulation
-        const battleLog = await simulateAIBattle(battleForSim, getAIMove);
-
-        console.log('\n========================================');
-        console.log('SIMULATION COMPLETE');
-        console.log(`Winner: ${battleLog.winner}`);
-        console.log(`Turns: ${battleLog.turns.length}`);
-        console.log('========================================\n');
-
-        // Update battle with results
-        await db.collection('battles').updateOne(
-          { battleId },
-          {
-            $set: {
-              status: 'complete',
-              winner: battleLog.winner,
-              rounds: battleForSim.rounds,
-              currentTurn: battleForSim.currentTurn,
-              updatedAt: new Date(),
-            },
-          }
-        );
-        await applyBattleMoodResult(db, battleLog.winner, battleForSim.player1.address, battleForSim.player2?.address);
-
-        // Save battle log for replay
-        await db.collection<BattleLog>('battleLogs').insertOne({
-          ...battleLog,
-          createdAt: new Date(),
-        } as BattleLog & { createdAt: Date });
-
-        // Settle on-chain
-        let settleTxHash = null;
-        if (battleLog.winner && battleLog.winner !== 'draw') {
-          try {
-            settleTxHash = await settleBattleOnChain(battleId, battleLog.winner);
-            console.log(`Settlement tx: ${settleTxHash}`);
-            await db.collection('battles').updateOne(
-              { battleId },
-              { $set: { settleTxHash } }
-            );
-          } catch (settleError) {
-            console.error('Settlement failed:', settleError);
-          }
-        }
-
-        const finalBattle = await db.collection('battles').findOne({ battleId });
-        return NextResponse.json({
-          battle: finalBattle,
-          battleLog,
-          simulationComplete: true,
-          winner: battleLog.winner,
-        });
-
-      } catch (simError) {
-        console.error('Simulation error:', simError);
-        // Return battle anyway, simulation can be retried
-        const finalBattle = await db.collection('battles').findOne({ battleId });
-        return NextResponse.json({
-          battle: finalBattle,
-          simulationError: true,
-        });
-      }
+      // Simulation is now handled agent-side (no Vercel timeout).
+      // Just return the active battle — agents will detect and simulate.
+      console.log(`Battle ${battleId}: both players ready, status=active. Awaiting agent-side simulation.`);
     }
 
     const finalBattle = await db.collection('battles').findOne({ battleId });
