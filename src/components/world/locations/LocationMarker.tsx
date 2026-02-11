@@ -12,6 +12,7 @@ interface LocationMarkerProps {
   color: string;
   onClick?: () => void;
   variant?: 'building' | 'nature' | 'water' | 'dark' | 'farm' | 'none';
+  hideLabel?: boolean;
 }
 
 export function LocationLabel({
@@ -93,7 +94,7 @@ export function LocationLabel({
   );
 }
 
-export function LocationMarker({ position, label, icon, color, onClick, variant = 'nature' }: LocationMarkerProps) {
+export function LocationMarker({ position, label, icon, color, onClick, variant = 'nature', hideLabel = false }: LocationMarkerProps) {
   const groupRef = useRef<THREE.Group>(null);
   // glowRef removed
   const waterRef = useRef<THREE.Mesh>(null);
@@ -174,14 +175,16 @@ export function LocationMarker({ position, label, icon, color, onClick, variant 
         document.body.style.cursor = 'default';
       }}
     >
-      <LocationLabel
-        icon={icon}
-        label={label}
-        color={color}
-        clickable={!!onClick}
-        hovered={hovered}
-        hint={variant === 'building' ? 'Click to enter' : 'Click to inspect'}
-      />
+      {!hideLabel && (
+        <LocationLabel
+          icon={icon}
+          label={label}
+          color={color}
+          clickable={!!onClick}
+          hovered={hovered}
+          hint={variant === 'building' ? 'Click to enter' : 'Click to inspect'}
+        />
+      )}
 
       {/* Invisible hitbox for click detection */}
       <mesh visible={false}>
