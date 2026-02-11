@@ -274,8 +274,8 @@ export default function BattlePage() {
   return (
     <div className="page-container page-transition">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8">
-        <div>
+      <div className="flex flex-col items-center sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 sm:mb-8">
+        <div className="text-center sm:text-left">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
             ⚔️ Battle Arena
           </h1>
