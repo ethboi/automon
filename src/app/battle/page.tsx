@@ -48,7 +48,7 @@ function formatDuration(start: string | Date, end?: string | Date | null): strin
   return `${m}m ${s}s`;
 }
 
-type View = 'list' | 'create' | 'select-cards' | 'battle' | 'replay';
+type View = 'list' | 'create' | 'select-cards' | 'battle' | 'replay' | 'simulating';
 
 export default function BattlePage() {
   const { address, refreshBalance } = useWallet();
@@ -64,11 +64,22 @@ export default function BattlePage() {
 
   useEffect(() => { fetchData(); }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (currentBattle && currentBattle.status === 'active') {
-      const iv = setInterval(() => refreshBattle(), 3000);
+    if (currentBattle && view === 'simulating') {
+      const iv = setInterval(async () => {
+        const res = await fetch(`/api/battle/${currentBattle.battleId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.battle) {
+          setCurrentBattle(data.battle);
+          if (data.battle.status === 'complete') {
+            // Auto-show replay
+            await watchReplay(data.battle.battleId);
+          }
+        }
+      }, 3000);
       return () => clearInterval(iv);
     }
-  }, [currentBattle]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentBattle?.battleId, view]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     try {
@@ -84,7 +95,7 @@ export default function BattlePage() {
     finally { setLoading(false); }
   };
 
-  const refreshBattle = async () => {
+  const _refreshBattle = async () => {
     if (!currentBattle) return;
     try {
       const res = await fetch(`/api/battle/${currentBattle.battleId}`);
@@ -133,8 +144,7 @@ export default function BattlePage() {
       if (!res.ok) throw new Error(data.error || 'Failed to select');
       setCurrentBattle(data.battle);
       if (data.simulationComplete && data.battleLog) { setBattleLog(data.battleLog); setView('replay'); }
-      else if (data.battle.status === 'active') { setView('battle'); }
-      else { setSelectedCards([]); setView('list'); }
+      else { setView('simulating'); /* Poll until complete */ }
     } catch (e) { setError(e instanceof Error ? e.message : 'Error'); }
   };
 
@@ -263,6 +273,37 @@ export default function BattlePage() {
       <div className="text-center">
         <div className="spinner mb-4" />
         <p className="text-gray-500 text-sm">Loading battles…</p>
+      </div>
+    </div>
+  );
+
+  if (view === 'simulating' && currentBattle) return (
+    <div className="page-container page-transition">
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="relative mb-8">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-600 to-cyan-600 animate-pulse flex items-center justify-center">
+            <span className="text-4xl">⚔️</span>
+          </div>
+          <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-purple-400/30 animate-spin" style={{ borderTopColor: 'rgb(168 85 247)' }} />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">AI Battle in Progress</h2>
+        <p className="text-gray-400 mb-6 text-center max-w-md">
+          {currentBattle.status === 'complete'
+            ? 'Battle complete! Loading replay...'
+            : currentBattle.status === 'active'
+            ? 'Both teams ready! AI agents are battling it out...'
+            : currentBattle.status === 'selecting'
+            ? 'Opponent joined! Waiting for them to pick cards...'
+            : 'Waiting for an AI agent to accept your challenge...'}
+        </p>
+        <div className="flex items-center gap-3 text-sm text-gray-500">
+          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+          <span>Polling for results...</span>
+        </div>
+        <button onClick={() => { setCurrentBattle(null); setView('list'); fetchData(); }}
+          className="mt-8 text-gray-500 hover:text-white text-sm transition">
+          ← Back to battles
+        </button>
       </div>
     </div>
   );

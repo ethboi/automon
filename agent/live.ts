@@ -921,7 +921,57 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
 
 // ─── Main Loop ─────────────────────────────────────────────────────────────────
 
+let pendingBattleCheckCounter = 0;
+
 async function tick(): Promise<void> {
+  // Check for pending user battles every 3 ticks (~12s)
+  pendingBattleCheckCounter++;
+  if (pendingBattleCheckCounter >= 3 && Date.now() - lastBattleTime > 60_000) {
+    pendingBattleCheckCounter = 0;
+    try {
+      const res = await api('/api/battle/list?status=pending');
+      if (res.ok) {
+        const { battles } = await res.json();
+        const openBattle = battles?.find(
+          (b: { status: string; player1: { address: string } }) =>
+            b.status === 'pending' && b.player1.address.toLowerCase() !== ADDRESS.toLowerCase()
+        );
+        if (openBattle) {
+          console.log(`[${ts()}] 🔔 Found pending battle from user — joining!`);
+          const joined = await tryJoinBattle('Joining user battle');
+          if (joined) return;
+        }
+      }
+    } catch { /* best effort */ }
+  }
+
+  // Check for active battles we're in that need simulation
+  if (pendingBattleCheckCounter === 1) {
+    try {
+      const res = await api(`/api/battle/list?address=${ADDRESS}&status=active`);
+      if (res.ok) {
+        const { battles } = await res.json();
+        for (const b of (battles || [])) {
+          if (b.currentTurn === 0 && (!b.rounds || b.rounds.length === 0) && b.player1?.ready && b.player2?.ready) {
+            console.log(`[${ts()}] 🔔 Active battle ${b.battleId.slice(0, 8)} needs simulation!`);
+            const fullRes = await api(`/api/battle/${b.battleId}`);
+            if (fullRes.ok) {
+              const { battle: fullBattle } = await fullRes.json();
+              if (fullBattle?.player1?.cards?.length && fullBattle?.player2?.cards?.length) {
+                const simResult = await runBattleSimulation(fullBattle, API_URL, api);
+                if (simResult) {
+                  console.log(`[${ts()}]   ⚔️ Simulation done — winner: ${simResult.winner.slice(0, 10)}`);
+                  lastBattleTime = Date.now();
+                  await trySettleBattle(b.battleId, simResult.winner);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch { /* best effort */ }
+  }
+
   console.log(`[${ts()}] tick: pos=(${posX.toFixed(0)},${posZ.toFixed(0)}) target=${target.name}`);
   const dx = target.x - posX;
   const dz = target.z - posZ;
