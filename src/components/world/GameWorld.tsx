@@ -484,19 +484,53 @@ function Roads() {
             <meshStandardMaterial color="#87CEEB" transparent opacity={0.6} roughness={0.2} metalness={0.3} />
           </mesh>
         ))}
-        {/* Sign board — "SHOP" */}
-        <group position={[0, 3.6, 2.2]}>
-          {/* Sign backing */}
-          <mesh castShadow>
-            <boxGeometry args={[3, 0.8, 0.12]} />
-            <meshStandardMaterial color="#2c1810" roughness={0.85} />
+        {/* === 3D "MON SHOP" ROOFTOP SIGN — neon style === */}
+        {/* Sign backing — dark */}
+        <mesh position={[0, 4.0, 0.1]} castShadow>
+          <boxGeometry args={[5.5, 1.6, 0.15]} />
+          <meshStandardMaterial color="#1a0520" roughness={0.3} />
+        </mesh>
+        {/* Gold border */}
+        <mesh position={[0, 4.0, 0.18]}>
+          <boxGeometry args={[5.7, 1.8, 0.05]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.7} roughness={0.3} />
+        </mesh>
+        {/* Inner glow panel */}
+        <mesh position={[0, 4.0, 0.2]}>
+          <boxGeometry args={[5.2, 1.3, 0.05]} />
+          <meshStandardMaterial color="#1a0520" emissive="#f97316" emissiveIntensity={0.2} roughness={0.2} />
+        </mesh>
+        {/* 3D neon letters — "MON SHOP" */}
+        {[
+          // M
+          { x: -2.2, w: 0.18, h: 0.8 }, { x: -1.7, w: 0.18, h: 0.8 },
+          { x: -2.1, w: 0.18, h: 0.5, y: 0.15, r: 0.3 }, { x: -1.8, w: 0.18, h: 0.5, y: 0.15, r: -0.3 },
+          // O
+          { x: -1.2, w: 0.18, h: 0.8 }, { x: -0.7, w: 0.18, h: 0.8 },
+          { x: -0.95, w: 0.5, h: 0.18, y: 0.31 }, { x: -0.95, w: 0.5, h: 0.18, y: -0.31 },
+          // N
+          { x: -0.3, w: 0.18, h: 0.8 }, { x: 0.2, w: 0.18, h: 0.8 },
+          { x: -0.05, w: 0.18, h: 0.65, r: 0.3 },
+          // S (space then)
+          { x: 0.8, w: 0.5, h: 0.18, y: 0.31 }, { x: 0.7, w: 0.35, h: 0.18, y: 0 },
+          { x: 0.8, w: 0.5, h: 0.18, y: -0.31 }, { x: 0.65, w: 0.18, h: 0.3, y: 0.15 }, { x: 0.95, w: 0.18, h: 0.3, y: -0.15 },
+          // H
+          { x: 1.3, w: 0.18, h: 0.8 }, { x: 1.8, w: 0.18, h: 0.8 },
+          { x: 1.55, w: 0.5, h: 0.18, y: 0 },
+          // O
+          { x: 2.1, w: 0.18, h: 0.8 }, { x: 2.6, w: 0.18, h: 0.8 },
+          { x: 2.35, w: 0.5, h: 0.18, y: 0.31 }, { x: 2.35, w: 0.5, h: 0.18, y: -0.31 },
+          // P
+          { x: 2.9, w: 0.18, h: 0.8 }, { x: 3.15, w: 0.35, h: 0.18, y: 0.31 },
+          { x: 3.15, w: 0.35, h: 0.18, y: 0 }, { x: 3.3, w: 0.18, h: 0.3, y: 0.15 },
+        ].map((l, i) => (
+          <mesh key={`shopletter-${i}`} position={[l.x, 4.0 + (l.y || 0), 0.28]} rotation={[0, 0, l.r || 0]} castShadow>
+            <boxGeometry args={[l.w, l.h, 0.15]} />
+            <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.9} metalness={0.6} roughness={0.2} />
           </mesh>
-          {/* Sign border */}
-          <mesh position={[0, 0, 0.06]}>
-            <boxGeometry args={[2.8, 0.6, 0.02]} />
-            <meshStandardMaterial color="#d4a017" roughness={0.5} metalness={0.4} />
-          </mesh>
-        </group>
+        ))}
+        {/* Sign glow */}
+        <pointLight position={[0, 4.0, 1.5]} intensity={1.5} color="#f97316" distance={10} decay={2} />
         {/* Display crates outside */}
         {[[-1.8, 0.3, 3.2], [1.8, 0.3, 3.2], [0, 0.25, 3.5]].map(([x, y, z], i) => (
           <mesh key={`crate-${i}`} position={[x, y, z]} rotation={[0, i * 0.4, 0]} castShadow>
