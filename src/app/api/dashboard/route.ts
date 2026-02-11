@@ -133,6 +133,8 @@ export async function GET() {
         player2: b.player2?.address,
         player1Cards: (b.player1?.cards || []).map((c: { name: string }) => c.name),
         player2Cards: (b.player2?.cards || []).map((c: { name: string }) => c.name),
+        player1Reasoning: b.player1?.cardSelectionReasoning || null,
+        player2Reasoning: b.player2?.cardSelectionReasoning || null,
         winner: b.winner,
         wager: b.wager,
         settleTxHash: b.settleTxHash || null,

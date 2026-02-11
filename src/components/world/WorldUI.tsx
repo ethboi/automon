@@ -59,6 +59,8 @@ interface BattleData {
   player2: string | null;
   player1Cards?: string[];
   player2Cards?: string[];
+  player1Reasoning?: string | null;
+  player2Reasoning?: string | null;
   winner: string | null;
   wager?: string;
   payout?: string | null;
@@ -343,6 +345,12 @@ export function WorldUI({
                                   </div>
                                 )}
                                 <div className="text-[10px] text-gray-600 mt-0.5">💰 {b.wager || '0'} MON{b.rounds > 0 ? ` • ${b.rounds} turns` : ''}</div>
+                                {b.player1Reasoning && (
+                                  <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">🧠 {p1}: {b.player1Reasoning}</div>
+                                )}
+                                {b.player2Reasoning && (
+                                  <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">🧠 {p2}: {b.player2Reasoning}</div>
+                                )}
                               </div>
                             </div>
                           </div>
