@@ -736,7 +736,33 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
         await trySettleBattle(openBattle.battleId, data.winner);
         await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
       } else {
-        console.log(`[${ts()}]   ✅ Cards selected, waiting for simulation`);
+        console.log(`[${ts()}]   ✅ Cards selected, triggering simulation...`);
+        // Joiner triggers simulation since Vercel may have timed out
+        try {
+          await apiLong('/api/battle/simulate', {
+            method: 'POST',
+            body: JSON.stringify({ battleId: openBattle.battleId, action: 'start_simulation' }),
+          });
+        } catch { /* Vercel timeout expected */ }
+        // Poll for completion (up to 60s)
+        for (let j = 0; j < 6; j++) {
+          await new Promise(r => setTimeout(r, 10000));
+          const pollRes = await api(`/api/battle/${openBattle.battleId}`);
+          if (pollRes.ok) {
+            const pollData = await pollRes.json();
+            if (pollData.battle?.status === 'complete') {
+              const result = pollData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+              console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+              lastBattleTime = Date.now();
+              await trySettleBattle(openBattle.battleId, pollData.battle.winner);
+              await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
+              return true;
+            }
+          }
+        }
+        console.log(`[${ts()}]   ⚠️ Simulation didn't complete, cancelling`);
+        await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId: openBattle.battleId, address: ADDRESS }) });
+        lastBattleTime = Date.now();
         await logAction('battling', `Joined battle vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
       }
       return true;
@@ -852,20 +878,33 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
             return;
           }
           if (data.battle?.status === 'active') {
-            console.log(`[${ts()}]   ⚡ Opponent joined! Battle in progress...`);
-            // Wait a bit for simulation to finish
-            await new Promise(r => setTimeout(r, 5000));
-            const finalRes = await api(`/api/battle/${battleId}`);
-            if (finalRes.ok) {
-              const finalData = await finalRes.json();
-              if (finalData.battle?.status === 'complete') {
-                const result = finalData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
-                console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
-        lastBattleTime = Date.now();
-                await trySettleBattle(battleId, finalData.battle.winner);
-                await logAction('battling', `Battle ${result}!`, 'Town Arena', aiReason);
+            console.log(`[${ts()}]   ⚡ Opponent joined! Triggering simulation...`);
+            // Try triggering simulation (may timeout on Vercel but still complete)
+            try {
+              await apiLong('/api/battle/simulate', {
+                method: 'POST',
+                body: JSON.stringify({ battleId, action: 'start_simulation' }),
+              });
+            } catch { /* Vercel timeout expected */ }
+            // Poll for completion (up to 60s)
+            for (let j = 0; j < 6; j++) {
+              await new Promise(r => setTimeout(r, 10000));
+              const finalRes = await api(`/api/battle/${battleId}`);
+              if (finalRes.ok) {
+                const finalData = await finalRes.json();
+                if (finalData.battle?.status === 'complete') {
+                  const result = finalData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+                  console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+                  lastBattleTime = Date.now();
+                  await trySettleBattle(battleId, finalData.battle.winner);
+                  await logAction('battling', `Battle ${result}!`, 'Town Arena', aiReason);
+                  return;
+                }
               }
             }
+            console.log(`[${ts()}]   ⚠️ Simulation didn't complete in 60s, cancelling`);
+            await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId, address: ADDRESS }) });
+            lastBattleTime = Date.now();
             return;
           }
         }
@@ -1163,6 +1202,18 @@ async function main() {
       for (const b of (staleBattles || [])) {
         console.log(`[${ts()}] 🧹 Cancelling stale pending battle ${b.battleId?.slice(0, 8)}`);
         await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId: b.battleId }) });
+      }
+    }
+    // Cancel stale active battles (no rounds after 2+ min = simulation failed)
+    const staleActiveRes = await api(`/api/battle/list?address=${ADDRESS}&status=active`);
+    if (staleActiveRes.ok) {
+      const { battles: activeBattles } = await staleActiveRes.json();
+      for (const b of (activeBattles || [])) {
+        const age = Date.now() - new Date(b.createdAt).getTime();
+        if (age > 120_000 && (!b.rounds || b.rounds.length === 0)) {
+          console.log(`[${ts()}] 🧹 Cancelling stale active battle ${b.battleId?.slice(0, 8)} (${Math.round(age/60000)}m old, 0 rounds)`);
+          await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId: b.battleId, address: ADDRESS }) });
+        }
       }
     }
     // Settle any unsettled completed battles
