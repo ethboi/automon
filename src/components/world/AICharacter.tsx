@@ -14,6 +14,7 @@ interface AICharacterProps {
 }
 
 const SPEED = 6;
+type AccessoryType = 'halo' | 'cape' | 'packs' | 'antenna' | 'orbs' | 'none';
 
 function getActivityIndicator(activity?: string | null): { label: string; color: string } {
   const raw = (activity || '').toLowerCase();
@@ -62,11 +63,51 @@ function getTheme(address: string) {
   return ROBOT_THEMES[v % ROBOT_THEMES.length];
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const cleaned = hex.replace('#', '');
+  const value = parseInt(cleaned, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getVisualProfile(address: string) {
+  const a = address.toLowerCase();
+  const hash = (
+    parseInt(a[2], 16) * 17 +
+    parseInt(a[6], 16) * 31 +
+    parseInt(a[10], 16) * 13 +
+    parseInt(a[14], 16) * 19
+  );
+
+  const accessories: AccessoryType[] = ['halo', 'cape', 'packs', 'antenna', 'orbs', 'none'];
+  const scales: Array<[number, number, number]> = [
+    [0.95, 0.95, 0.95],
+    [1.05, 1.0, 1.05],
+    [1.1, 0.95, 1.1],
+    [0.9, 1.1, 0.9],
+    [1.0, 1.08, 1.0],
+    [1.15, 0.9, 1.15],
+  ];
+
+  return {
+    theme: getTheme(address),
+    accessory: accessories[hash % accessories.length],
+    scale: scales[hash % scales.length],
+    bob: 0.08 + (hash % 4) * 0.015,
+    ringInner: 0.45 + (hash % 3) * 0.08,
+    ringOuter: 0.72 + (hash % 3) * 0.1,
+  };
+}
+
 export function AICharacter({ address, name, targetPosition, activity, onClick }: AICharacterProps) {
   const groupRef = useRef<THREE.Group>(null);
+  const orbitRef = useRef<THREE.Group>(null);
   const [position, setPosition] = useState(new THREE.Vector3(targetPosition.x, 0, targetPosition.z));
   const [isMoving, setIsMoving] = useState(false);
-  const theme = useMemo(() => getTheme(address), [address]);
+  const profile = useMemo(() => getVisualProfile(address), [address]);
+  const { theme } = profile;
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
@@ -95,9 +136,13 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
 
     // Bobbing animation when moving
     if (isMoving) {
-      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 12) * 0.1;
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 12) * profile.bob;
     } else {
       groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, 0, delta * 5);
+    }
+
+    if (orbitRef.current) {
+      orbitRef.current.rotation.y += delta * 1.8;
     }
   });
 
@@ -114,14 +159,22 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
     >
       {/* Name tag */}
       <Html position={[0, 3.5, 0]} center zIndexRange={[1, 0]}>
-        <div className={`bg-purple-900/85 px-2.5 py-1 rounded text-xs whitespace-nowrap border border-purple-500/50 ${indicator.color}`}>
+        <div
+          className={`px-2.5 py-1 rounded text-xs whitespace-nowrap border ${indicator.color}`}
+          style={{
+            backgroundColor: hexToRgba(theme.body, 0.82),
+            borderColor: hexToRgba(theme.glow, 0.5),
+            boxShadow: `0 0 18px ${hexToRgba(theme.glow, 0.25)}`,
+          }}
+        >
           {name} • {indicator.label}
         </div>
       </Html>
 
       {/* === BODY — varies by headShape === */}
-      {theme.headShape === 'angular' && (
-        <group>
+      <group scale={profile.scale}>
+        {theme.headShape === 'angular' && (
+          <group>
           {/* Bulky armored torso */}
           <mesh position={[0, 1.2, 0]} castShadow>
             <boxGeometry args={[1.2, 1.5, 0.8]} />
@@ -149,11 +202,11 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
           <mesh position={[-0.3, 0.35, 0]} castShadow><boxGeometry args={[0.32, 0.7, 0.32]} /><meshStandardMaterial color={theme.body} roughness={0.3} metalness={0.5} /></mesh>
           <mesh position={[0.3, 0.05, 0.05]} castShadow><boxGeometry args={[0.35, 0.1, 0.45]} /><meshStandardMaterial color={theme.accent} roughness={0.3} metalness={0.6} /></mesh>
           <mesh position={[-0.3, 0.05, 0.05]} castShadow><boxGeometry args={[0.35, 0.1, 0.45]} /><meshStandardMaterial color={theme.accent} roughness={0.3} metalness={0.6} /></mesh>
-        </group>
-      )}
+          </group>
+        )}
 
-      {theme.headShape === 'round' && (
-        <group>
+        {theme.headShape === 'round' && (
+          <group>
           {/* Sleek rounded torso */}
           <mesh position={[0, 1.2, 0]} castShadow>
             <capsuleGeometry args={[0.45, 0.8, 4, 12]} />
@@ -181,11 +234,11 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
           <mesh position={[-0.2, 0.3, 0]} castShadow><capsuleGeometry args={[0.09, 0.4, 4, 8]} /><meshStandardMaterial color={theme.body} roughness={0.3} metalness={0.5} /></mesh>
           <mesh position={[0.2, 0.05, 0.03]} castShadow><sphereGeometry args={[0.14, 8, 6]} /><meshStandardMaterial color={theme.accent} roughness={0.3} metalness={0.6} /></mesh>
           <mesh position={[-0.2, 0.05, 0.03]} castShadow><sphereGeometry args={[0.14, 8, 6]} /><meshStandardMaterial color={theme.accent} roughness={0.3} metalness={0.6} /></mesh>
-        </group>
-      )}
+          </group>
+        )}
 
-      {theme.headShape === 'flat' && (
-        <group>
+        {theme.headShape === 'flat' && (
+          <group>
           {/* Wide flat industrial torso */}
           <mesh position={[0, 1.15, 0]} castShadow>
             <boxGeometry args={[1.1, 1.2, 0.65]} />
@@ -221,12 +274,66 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
           <mesh position={[-0.3, 0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.3]} /><meshStandardMaterial color={theme.body} roughness={0.4} metalness={0.45} /></mesh>
           <mesh position={[0.3, 0.05, 0]} castShadow><boxGeometry args={[0.3, 0.1, 0.45]} /><meshStandardMaterial color={theme.accent} roughness={0.3} metalness={0.6} /></mesh>
           <mesh position={[-0.3, 0.05, 0]} castShadow><boxGeometry args={[0.3, 0.1, 0.45]} /><meshStandardMaterial color={theme.accent} roughness={0.3} metalness={0.6} /></mesh>
+          </group>
+        )}
+      </group>
+
+      {/* Distinct per-agent accessories */}
+      {profile.accessory === 'halo' && (
+        <mesh position={[0, 3.15, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.42, 0.05, 10, 24]} />
+          <meshStandardMaterial color={theme.glow} emissive={theme.glow} emissiveIntensity={0.55} metalness={0.7} roughness={0.25} />
+        </mesh>
+      )}
+      {profile.accessory === 'cape' && (
+        <mesh position={[0, 1.45, -0.42]} rotation={[0.15, 0, 0]}>
+          <planeGeometry args={[0.9, 1.2]} />
+          <meshStandardMaterial color={theme.accent} roughness={0.8} metalness={0.1} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+      {profile.accessory === 'packs' && (
+        <>
+          <mesh position={[0.45, 1.25, -0.1]} castShadow>
+            <boxGeometry args={[0.22, 0.5, 0.22]} />
+            <meshStandardMaterial color={theme.accent} roughness={0.35} metalness={0.45} />
+          </mesh>
+          <mesh position={[-0.45, 1.25, -0.1]} castShadow>
+            <boxGeometry args={[0.22, 0.5, 0.22]} />
+            <meshStandardMaterial color={theme.accent} roughness={0.35} metalness={0.45} />
+          </mesh>
+        </>
+      )}
+      {profile.accessory === 'antenna' && (
+        <>
+          <mesh position={[0.28, 3.15, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.42, 6]} />
+            <meshStandardMaterial color={theme.body} metalness={0.55} />
+          </mesh>
+          <mesh position={[-0.28, 3.15, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.42, 6]} />
+            <meshStandardMaterial color={theme.body} metalness={0.55} />
+          </mesh>
+          <mesh position={[0.28, 3.41, 0]}><sphereGeometry args={[0.055, 8, 8]} /><meshBasicMaterial color={theme.glow} /></mesh>
+          <mesh position={[-0.28, 3.41, 0]}><sphereGeometry args={[0.055, 8, 8]} /><meshBasicMaterial color={theme.glow} /></mesh>
+        </>
+      )}
+      {profile.accessory === 'orbs' && (
+        <group ref={orbitRef} position={[0, 1.9, 0]}>
+          {[0, 1, 2].map((i) => {
+            const angle = (Math.PI * 2 * i) / 3;
+            return (
+              <mesh key={`orb-${i}`} position={[Math.cos(angle) * 0.75, 0.12 * (i % 2), Math.sin(angle) * 0.75]}>
+                <sphereGeometry args={[0.08, 8, 8]} />
+                <meshBasicMaterial color={theme.glow} />
+              </mesh>
+            );
+          })}
         </group>
       )}
 
       {/* Glow ring at feet */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[0.5, 0.8, 32]} />
+        <ringGeometry args={[profile.ringInner, profile.ringOuter, 32]} />
         <meshBasicMaterial color={theme.glow} transparent opacity={0.3} side={THREE.DoubleSide} />
       </mesh>
 
