@@ -690,30 +690,32 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
     console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
     if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
 
-    // Join on-chain escrow
-    let txHash: string;
-    try {
-      const battleIdBytes = ethers.id(openBattle.battleId);
-      // Read exact wager from on-chain to ensure match
-      const escrowRead = new ethers.Contract(ESCROW_ADDRESS, [...ESCROW_ABI, 'function battles(bytes32) view returns (address,address,uint256,bool)'], provider);
-      const onChain = await escrowRead.battles(battleIdBytes);
-      const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
-      const wagerWei = onChain[2];
-      if (wagerWei.toString() === '0') { console.log(`[${ts()}]   ⚠️ Battle not on-chain, skipping`); return false; }
-      console.log(`[${ts()}]   💰 Joining escrow with ${ethers.formatEther(wagerWei)} MON (on-chain verified)...`);
-      console.log(`[${ts()}]   💰 Joining escrow with ${openBattle.wager} MON...`);
-      const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei });
-      const receipt = await tx.wait();
-      txHash = receipt.hash;
-      console.log(`[${ts()}]   ✅ Escrow joined: ${txHash.slice(0, 12)}...`);
-    } catch (err) {
-      console.log(`[${ts()}]   ❌ Escrow join failed: ${(err as Error).message?.slice(0, 80)}`);
-      return false;
+    // Join on-chain escrow (if battle has escrow tx) or just join via API
+    let txHash: string | undefined;
+    if (openBattle.escrowTxHash) {
+      try {
+        const battleIdBytes = ethers.id(openBattle.battleId);
+        const escrowRead = new ethers.Contract(ESCROW_ADDRESS, [...ESCROW_ABI, 'function battles(bytes32) view returns (address,address,uint256,bool)'], provider);
+        const onChain = await escrowRead.battles(battleIdBytes);
+        const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
+        const wagerWei = onChain[2];
+        if (wagerWei.toString() === '0') { console.log(`[${ts()}]   ⚠️ Battle not on-chain, skipping`); return false; }
+        console.log(`[${ts()}]   💰 Joining escrow with ${ethers.formatEther(wagerWei)} MON...`);
+        const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei });
+        const receipt = await tx.wait();
+        txHash = receipt.hash;
+        console.log(`[${ts()}]   ✅ Escrow joined: ${txHash.slice(0, 12)}...`);
+      } catch (err) {
+        console.log(`[${ts()}]   ❌ Escrow join failed: ${(err as Error).message?.slice(0, 80)}`);
+        return false;
+      }
+    } else {
+      console.log(`[${ts()}]   🎮 No escrow — joining via API only`);
     }
 
     const joinRes = await api('/api/battle/join', {
       method: 'POST',
-      body: JSON.stringify({ battleId: openBattle.battleId, txHash, address: ADDRESS }),
+      body: JSON.stringify({ battleId: openBattle.battleId, txHash: txHash || undefined, address: ADDRESS }),
     });
     if (!joinRes.ok) { console.log(`[${ts()}]   ❌ Join failed`); return false; }
 
