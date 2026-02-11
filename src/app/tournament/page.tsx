@@ -27,12 +27,16 @@ export default function TournamentPage() {
   };
 
   const enterTournament = async (tournamentId: string) => {
+    if (!address) {
+      setError('Please connect your wallet first.');
+      return;
+    }
     setError(null);
     try {
       const res = await fetch('/api/tournament/enter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId }),
+        body: JSON.stringify({ tournamentId, address }),
       });
 
       if (!res.ok) {
