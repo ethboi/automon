@@ -277,16 +277,18 @@ async function executeTrade(aiReason?: string): Promise<void> {
 
   try {
     // Get market data
-    const price = await getTokenPrice(PRIVATE_KEY);
-    const tokenBal = await getTokenBalance(PRIVATE_KEY);
+    const price = await getTokenPrice(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!);
+    const tokenBalRaw = await getTokenBalance(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!);
+    const { formatEther: fmtEth } = await import('viem');
+    const tokenBal = fmtEth(tokenBalRaw);
     const monBal = parseFloat(agentBalance).toFixed(4);
 
-    console.log(`[${ts()}]   📊 $AUTOMON price: ${price.price} MON | Balance: ${tokenBal} tokens, ${monBal} MON`);
+    console.log(`[${ts()}]   📊 $AUTOMON price: ${price} MON | Balance: ${tokenBal} tokens, ${monBal} MON`);
 
     // Ask Claude what to do
     const { decideTradeAction } = await import('./strategy');
     const decision = await decideTradeAction(
-      price.price,
+      String(price),
       tokenBal,
       monBal,
       recentActions.slice(-5).join(' → '),
@@ -296,37 +298,40 @@ async function executeTrade(aiReason?: string): Promise<void> {
     console.log(`[${ts()}]   🧠 Trade decision: ${decision.action} ${decision.amount || ''} — ${decision.reasoning}`);
 
     if (decision.action === 'BUY' && decision.amount) {
-      const result = await buyToken(PRIVATE_KEY, decision.amount, 5);
-      console.log(`[${ts()}]   💰 Bought $AUTOMON: ${result.estimatedOut} tokens for ${result.amountIn} MON | tx: ${result.txHash}`);
-      await logAction('trading_token', `Bought ${result.estimatedOut} $AUTOMON for ${result.amountIn} MON`, 'Trading Post', decision.reasoning);
+      const txHash = await buyToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!, decision.amount);
+      if (txHash) {
+        console.log(`[${ts()}]   💰 Bought $AUTOMON for ${decision.amount} MON | tx: ${txHash}`);
+        await logAction('trading_token', `Bought $AUTOMON for ${decision.amount} MON`, 'Trading Post', decision.reasoning);
 
-      // Log transaction
-      await api('/api/transactions', {
-        method: 'POST',
-        body: JSON.stringify({
-          address: ADDRESS,
-          type: 'token_buy',
-          amount: result.amountIn,
-          txHash: result.txHash,
-          details: { token: 'AUTOMON', tokensReceived: result.estimatedOut },
-        }),
-      }).catch(() => {});
+        await api('/api/transactions', {
+          method: 'POST',
+          body: JSON.stringify({
+            address: ADDRESS,
+            type: 'token_buy',
+            amount: decision.amount,
+            txHash,
+            details: { token: 'AUTOMON' },
+          }),
+        }).catch(() => {});
+      }
 
     } else if (decision.action === 'SELL' && decision.amount) {
-      const result = await sellToken(PRIVATE_KEY, decision.amount, 5);
-      console.log(`[${ts()}]   💸 Sold ${result.amountIn} $AUTOMON for ~${result.estimatedOut} MON | tx: ${result.txHash}`);
-      await logAction('trading_token', `Sold ${result.amountIn} $AUTOMON for ~${result.estimatedOut} MON`, 'Trading Post', decision.reasoning);
+      const txHash = await sellToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!);
+      if (txHash) {
+        console.log(`[${ts()}]   💸 Sold $AUTOMON | tx: ${txHash}`);
+        await logAction('trading_token', `Sold $AUTOMON`, 'Trading Post', decision.reasoning);
 
-      await api('/api/transactions', {
-        method: 'POST',
-        body: JSON.stringify({
-          address: ADDRESS,
-          type: 'token_sell',
-          amount: result.amountIn,
-          txHash: result.txHash,
-          details: { token: 'AUTOMON', monReceived: result.estimatedOut },
-        }),
-      }).catch(() => {});
+        await api('/api/transactions', {
+          method: 'POST',
+          body: JSON.stringify({
+            address: ADDRESS,
+            type: 'token_sell',
+            amount: '0',
+            txHash,
+            details: { token: 'AUTOMON' },
+          }),
+        }).catch(() => {});
+      }
 
     } else {
       console.log(`[${ts()}]   📊 Holding — no trade this time`);
@@ -334,7 +339,7 @@ async function executeTrade(aiReason?: string): Promise<void> {
     }
     // Refresh balances after trade
     try {
-      agentTokenBalance = await getTokenBalance(PRIVATE_KEY);
+      agentTokenBalance = String(await getTokenBalance(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!));
       const bal = ethers.formatEther(await provider.getBalance(wallet.address));
       agentBalance = parseFloat(bal).toFixed(4);
     } catch {}
@@ -1015,7 +1020,7 @@ async function main() {
   // Token balance
   if (process.env.AUTOMON_TOKEN_ADDRESS) {
     try {
-      agentTokenBalance = await getTokenBalance(process.env.AGENT_PRIVATE_KEY!);
+      agentTokenBalance = String(await getTokenBalance(process.env.AGENT_PRIVATE_KEY!, process.env.AUTOMON_TOKEN_ADDRESS!));
       console.log(`  Balance:  ${agentBalance} MON | ${agentTokenBalance} $AUTOMON`);
     } catch { console.log(`  Balance:  ${agentBalance} MON | $AUTOMON: N/A`); }
   } else {
