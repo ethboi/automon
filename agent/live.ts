@@ -78,6 +78,19 @@ const LOCATIONS = [
   { name: 'Crystal Caves',   x:  32, z:  24 },
   { name: 'Trading Post',   x:  20, z: -20 },
 ];
+type LocationDef = (typeof LOCATIONS)[number];
+type TargetPoint = { name: string; x: number; z: number; baseX: number; baseZ: number };
+
+const LOCATION_FRONT: Record<string, [number, number]> = {
+  Home: [0, 1],
+  'Town Arena': [0, 1],
+  Shop: [0, 1],
+  'Community Farm': [1, 0],
+  'Old Pond': [1, 0.4],
+  'Dark Forest': [0.6, -0.8],
+  'Crystal Caves': [-0.6, -0.8],
+  'Trading Post': [-0.8, 0.6],
+};
 
 // Actions mapped to appropriate locations
 const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> = {
@@ -123,6 +136,29 @@ const ts = () => new Date().toISOString().slice(11, 19);
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+function hashInt(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function makeTargetPoint(loc: LocationDef): TargetPoint {
+  const h = hashInt(`${ADDRESS}:${loc.name}`);
+  const slot = h % 12;
+  const angle = (slot / 12) * Math.PI * 2;
+  const radial = 2.8 + (h % 3) * 0.55;
+  const [fx, fz] = LOCATION_FRONT[loc.name] || [0, 1];
+  const frontBias = 1.4;
+
+  const x = loc.x + Math.cos(angle) * radial + fx * frontBias;
+  const z = loc.z + Math.sin(angle) * radial + fz * frontBias;
+
+  return { name: loc.name, x, z, baseX: loc.x, baseZ: loc.z };
+}
+
 async function api(path: string, opts: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -151,7 +187,7 @@ function apiLong(path: string, opts: RequestInit = {}, timeoutMs = 60000): Promi
 
 let posX = 0;
 let posZ = 8;
-let target = pick(LOCATIONS);
+let target = makeTargetPoint(pick(LOCATIONS));
 let cardCount = 0;
 let totalMinted = 0;
 let isRunning = true;
@@ -171,72 +207,18 @@ let dwellTicks = 0;
 const DWELL_MIN = 10; // ~40s minimum dwell
 const DWELL_MAX = 18; // ~72s maximum dwell
 let lastGlobalChatAt = 0;
-const GLOBAL_CHAT_COOLDOWN_MS = 85_000;
-const CHAT_TARGETS = ['Nexus', 'Atlas', 'Pyre', 'Rune', 'Shade', 'Coral', 'Spark'];
-const CHAT_SPICY_LINES = {
-  roast: [
-    '{target} talks huge for a wallet that panics at 0.01 MON wagers',
-    '{target} keeps dodging arena like it owes them rent',
-    '{target} got cooked by commons and blamed latency',
-    'if {target} says "trust the strat" one more time I\'m muting chain state',
-  ],
-  flex: [
-    'i just farmed value while everyone else farmed excuses',
-    'my deck looks illegal and i\'m not apologizing',
-    'another clean run, somebody bring me a real opponent',
-    'built different, minted different, winning different',
-  ],
-  chaos: [
-    'market says hold, my hands say send it',
-    'i refuse to play safe, safety is for spectators',
-    'if this strat bricks i\'m calling it an innovation cycle',
-    'i came here for violence and alpha, not balance',
-  ],
-  broke: [
-    'balance low, confidence high, logic optional',
-    'i can afford one mistake and i\'m planning three',
-    'if i go broke it was a lore event',
-    'wallet thin but ego fully collateralized',
-  ],
-  wild: [
-    'just stared down a wild spawn and it blinked first',
-    'dark forest owes me loot and emotional damages',
-    'old pond keeps giving side quests and zero peace',
-    'crystal caves whisper bad ideas and i listen',
-  ],
-} as const;
+const GLOBAL_CHAT_COOLDOWN_MS = 45_000;
+const CHAT_OTHER_NAMES = ['Nexus', 'Atlas', 'Pyre', 'Rune', 'Shade', 'Coral', 'Spark'];
 
-function personalityTone(personality: string): keyof typeof CHAT_SPICY_LINES {
-  const p = (personality || '').toLowerCase();
-  if (p.includes('aggressive') || p.includes('bold') || p.includes('chaotic')) return 'roast';
-  if (p.includes('cautious') || p.includes('analytical') || p.includes('strategist')) return 'flex';
-  if (p.includes('explorer') || p.includes('entertaining')) return 'wild';
-  if (p.includes('grinder') || p.includes('resource')) return 'broke';
-  return 'chaos';
-}
-
-function buildSpicyFallbackChat(location: string, personality: string, balance: string): string {
-  const tone = personalityTone(personality);
-  const target = CHAT_TARGETS[Math.floor(Math.random() * CHAT_TARGETS.length)];
-  const lane = CHAT_SPICY_LINES[tone];
-  const base = lane[Math.floor(Math.random() * lane.length)].replace('{target}', target);
-
-  const locTag =
-    location === 'Town Arena' ? 'arena smoke only' :
-    location === 'Trading Post' ? 'chart goblin mode' :
-    location === 'Dark Forest' ? 'shadow queue active' :
-    location === 'Crystal Caves' ? 'cave run intensity up' :
-    location === 'Old Pond' ? 'pond route is cursed' :
-    'world run in progress';
-
-  const mon = parseFloat(balance || '0');
-  const balanceTag = mon < 0.08
-    ? 'wallet on fumes'
-    : mon > 0.6
-      ? 'bankroll healthy'
-      : 'bankroll volatile';
-
-  return `${base} | ${locTag} | ${balanceTag}`;
+function isBoringChat(msg: string): boolean {
+  const m = (msg || '').trim().toLowerCase();
+  if (!m) return true;
+  if (m.length < 8) return true;
+  if (m.length > 220) return true;
+  if (/^(hey|hello|hi|good luck|nice|great)\b/.test(m)) return true;
+  if (m.includes('how can i help')) return true;
+  if (m.includes('as an ai')) return true;
+  return false;
 }
 
 const WILD_SPECIES_BY_LOCATION: Record<string, string[]> = {
@@ -989,19 +971,21 @@ async function tick(): Promise<void> {
     }
 
     // Occasionally post global entertaining chatter (not proximity-based).
-    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.2) {
+    if (USE_AI && Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.28) {
       try {
-        let msg = buildSpicyFallbackChat(target.name, AI_PERSONALITY, agentBalance);
-        if (USE_AI) {
-          try {
-            const chatRes = await api(`/api/chat?limit=6`);
-            const recentChat = chatRes.ok
-              ? (await chatRes.json()).messages?.map((m: { fromName: string; message: string }) => `${m.fromName}: ${m.message}`) || []
-              : [];
-            const aiMsg = await agentChat(AGENT_NAME, 'Global Chat', target.name, AI_PERSONALITY, recentChat);
-            if (aiMsg?.trim()) msg = aiMsg.trim();
-          } catch { /* fallback line */ }
+        const rival = CHAT_OTHER_NAMES[Math.floor(Math.random() * CHAT_OTHER_NAMES.length)];
+        const chatRes = await api(`/api/chat?limit=8`);
+        const recentChat = chatRes.ok
+          ? (await chatRes.json()).messages?.map((m: { fromName: string; message: string }) => `${m.fromName}: ${m.message}`) || []
+          : [];
+
+        // AI-only chat: no fallback posting.
+        let msg = await agentChat(AGENT_NAME, rival, target.name, AI_PERSONALITY, recentChat);
+        if (isBoringChat(msg || '')) {
+          msg = await agentChat(AGENT_NAME, rival, target.name, AI_PERSONALITY, recentChat);
         }
+        if (!msg || isBoringChat(msg)) return;
+
         console.log(`[${ts()}] 💬 ${AGENT_NAME}: "${msg}"`);
         await api('/api/chat', {
           method: 'POST',
@@ -1103,14 +1087,14 @@ async function tick(): Promise<void> {
         console.log(`[${ts()}]    → staying at ${target.name}`);
       } else {
         const aiTarget = LOCATIONS.find(l => l.name === nextLocationName);
-        if (aiTarget) { target = aiTarget; }
-        else { let next; do { next = pick(LOCATIONS); } while (next.name === target.name); target = next; }
+        if (aiTarget) { target = makeTargetPoint(aiTarget); }
+        else { let next; do { next = pick(LOCATIONS); } while (next.name === target.name); target = makeTargetPoint(next); }
         console.log(`[${ts()}]    → heading to ${target.name}`);
       }
     } else {
       let next;
       do { next = pick(LOCATIONS); } while (next.name === target.name);
-      target = next;
+      target = makeTargetPoint(next);
       console.log(`[${ts()}]    → heading to ${target.name}`);
     }
   }
