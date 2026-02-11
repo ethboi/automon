@@ -85,6 +85,7 @@ export interface BattleMove {
   targetIndex?: number; // For switch - which card to switch to
   prediction?: string; // AI's prediction of opponent's move
   reasoning?: string; // AI's reasoning for this decision
+  aiModel?: string; // Model that produced this move
 }
 
 // Status effect types
@@ -125,6 +126,7 @@ export interface BattleEvent {
   action?: BattleAction;
   prediction?: string;
   reasoning?: string;
+  aiModel?: string;
 }
 
 export type BattleStatus = 'pending' | 'selecting' | 'active' | 'complete' | 'cancelled';
@@ -209,6 +211,7 @@ export interface BattleTurnLog {
     action: BattleAction;
     prediction?: string;
     reasoning?: string;
+    aiModel?: string;
   };
   player2: {
     address: string;
@@ -217,6 +220,7 @@ export interface BattleTurnLog {
     action: BattleAction;
     prediction?: string;
     reasoning?: string;
+    aiModel?: string;
   };
   triangleResult: {
     player1Result: TriangleResult;
