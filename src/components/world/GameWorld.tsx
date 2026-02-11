@@ -485,18 +485,18 @@ function Roads() {
           </mesh>
         ))}
         {/* === 3D "MON SHOP" — wooden carved sign style === */}
-        {/* Sign board — warm wood */}
+        {/* Sign board — warm wood — wider */}
         <mesh position={[0, 4.2, 0.1]} castShadow>
-          <boxGeometry args={[4.8, 1.4, 0.2]} />
+          <boxGeometry args={[6, 1.4, 0.2]} />
           <meshStandardMaterial color="#5c3a1e" roughness={0.85} />
         </mesh>
         {/* Inner panel — darker wood */}
         <mesh position={[0, 4.2, 0.22]}>
-          <boxGeometry args={[4.4, 1.1, 0.05]} />
+          <boxGeometry args={[5.6, 1.1, 0.05]} />
           <meshStandardMaterial color="#3a2010" roughness={0.9} />
         </mesh>
-        {/* Hanging chains (two vertical bars from roof) */}
-        {[-2, 2].map((x, i) => (
+        {/* Hanging chains */}
+        {[-2.5, 2.5].map((x, i) => (
           <mesh key={`chain-${i}`} position={[x, 3.6, 0.1]} castShadow>
             <cylinderGeometry args={[0.04, 0.04, 0.5, 6]} />
             <meshStandardMaterial color="#92400e" metalness={0.5} roughness={0.4} />
