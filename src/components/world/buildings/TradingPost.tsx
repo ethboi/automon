@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface TradingPostProps {
@@ -115,34 +115,22 @@ export function TradingPost({ position }: TradingPostProps) {
         <meshStandardMaterial color="#fbbf24" metalness={0.7} roughness={0.3} />
       </mesh>
       {/* nad.fun text */}
-      <Text
-        position={[0, 5.1, 3.65]}
-        fontSize={0.65}
-        color="#fbbf24"
-        font="/fonts/Inter-Bold.woff"
-        anchorX="center"
-        anchorY="middle"
-        outlineWidth={0.02}
-        outlineColor="#000000"
-      >
-        nad.fun
-      </Text>
+      <Html position={[0, 5.1, 3.65]} center transform distanceFactor={8} zIndexRange={[1, 0]}>
+        <div style={{ fontWeight: 900, fontSize: '24px', color: '#fbbf24', textShadow: '0 0 8px #7c3aed, 0 2px 4px rgba(0,0,0,0.8)', whiteSpace: 'nowrap', letterSpacing: '2px' }}>
+          nad.fun
+        </div>
+      </Html>
 
       {/* Side sign — "EXCHANGE" */}
       <mesh position={[4.55, 3, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
         <boxGeometry args={[3, 0.8, 0.1]} />
         <meshStandardMaterial color="#1e293b" />
       </mesh>
-      <Text
-        position={[4.6, 3, 0]}
-        rotation={[0, Math.PI / 2, 0]}
-        fontSize={0.35}
-        color="#10b981"
-        anchorX="center"
-        anchorY="middle"
-      >
-        EXCHANGE
-      </Text>
+      <Html position={[4.6, 3, 0]} center transform distanceFactor={8} zIndexRange={[1, 0]}>
+        <div style={{ fontWeight: 700, fontSize: '14px', color: '#10b981', textShadow: '0 0 6px #10b981', whiteSpace: 'nowrap' }}>
+          EXCHANGE
+        </div>
+      </Html>
 
       {/* === DECORATIVE ELEMENTS === */}
 
@@ -220,7 +208,7 @@ export function TradingPost({ position }: TradingPostProps) {
             <sphereGeometry args={[0.2, 12, 12]} />
             <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={1} />
           </mesh>
-          <pointLight position={[x, 2, 3.8]} intensity={0.5} color="#fbbf24" distance={6} decay={2} />
+          <pointLight position={[0, 1.8, 0]} intensity={0.5} color="#fbbf24" distance={6} decay={2} />
         </group>
       ))}
 
