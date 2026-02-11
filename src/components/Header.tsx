@@ -51,7 +51,7 @@ function useLatestTx() {
 }
 
 export default function Header() {
-  const { address, balance, disconnect } = useWallet();
+  const { address, balance, isConnecting, connect, disconnect } = useWallet();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { tx: latestTx, isNew } = useLatestTx();
@@ -186,6 +186,30 @@ export default function Header() {
                   Disconnect
                 </button>
               </>
+            )}
+
+            {!address && (
+              <button
+                onClick={connect}
+                disabled={isConnecting}
+                className="hidden sm:block btn-primary disabled:opacity-50 disabled:cursor-not-allowed !px-4 !py-2"
+              >
+                <span className="flex items-center gap-2">
+                  {isConnecting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      <span className="text-sm">Connecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      <span className="text-sm">Connect Wallet</span>
+                    </>
+                  )}
+                </span>
+              </button>
             )}
 
             {/* Burger menu — mobile only, always visible */}
