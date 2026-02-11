@@ -64,7 +64,7 @@ export default function Header() {
     { href: '/collection', label: 'Collection', icon: '📚' },
     { href: '/shop', label: 'Shop', icon: '🛒' },
     { href: '/battle', label: 'Battle', icon: '⚔️' },
-    { href: '/agent', label: 'AI Agent', icon: '🤖' },
+    { href: '/', label: 'Map', icon: '🗺️' },
     { href: '/how-to-play', label: 'How to Play', icon: '📖' },
   ];
 
