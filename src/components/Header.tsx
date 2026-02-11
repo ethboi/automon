@@ -163,75 +163,103 @@ export default function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-3 sm:gap-4">
-            {address ? (
+            {address && (
               <>
-                {/* Balance pill */}
+                {/* Balance pill — desktop only */}
                 <div className="hidden sm:flex items-center gap-2 glass-purple rounded-full px-4 py-2">
                   <span className="text-yellow-400 text-lg">💰</span>
                   <span className="text-white font-semibold">{parseFloat(balance || '0').toFixed(2)}</span>
                   <span className="text-purple-300 text-sm">MON</span>
                 </div>
 
-                {/* Address pill */}
-                <div className="glass rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1.5 sm:gap-2">
+                {/* Address pill — desktop only */}
+                <div className="hidden sm:flex glass rounded-full px-4 py-2 items-center gap-2">
                   <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-400 flex-shrink-0" />
-                  <span className="text-purple-300 font-mono text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">
+                  <span className="text-purple-300 font-mono text-sm">
                     {formatAddress(address)}
                   </span>
                 </div>
 
-                {/* Disconnect button */}
+                {/* Disconnect button — desktop only */}
                 <button
                   onClick={disconnect}
                   className="hidden sm:block text-gray-400 hover:text-white text-sm transition-colors duration-300 px-3 py-2 hover:bg-white/5 rounded-lg"
                 >
                   Disconnect
                 </button>
-
-                {/* Mobile menu button */}
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {mobileMenuOpen ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    )}
-                  </svg>
-                </button>
               </>
-            ) : (
+            )}
+
+            {/* Connect button — desktop only when not connected */}
+            {!address && (
               <button
                 onClick={connect}
                 disabled={isConnecting}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed !px-3 !py-1.5 sm:!px-4 sm:!py-2"
+                className="hidden sm:block btn-primary disabled:opacity-50 disabled:cursor-not-allowed !px-4 !py-2"
               >
-                <span className="flex items-center gap-1.5 sm:gap-2">
+                <span className="flex items-center gap-2">
                   {isConnecting ? (
                     <>
-                      <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span className="text-xs sm:text-sm">Connecting...</span>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      <span className="text-sm">Connecting...</span>
                     </>
                   ) : (
                     <>
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                       </svg>
-                      <span className="text-xs sm:text-sm">Connect</span>
+                      <span className="text-sm">Connect</span>
                     </>
                   )}
                 </span>
               </button>
             )}
+
+            {/* Burger menu — mobile only, always visible */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        {address && mobileMenuOpen && (
+        {/* Mobile Navigation — always available */}
+        {mobileMenuOpen && (
           <nav className="lg:hidden py-4 border-t border-white/5 animate-fade-in-up">
             <p className="text-center text-[10px] font-semibold tracking-[0.16em] uppercase text-cyan-300/60 pb-3">mint · battle · trade</p>
+
+            {/* Wallet section */}
+            <div className="px-4 pb-3 mb-3 border-b border-white/5">
+              {address ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-400" />
+                    <span className="text-purple-300 font-mono text-sm">{formatAddress(address)}</span>
+                    <span className="text-yellow-400 text-sm font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
+                  </div>
+                  <button onClick={() => { disconnect(); setMobileMenuOpen(false); }} className="text-xs text-gray-500 hover:text-white px-2 py-1 rounded-lg hover:bg-white/5">
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { connect(); setMobileMenuOpen(false); }}
+                  disabled={isConnecting}
+                  className="w-full btn-primary disabled:opacity-50 !py-2.5"
+                >
+                  {isConnecting ? 'Connecting...' : '🔗 Connect Wallet'}
+                </button>
+              )}
+            </div>
+
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <Link
