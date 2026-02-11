@@ -180,8 +180,8 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
         <div
           className={`px-2.5 py-1 rounded text-xs whitespace-nowrap border ${indicator.color}`}
           style={{
-            backgroundColor: hexToRgba(theme.body, 0.82),
-            borderColor: hexToRgba(theme.glow, 0.5),
+            backgroundColor: 'rgba(8, 10, 18, 0.88)',
+            borderColor: hexToRgba(theme.accent, 0.55),
             boxShadow: `0 0 18px ${hexToRgba(theme.glow, 0.25)}`,
           }}
         >
