@@ -16,46 +16,63 @@ export default function CrystalCaves({ hovered }: { hovered: boolean }) {
     });
   });
 
+  const rockColor = hovered ? '#4a4a52' : '#3a3a42';
+
   return (
     <group>
-      {/* Rocky hillside base — large mound grounded at y=0 */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <sphereGeometry args={[4.5, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={hovered ? '#4a4a52' : '#3a3a42'} roughness={0.95} flatShading />
-      </mesh>
-
-      {/* Secondary rocky bump */}
-      <mesh position={[-1.5, 1.0, 1.5]} castShadow>
-        <sphereGeometry args={[3, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#33333b" roughness={0.95} flatShading />
+      {/* Main rock mass — flat-bottomed cone sitting on ground */}
+      <mesh position={[0, 1.5, 0]} castShadow>
+        <coneGeometry args={[5, 3, 8]} />
+        <meshStandardMaterial color={rockColor} roughness={0.95} flatShading />
       </mesh>
 
       {/* Rear rock mass */}
-      <mesh position={[1.5, 0.8, -1.5]} castShadow>
-        <sphereGeometry args={[3.2, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      <mesh position={[1, 1.2, -2]} castShadow>
+        <coneGeometry args={[3.5, 2.4, 7]} />
         <meshStandardMaterial color="#2e2e36" roughness={0.95} flatShading />
       </mesh>
 
-      {/* Cave mouth — dark opening */}
-      <mesh position={[0, 1.5, 3.8]} rotation={[Math.PI / 6, 0, 0]}>
-        <circleGeometry args={[1.8, 8]} />
+      {/* Side rock mass */}
+      <mesh position={[-2, 1.0, 1]} castShadow>
+        <coneGeometry args={[3, 2, 7]} />
+        <meshStandardMaterial color="#33333b" roughness={0.95} flatShading />
+      </mesh>
+
+      {/* Flat base disc to hide any ground gaps */}
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[6, 12]} />
+        <meshStandardMaterial color="#2a2a32" roughness={1} />
+      </mesh>
+
+      {/* Cave mouth — dark opening in front */}
+      <mesh position={[0, 1.2, 4.2]} rotation={[Math.PI / 8, 0, 0]}>
+        <circleGeometry args={[1.6, 8]} />
         <meshStandardMaterial color="#0a0a0f" roughness={1} />
       </mesh>
 
-      {/* Cave arch — rocky frame */}
-      <mesh position={[0, 2.5, 3.5]} castShadow>
-        <torusGeometry args={[1.8, 0.5, 6, 8, Math.PI]} />
+      {/* Cave arch — rocky overhang */}
+      <mesh position={[0, 2.2, 3.8]} rotation={[0, 0, 0]} castShadow>
+        <boxGeometry args={[3.8, 0.8, 1.5]} />
         <meshStandardMaterial color="#3a3a42" roughness={0.92} flatShading />
       </mesh>
+      {/* Arch sides */}
+      <mesh position={[-1.6, 1.2, 4]} castShadow>
+        <boxGeometry args={[0.8, 2, 1]} />
+        <meshStandardMaterial color="#33333b" roughness={0.92} flatShading />
+      </mesh>
+      <mesh position={[1.6, 1.2, 4]} castShadow>
+        <boxGeometry args={[0.8, 2, 1]} />
+        <meshStandardMaterial color="#33333b" roughness={0.92} flatShading />
+      </mesh>
 
-      {/* Scattered boulders */}
+      {/* Scattered boulders — sitting on ground */}
       {[
-        [3.2, 0.3, 2.5, 0.6],
-        [-3.5, 0.25, 1.0, 0.5],
-        [2.5, 0.2, -3.0, 0.45],
-        [-2.0, 0.35, -3.5, 0.55],
-        [4.0, 0.2, -1.0, 0.4],
-        [-4.0, 0.2, 3.0, 0.35],
+        [3.5, 0.3, 2.5, 0.55],
+        [-3.8, 0.25, 1.0, 0.5],
+        [2.8, 0.2, -3.5, 0.45],
+        [-2.5, 0.3, -3, 0.5],
+        [4.5, 0.2, -0.5, 0.35],
+        [-4.2, 0.2, 2.8, 0.35],
       ].map((rock, i) => (
         <mesh key={`rock-${i}`} position={[rock[0], rock[1], rock[2]]} castShadow
           rotation={[0.2 * i, 0.7 * i, 0.1 * i]}>
@@ -64,15 +81,15 @@ export default function CrystalCaves({ hovered }: { hovered: boolean }) {
         </mesh>
       ))}
 
-      {/* Main crystals emerging from rock — grounded */}
+      {/* Large crystals emerging from rock */}
       {[
-        { pos: [-1.8, 1.8, 0.5], size: [0.4, 1.8, 5] as [number, number, number], color: '#67e8f9', emissive: '#0891b2', rot: [0, 0, 0.15] },
-        { pos: [2.0, 2.0, -0.5], size: [0.35, 2.2, 5] as [number, number, number], color: '#a78bfa', emissive: '#6d28d9', rot: [0, 0.5, -0.1] },
-        { pos: [0.5, 2.5, -1.0], size: [0.45, 2.5, 5] as [number, number, number], color: '#22d3ee', emissive: '#0e7490', rot: [0.1, 0.3, 0.08] },
-        { pos: [-0.5, 2.2, -2.0], size: [0.3, 1.6, 5] as [number, number, number], color: '#c084fc', emissive: '#7c3aed', rot: [0, 0.8, -0.2] },
-        { pos: [1.2, 1.5, 1.8], size: [0.25, 1.3, 5] as [number, number, number], color: '#67e8f9', emissive: '#0891b2', rot: [-0.1, 1.2, 0.12] },
-        { pos: [-2.5, 1.2, -1.0], size: [0.2, 1.0, 5] as [number, number, number], color: '#a78bfa', emissive: '#6d28d9', rot: [0.15, 0.2, 0.25] },
-        { pos: [0, 1.8, 2.5], size: [0.3, 1.4, 5] as [number, number, number], color: '#22d3ee', emissive: '#0e7490', rot: [-0.08, 0, 0.05] },
+        { pos: [-1.8, 2.0, 0.5], size: [0.4, 1.8, 5] as [number, number, number], color: '#67e8f9', emissive: '#0891b2', rot: [0, 0, 0.15] },
+        { pos: [2.0, 2.2, -0.5], size: [0.35, 2.2, 5] as [number, number, number], color: '#a78bfa', emissive: '#6d28d9', rot: [0, 0.5, -0.1] },
+        { pos: [0.5, 2.8, -1.0], size: [0.45, 2.5, 5] as [number, number, number], color: '#22d3ee', emissive: '#0e7490', rot: [0.1, 0.3, 0.08] },
+        { pos: [-0.5, 2.0, -2.0], size: [0.3, 1.6, 5] as [number, number, number], color: '#c084fc', emissive: '#7c3aed', rot: [0, 0.8, -0.2] },
+        { pos: [1.2, 1.5, 2.0], size: [0.25, 1.3, 5] as [number, number, number], color: '#67e8f9', emissive: '#0891b2', rot: [-0.1, 1.2, 0.12] },
+        { pos: [-2.5, 1.5, -0.8], size: [0.2, 1.0, 5] as [number, number, number], color: '#a78bfa', emissive: '#6d28d9', rot: [0.15, 0.2, 0.25] },
+        { pos: [0, 1.8, 2.8], size: [0.3, 1.4, 5] as [number, number, number], color: '#22d3ee', emissive: '#0e7490', rot: [-0.08, 0, 0.05] },
       ].map((cr, i) => (
         <mesh
           key={`crystal-${i}`}
@@ -94,10 +111,10 @@ export default function CrystalCaves({ hovered }: { hovered: boolean }) {
         </mesh>
       ))}
 
-      {/* Tiny crystal clusters on rocks */}
+      {/* Tiny crystal clusters on boulders */}
       {[
-        [3.0, 0.7, 2.2], [-3.2, 0.6, 0.8], [2.2, 0.5, -2.7],
-        [-1.8, 0.6, -3.2], [3.8, 0.4, -0.8],
+        [3.3, 0.7, 2.2], [-3.5, 0.6, 0.8], [2.5, 0.5, -3.2],
+        [-2.2, 0.6, -2.7], [4.2, 0.4, -0.3],
       ].map((pos, i) => (
         <group key={`cluster-${i}`} position={pos as [number, number, number]}>
           {[0, 0.15, -0.12].map((off, j) => (
@@ -117,12 +134,10 @@ export default function CrystalCaves({ hovered }: { hovered: boolean }) {
         </group>
       ))}
 
-      {/* Glowing point lights inside */}
+      {/* Glowing point lights */}
       <pointLight position={[0, 2, 1]} color="#67e8f9" intensity={3} distance={8} />
       <pointLight position={[-1.5, 1.5, -1]} color="#a78bfa" intensity={2} distance={6} />
       <pointLight position={[1.5, 2, -0.5]} color="#22d3ee" intensity={2.5} distance={7} />
-
-      {/* Faint glow from cave mouth */}
       <pointLight position={[0, 1.5, 3.5]} color="#c084fc" intensity={1.5} distance={5} />
     </group>
   );
