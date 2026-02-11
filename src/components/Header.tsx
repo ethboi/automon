@@ -65,6 +65,7 @@ export default function Header() {
     { href: '/shop', label: 'Shop', icon: '🛒' },
     { href: '/battle', label: 'Battle', icon: '⚔️' },
     { href: '/agent', label: 'AI Agent', icon: '🤖' },
+    { href: '/how-to-play', label: 'How to Play', icon: '📖' },
   ];
 
   const isActive = (href: string) => pathname === href;
