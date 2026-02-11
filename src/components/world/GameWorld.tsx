@@ -15,7 +15,7 @@ import { BattleArena } from './buildings/BattleArena';
 import { TradingPost } from './buildings/TradingPost';
 import CrystalCaves from './buildings/CrystalCaves';
 import DarkForest from './buildings/DarkForest';
-import { WildAutoMons } from './WildAutoMon';
+import { WildAutoMons, TameDialog, WILD_SPECIES, SPAWN_ZONES, TAME_CHANCE, type TameState } from './WildAutoMon';
 import AgentProfileModal from '@/components/AgentProfileModal';
 import { useWallet } from '@/context/WalletContext';
 
@@ -207,6 +207,10 @@ function Scene({
   walletAddress,
   playerPositionRef,
   cameraMode,
+  tameState,
+  setTameState,
+  wildCreatures,
+  setWildCreatures,
 }: {
   onLocationClick: (route: string) => void;
   onGroundClick: (point: THREE.Vector3) => void;
@@ -219,6 +223,10 @@ function Scene({
   walletAddress?: string;
   playerPositionRef: React.MutableRefObject<THREE.Vector3 | null>;
   cameraMode: CameraMode;
+  tameState: TameState;
+  setTameState: (s: TameState) => void;
+  wildCreatures: Array<{ id: number; species: typeof WILD_SPECIES[number]; spawn: [number, number]; alive: boolean }>;
+  setWildCreatures: React.Dispatch<React.SetStateAction<Array<{ id: number; species: typeof WILD_SPECIES[number]; spawn: [number, number]; alive: boolean }>>>;
 }) {
   const buildingsArray = Object.values(WORLD_LOCATIONS).map((b) => ({
     position: b.position,
@@ -329,6 +337,10 @@ function Scene({
       <WildAutoMons
         playerPosition={playerPositionRef?.current ?? null}
         walletAddress={walletAddress}
+        tameState={tameState}
+        setTameState={setTameState}
+        creatures={wildCreatures}
+        setCreatures={setWildCreatures}
       />
     </>
   );
@@ -926,6 +938,10 @@ export function GameWorld() {
   const [nearbyRoute, setNearbyRoute] = useState<string | null>(null);
   const [onlineAgents, setOnlineAgents] = useState<OnlineAgent[]>([]);
   const [events, setEvents] = useState<EventData[]>([]);
+  const [tameState, setTameState] = useState<TameState>(null);
+  const [wildCreatures, setWildCreatures] = useState(() =>
+    SPAWN_ZONES.map((spawn, i) => ({ id: i, species: WILD_SPECIES[i % WILD_SPECIES.length], spawn, alive: true }))
+  );
   const [totalBattles, setTotalBattles] = useState(0);
   const [battles, setBattles] = useState<{
     id: string;
@@ -1048,9 +1064,41 @@ export function GameWorld() {
             walletAddress={address || undefined}
             playerPositionRef={playerPositionRef}
             cameraMode={cameraMode}
+            tameState={tameState}
+            setTameState={setTameState}
+            wildCreatures={wildCreatures}
+            setWildCreatures={setWildCreatures}
           />
         </Suspense>
       </Canvas>
+
+      <TameDialog
+        tameState={tameState}
+        onCancel={() => setTameState(null)}
+        onTameAttempt={async () => {
+          if (!tameState || tameState.phase !== 'confirm') return;
+          const { creatureId, species } = tameState;
+          setTameState({ phase: 'attempting', species });
+          await new Promise(r => setTimeout(r, 1500));
+          const success = Math.random() < TAME_CHANCE;
+          let cardName = '';
+          if (success && address) {
+            try {
+              const res = await fetch('/api/cards/tame', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address, speciesName: species.name }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                cardName = data.card?.name || species.name;
+                setWildCreatures(prev => prev.map(c => c.id === creatureId ? { ...c, alive: false } : c));
+              }
+            } catch (err) { console.error('Tame API error:', err); }
+          }
+          setTameState({ phase: 'result', species, success, cardName });
+          setTimeout(() => setTameState(null), 3500);
+        }}
+      />
 
       <WorldUI
         nearbyBuilding={nearbyBuilding}
