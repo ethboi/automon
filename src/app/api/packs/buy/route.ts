@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
       txHash,
       type: 'mint_pack',
       from: address,
-      description: `Minted card pack for ${price || '0.1'} MON`,
+      amount: `${price ? (Number(price) / 1e18).toFixed(2) : '0.10'}`,
+      description: `Minted AutoMon card pack`,
       metadata: { packId: pack.packId, price, tokenIds },
     });
 
