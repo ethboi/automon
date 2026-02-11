@@ -33,7 +33,7 @@ export default function HowToPlayPage() {
             <li><strong>Click a location</strong> — Fly camera to it</li>
           </ul>
           <p className="mt-3 text-gray-400 text-sm">
-            Locations with pages (Home, Shop, Arena, Trading Post) will open when clicked.
+            Every major location now has a page. Click any map marker to open its location view.
           </p>
         </Section>
 

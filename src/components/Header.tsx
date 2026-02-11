@@ -51,7 +51,7 @@ function useLatestTx() {
 }
 
 export default function Header() {
-  const { address, balance, isConnecting, connect, disconnect } = useWallet();
+  const { address, balance, disconnect } = useWallet();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { tx: latestTx, isNew } = useLatestTx();
@@ -190,31 +190,6 @@ export default function Header() {
               </>
             )}
 
-            {/* Connect button — desktop only when not connected */}
-            {!address && (
-              <button
-                onClick={connect}
-                disabled={isConnecting}
-                className="hidden sm:block btn-primary disabled:opacity-50 disabled:cursor-not-allowed !px-4 !py-2"
-              >
-                <span className="flex items-center gap-2">
-                  {isConnecting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span className="text-sm">Connecting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                      </svg>
-                      <span className="text-sm">Connect</span>
-                    </>
-                  )}
-                </span>
-              </button>
-            )}
-
             {/* Burger menu — mobile only, always visible */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -250,13 +225,7 @@ export default function Header() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => { connect(); setMobileMenuOpen(false); }}
-                  disabled={isConnecting}
-                  className="w-full btn-primary disabled:opacity-50 !py-2.5"
-                >
-                  {isConnecting ? 'Connecting...' : '🔗 Connect Wallet'}
-                </button>
+                <div className="text-xs text-gray-500">Wallet not connected</div>
               )}
             </div>
 
@@ -279,22 +248,26 @@ export default function Header() {
                 </Link>
               ))}
 
-              {/* Mobile balance display */}
-              <div className="flex items-center justify-between px-4 py-3 mt-2 glass rounded-xl">
-                <span className="text-gray-400 text-sm">Balance</span>
-                <span className="text-white font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
-              </div>
+              {address && (
+                <>
+                  {/* Mobile balance display */}
+                  <div className="flex items-center justify-between px-4 py-3 mt-2 glass rounded-xl">
+                    <span className="text-gray-400 text-sm">Balance</span>
+                    <span className="text-white font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
+                  </div>
 
-              {/* Mobile disconnect */}
-              <button
-                onClick={() => {
-                  disconnect();
-                  setMobileMenuOpen(false);
-                }}
-                className="px-4 py-3 text-left text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
-              >
-                Disconnect Wallet
-              </button>
+                  {/* Mobile disconnect */}
+                  <button
+                    onClick={() => {
+                      disconnect();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="px-4 py-3 text-left text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+                  >
+                    Disconnect Wallet
+                  </button>
+                </>
+              )}
             </div>
           </nav>
         )}
