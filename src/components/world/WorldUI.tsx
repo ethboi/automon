@@ -195,7 +195,7 @@ export function WorldUI({
     <div className="absolute inset-0 pointer-events-none">
 
       {/* ─── Controls Legend ─── */}
-      <div className="absolute top-16 right-4 pointer-events-auto hidden sm:block">
+      <div className="absolute top-20 right-4 pointer-events-auto hidden sm:block">
         <div className="bg-black/60 backdrop-blur-md rounded-xl px-4 py-3 border border-white/10 space-y-1.5">
           <div className="flex items-center gap-2 text-xs text-gray-300">
             <span className="text-gray-500 w-20">🖱️ Left</span>
