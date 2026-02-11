@@ -378,49 +378,45 @@ function BattleCard({ battle, index, onReplay }: { battle: any; index: number; o
 
   return (
     <div className="bg-gray-900/60 border border-white/5 hover:border-white/10 rounded-xl p-3 sm:p-4 transition animate-fade-in-up opacity-0" style={{ animationDelay: `${index * 0.04}s` }}>
-      {/* Top row: players + status */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="text-sm sm:text-base font-bold text-cyan-400 truncate">{p1Name}</span>
-          <span className="text-xs text-gray-600 shrink-0">vs</span>
-          <span className="text-sm sm:text-base font-bold text-purple-400 truncate">{p2Name || '…'}</span>
+      {/* Players + cards — centered layout */}
+      <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3">
+        {/* Player 1 side */}
+        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+          <span className={`text-sm font-bold truncate max-w-full ${winner?.toLowerCase() === p1?.address?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
+          <div className="flex gap-1">
+            {p1Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
+              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover border-2 shadow-md"
+                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444' }} />
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {isActive && <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-semibold animate-pulse">LIVE</span>}
-          {battle.status === 'complete' && <button onClick={() => onReplay(battle.battleId)} className="text-xs bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 px-3 py-1 rounded-lg transition font-medium">📺 Replay</button>}
+
+        {/* VS badge */}
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shrink-0 shadow-lg">
+          <span className="text-[10px] font-black text-white">VS</span>
+        </div>
+
+        {/* Player 2 side */}
+        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+          <span className={`text-sm font-bold truncate max-w-full ${winner?.toLowerCase() === p2?.address?.toLowerCase() ? 'text-yellow-300' : 'text-purple-400'}`}>{p2Name || '…'}</span>
+          <div className="flex gap-1">
+            {p2Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
+              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover border-2 shadow-md"
+                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444' }} />
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Card thumbnails — centered */}
-      {(p1Cards.length > 0 || p2Cards.length > 0) && (
-        <div className="flex items-center justify-center gap-3 mb-3">
-          <div className="flex gap-1.5">
-            {p1Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
-              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover border-2 shadow-md"
-                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444' }} />
-            ))}
-          </div>
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shrink-0 shadow-lg">
-            <span className="text-[9px] font-black text-white">VS</span>
-          </div>
-          <div className="flex gap-1.5">
-            {p2Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
-              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover border-2 shadow-md"
-                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444' }} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Bottom row: wager + winner */}
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-3 text-gray-500">
-          <span className="text-yellow-400 font-semibold">💰 {battle.wager} MON</span>
-          {winner && <span className="text-emerald-400">🏆 {winnerName} won {payout} MON</span>}
-        </div>
-        {battle.createdAt && <span className="text-gray-600 shrink-0">{timeAgo(battle.createdAt)}</span>}
+      {/* Info row — compact single line */}
+      <div className="flex items-center justify-center gap-2 text-xs flex-wrap">
+        <span className="text-yellow-400 font-semibold">💰 {battle.wager} MON</span>
+        {winner && <span className="text-emerald-400">🏆 {winnerName} +{payout}</span>}
+        {isActive && <span className="bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-semibold animate-pulse text-[10px]">LIVE</span>}
+        {battle.status === 'complete' && <button onClick={() => onReplay(battle.battleId)} className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 px-2 py-0.5 rounded-lg transition font-medium text-[10px]">📺 Replay</button>}
+        {battle.createdAt && <span className="text-gray-600">{timeAgo(battle.createdAt)}</span>}
       </div>
     </div>
   );
