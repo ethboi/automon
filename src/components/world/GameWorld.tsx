@@ -14,6 +14,7 @@ import { LocationMarker } from './locations/LocationMarker';
 import { BattleArena } from './buildings/BattleArena';
 import { TradingPost } from './buildings/TradingPost';
 import CrystalCaves from './buildings/CrystalCaves';
+import DarkForest from './buildings/DarkForest';
 import { WildAutoMons } from './WildAutoMon';
 import AgentProfileModal from '@/components/AgentProfileModal';
 import { useWallet } from '@/context/WalletContext';
@@ -45,7 +46,7 @@ export const WORLD_LOCATIONS = {
   town_market:    { position: [28, 0, 0] as [number, number, number],      label: 'Shop',     icon: '🏪', color: '#f97316', variant: 'none' as const, route: '/shop', hideLabel: true },
   community_farm: { position: [-28, 0, 0] as [number, number, number],     label: 'Community Farm',  icon: '🌾', color: '#84cc16', variant: 'farm' as const,     route: null },
   old_pond:       { position: [-36, 0, -14] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
-  dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'dark' as const,     route: null },
+  dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'none' as const,     route: null },
   crystal_caves:  { position: [32, -0.6, 24] as [number, number, number],  label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'none' as const,       route: null },
   trading_post:   { position: [20, 0, -20] as [number, number, number],   label: 'Trading Post',    icon: '📈', color: '#10b981', variant: 'none' as const,       route: '/trading', hideLabel: true },
 };
@@ -248,6 +249,9 @@ function Scene({
       <TradingPost position={WORLD_LOCATIONS.trading_post.position} />
       <group position={WORLD_LOCATIONS.crystal_caves.position}>
         <CrystalCaves />
+      </group>
+      <group position={WORLD_LOCATIONS.dark_forest.position}>
+        <DarkForest />
       </group>
 
       {Object.entries(WORLD_LOCATIONS)
