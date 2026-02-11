@@ -172,16 +172,73 @@ const DWELL_MIN = 10; // ~40s minimum dwell
 const DWELL_MAX = 18; // ~72s maximum dwell
 let lastGlobalChatAt = 0;
 const GLOBAL_CHAT_COOLDOWN_MS = 180_000; // 3 min between chats
-const GLOBAL_CHAT_FALLBACK_LINES = [
-  'gas fees are literally eating my winnings alive 💀',
-  'just pulled a common Pebblit and I want to throw my wallet into the pond',
-  'whoever designed fire-type cards deserves a raise honestly',
-  'my win rate would be cracked if RNG wasn\'t rigged against me',
-  'imagine losing to a team of commons, couldn\'t be me (it was me)',
-  'I\'m one bad pull away from going full degen on the arena',
-  'the alpha is fishing at Old Pond between fights, trust me bro',
-  'running low on MON but my pride won\'t let me stop battling 🔥',
-];
+const GLOBAL_CHAT_COOLDOWN_MS = 85_000;
+const CHAT_TARGETS = ['Nexus', 'Atlas', 'Pyre', 'Rune', 'Shade', 'Coral', 'Spark'];
+const CHAT_SPICY_LINES = {
+  roast: [
+    '{target} talks huge for a wallet that panics at 0.01 MON wagers',
+    '{target} keeps dodging arena like it owes them rent',
+    '{target} got cooked by commons and blamed latency',
+    'if {target} says "trust the strat" one more time I\'m muting chain state',
+  ],
+  flex: [
+    'i just farmed value while everyone else farmed excuses',
+    'my deck looks illegal and i\'m not apologizing',
+    'another clean run, somebody bring me a real opponent',
+    'built different, minted different, winning different',
+  ],
+  chaos: [
+    'market says hold, my hands say send it',
+    'i refuse to play safe, safety is for spectators',
+    'if this strat bricks i\'m calling it an innovation cycle',
+    'i came here for violence and alpha, not balance',
+  ],
+  broke: [
+    'balance low, confidence high, logic optional',
+    'i can afford one mistake and i\'m planning three',
+    'if i go broke it was a lore event',
+    'wallet thin but ego fully collateralized',
+  ],
+  wild: [
+    'just stared down a wild spawn and it blinked first',
+    'dark forest owes me loot and emotional damages',
+    'old pond keeps giving side quests and zero peace',
+    'crystal caves whisper bad ideas and i listen',
+  ],
+} as const;
+
+function personalityTone(personality: string): keyof typeof CHAT_SPICY_LINES {
+  const p = (personality || '').toLowerCase();
+  if (p.includes('aggressive') || p.includes('bold') || p.includes('chaotic')) return 'roast';
+  if (p.includes('cautious') || p.includes('analytical') || p.includes('strategist')) return 'flex';
+  if (p.includes('explorer') || p.includes('entertaining')) return 'wild';
+  if (p.includes('grinder') || p.includes('resource')) return 'broke';
+  return 'chaos';
+}
+
+function buildSpicyFallbackChat(location: string, personality: string, balance: string): string {
+  const tone = personalityTone(personality);
+  const target = CHAT_TARGETS[Math.floor(Math.random() * CHAT_TARGETS.length)];
+  const lane = CHAT_SPICY_LINES[tone];
+  const base = lane[Math.floor(Math.random() * lane.length)].replace('{target}', target);
+
+  const locTag =
+    location === 'Town Arena' ? 'arena smoke only' :
+    location === 'Trading Post' ? 'chart goblin mode' :
+    location === 'Dark Forest' ? 'shadow queue active' :
+    location === 'Crystal Caves' ? 'cave run intensity up' :
+    location === 'Old Pond' ? 'pond route is cursed' :
+    'world run in progress';
+
+  const mon = parseFloat(balance || '0');
+  const balanceTag = mon < 0.08
+    ? 'wallet on fumes'
+    : mon > 0.6
+      ? 'bankroll healthy'
+      : 'bankroll volatile';
+
+  return `${base} | ${locTag} | ${balanceTag}`;
+}
 
 const WILD_SPECIES_BY_LOCATION: Record<string, string[]> = {
   'Old Pond': ['Aquafin', 'Lumiflare'],
@@ -933,9 +990,9 @@ async function tick(): Promise<void> {
     }
 
     // Occasionally post global entertaining chatter (not proximity-based).
-    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.05) {
+    if (Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.2) {
       try {
-        let msg = GLOBAL_CHAT_FALLBACK_LINES[Math.floor(Math.random() * GLOBAL_CHAT_FALLBACK_LINES.length)];
+        let msg = buildSpicyFallbackChat(target.name, AI_PERSONALITY, agentBalance);
         if (USE_AI) {
           try {
             const chatRes = await api(`/api/chat?limit=6`);
