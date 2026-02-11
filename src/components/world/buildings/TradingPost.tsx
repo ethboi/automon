@@ -1,66 +1,11 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface TradingPostProps {
   position: [number, number, number];
-}
-
-/* Build extruded 3D letter meshes from box primitives */
-function Letter3D({ char, x, color, metalness = 0.8 }: { char: string; x: number; color: string; metalness?: number }) {
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color, metalness, roughness: 0.2 }), [color, metalness]);
-  const h = 0.6; // letter height
-  const d = 0.15; // depth
-  const t = 0.12; // stroke thickness
-
-  // Each letter built from boxes
-  const boxes: [number, number, number, number, number, number][] = useMemo(() => {
-    switch (char) {
-      case 'n': return [
-        [0, 0, t, h, d, 0], // left stroke
-        [0.35, 0, t, h, d, 0], // right stroke
-        [0.175, h / 2 - t / 2, 0.35, t, d, 0], // top bar
-      ];
-      case 'a': return [
-        [0, 0, t, h, d, 0],
-        [0.35, 0, t, h, d, 0],
-        [0.175, h / 2 - t / 2, 0.35, t, d, 0], // top
-        [0.175, 0, 0.35, t, d, 0], // middle
-      ];
-      case 'd': return [
-        [0, 0, t, h, d, 0], // left
-        [0.175, h / 2 - t / 2, 0.25, t, d, 0], // top
-        [0.175, -(h / 2 - t / 2), 0.25, t, d, 0], // bottom
-        [0.3, 0, t, h * 0.6, d, 0], // right curve approx
-      ];
-      case '.': return [
-        [0, -(h / 2 - t / 2), t, t, d, 0],
-      ];
-      case 'f': return [
-        [0, 0, t, h, d, 0],
-        [0.15, h / 2 - t / 2, 0.3, t, d, 0], // top
-        [0.1, 0, 0.2, t, d, 0], // middle
-      ];
-      case 'u': return [
-        [0, 0, t, h, d, 0],
-        [0.35, 0, t, h, d, 0],
-        [0.175, -(h / 2 - t / 2), 0.35, t, d, 0], // bottom
-      ];
-      default: return [];
-    }
-  }, [char, h, d, t]);
-
-  return (
-    <group position={[x, 0, 0]}>
-      {boxes.map(([bx, by, bw, bh, bd], i) => (
-        <mesh key={i} position={[bx, by, 0]} castShadow material={mat}>
-          <boxGeometry args={[bw, bh, bd]} />
-        </mesh>
-      ))}
-    </group>
-  );
 }
 
 /** Trading Post — a stock exchange building with nad.fun branding */
@@ -150,33 +95,47 @@ export function TradingPost({ position }: TradingPostProps) {
         </mesh>
       ))}
 
-      {/* === 3D "nad.fun" ON ROOFTOP — BIG === */}
-      <group position={[-2.1, 6.2, 0]} rotation={[0, 0, 0]} scale={[1.8, 1.8, 1.8]}>
-        {'nad.fun'.split('').map((char, i) => {
-          const spacing = [0, 0.55, 1.1, 1.5, 1.75, 2.3, 2.85];
-          return (
-            <Letter3D
-              key={i}
-              char={char}
-              x={spacing[i]}
-              color="#fbbf24"
-              metalness={0.9}
-            />
-          );
-        })}
-        <pointLight position={[1.4, 0, -0.5]} intensity={1.5} color="#fbbf24" distance={12} decay={2} />
-      </group>
-
-      {/* Sign backing board on roof */}
-      <mesh position={[0, 6.3, 0]} castShadow>
-        <boxGeometry args={[7, 2, 0.15]} />
-        <meshStandardMaterial color="#7c3aed" roughness={0.4} />
+      {/* === "nad.fun" ROOFTOP SIGN — neon style === */}
+      {/* Sign backing — dark with gold trim */}
+      <mesh position={[0, 6.5, 0.1]} castShadow>
+        <boxGeometry args={[8, 2.5, 0.2]} />
+        <meshStandardMaterial color="#0f0520" roughness={0.3} />
       </mesh>
-      {/* Sign border - gold */}
-      <mesh position={[0, 6.3, -0.03]}>
-        <boxGeometry args={[7.3, 2.3, 0.05]} />
+      <mesh position={[0, 6.5, 0.22]}>
+        <boxGeometry args={[8.3, 2.8, 0.05]} />
         <meshStandardMaterial color="#fbbf24" metalness={0.7} roughness={0.3} />
       </mesh>
+      {/* Inner glow panel */}
+      <mesh position={[0, 6.5, 0.25]}>
+        <boxGeometry args={[7.5, 2, 0.05]} />
+        <meshStandardMaterial color="#1a0533" emissive="#7c3aed" emissiveIntensity={0.3} roughness={0.2} />
+      </mesh>
+      {/* Neon letters — thick extruded blocks spelling "nad.fun" */}
+      {[
+        // n
+        { x: -3.0, w: 0.25, h: 1.2 }, { x: -2.3, w: 0.25, h: 1.2 }, { x: -2.65, w: 0.7, h: 0.25, y: 0.48 },
+        // a
+        { x: -1.7, w: 0.25, h: 1.2 }, { x: -1.0, w: 0.25, h: 1.2 }, { x: -1.35, w: 0.7, h: 0.25, y: 0.48 }, { x: -1.35, w: 0.7, h: 0.25, y: 0 },
+        // d
+        { x: -0.4, w: 0.25, h: 1.2 }, { x: 0.2, w: 0.25, h: 0.8 }, { x: -0.1, w: 0.5, h: 0.25, y: 0.48 }, { x: -0.1, w: 0.5, h: 0.25, y: -0.48 },
+        // .
+        { x: 0.6, w: 0.2, h: 0.2, y: -0.5 },
+        // f
+        { x: 1.0, w: 0.25, h: 1.2 }, { x: 1.3, w: 0.55, h: 0.25, y: 0.48 }, { x: 1.2, w: 0.4, h: 0.25, y: 0 },
+        // u
+        { x: 1.8, w: 0.25, h: 1.2 }, { x: 2.5, w: 0.25, h: 1.2 }, { x: 2.15, w: 0.7, h: 0.25, y: -0.48 },
+        // n
+        { x: 2.9, w: 0.25, h: 1.2 }, { x: 3.6, w: 0.25, h: 1.2 }, { x: 3.25, w: 0.7, h: 0.25, y: 0.48 },
+      ].map((l, i) => (
+        <mesh key={`letter-${i}`} position={[l.x, 6.5 + (l.y || 0), 0.35]} castShadow>
+          <boxGeometry args={[l.w, l.h, 0.2]} />
+          <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.9} metalness={0.6} roughness={0.2} />
+        </mesh>
+      ))}
+      {/* Glow lights behind sign */}
+      <pointLight position={[0, 6.5, 1.5]} intensity={2} color="#fbbf24" distance={15} decay={2} />
+      <pointLight position={[-2, 6.5, 1]} intensity={1} color="#7c3aed" distance={10} decay={2} />
+      <pointLight position={[2, 6.5, 1]} intensity={1} color="#7c3aed" distance={10} decay={2} />
 
       {/* Side sign EXCHANGE */}
       <mesh position={[4.55, 3, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
@@ -189,8 +148,8 @@ export function TradingPost({ position }: TradingPostProps) {
         <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={0.8} roughness={0.3} />
       </mesh>
 
-      {/* === GOLDEN BULL — BIG, AWAY FROM BUILDING === */}
-      <group position={[6.5, 0.3, 7]} scale={[2.8, 2.8, 2.8]} rotation={[0, -0.4, 0]}>
+      {/* === GOLDEN BULL — BIG, AWAY FROM BUILDING, FACING FORWARD === */}
+      <group position={[6.5, 0.3, 7]} scale={[2.8, 2.8, 2.8]} rotation={[0, Math.PI, 0]}>
         {/* Pedestal */}
         <mesh position={[0, 0.1, 0]} castShadow>
           <boxGeometry args={[2, 0.2, 1.2]} />
@@ -199,43 +158,43 @@ export function TradingPost({ position }: TradingPostProps) {
         {/* Body */}
         <mesh position={[0, 0.7, 0]} castShadow>
           <boxGeometry args={[1.5, 1, 0.8]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.08} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.3} />
         </mesh>
         {/* Hump / shoulders */}
         <mesh position={[-0.3, 1.1, 0]} castShadow>
           <boxGeometry args={[0.7, 0.4, 0.7]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.08} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.3} />
         </mesh>
         {/* Head */}
         <mesh position={[0.8, 1.0, 0]} castShadow>
           <boxGeometry args={[0.6, 0.6, 0.6]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.08} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.3} />
         </mesh>
         {/* Snout */}
         <mesh position={[1.15, 0.85, 0]} castShadow>
           <boxGeometry args={[0.3, 0.35, 0.45]} />
-          <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.08} />
+          <meshStandardMaterial color="#f59e0b" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.25} />
         </mesh>
         {/* Horns */}
         <mesh position={[0.85, 1.4, -0.3]} rotation={[-0.4, 0, 0.3]} castShadow>
           <coneGeometry args={[0.08, 0.5, 6]} />
-          <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.05} />
+          <meshStandardMaterial color="#f59e0b" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.25} />
         </mesh>
         <mesh position={[0.85, 1.4, 0.3]} rotation={[0.4, 0, 0.3]} castShadow>
           <coneGeometry args={[0.08, 0.5, 6]} />
-          <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.05} />
+          <meshStandardMaterial color="#f59e0b" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.25} />
         </mesh>
         {/* Legs — thick */}
         {[[-0.5, 0, -0.3], [-0.5, 0, 0.3], [0.4, 0, -0.3], [0.4, 0, 0.3]].map((p, i) => (
           <mesh key={`leg-${i}`} position={p as [number, number, number]} castShadow>
             <boxGeometry args={[0.18, 0.4, 0.18]} />
-            <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.08} />
+            <meshStandardMaterial color="#f59e0b" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.25} />
           </mesh>
         ))}
         {/* Tail */}
         <mesh position={[-0.85, 0.9, 0]} rotation={[0, 0, -0.6]} castShadow>
           <cylinderGeometry args={[0.03, 0.05, 0.6, 6]} />
-          <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.08} />
+          <meshStandardMaterial color="#f59e0b" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.25} />
         </mesh>
       </group>
 
@@ -283,6 +242,8 @@ export function TradingPost({ position }: TradingPostProps) {
       {/* Lights */}
       <pointLight position={[0, 4, 5]} intensity={1.2} color="#10b981" distance={15} decay={2} />
       <pointLight position={[0, 3, 0]} intensity={0.6} color="#fbbf24" distance={10} decay={2} />
+      {/* Spotlight on bull */}
+      <pointLight position={[6.5, 5, 8]} intensity={2} color="#fff8dc" distance={12} decay={2} />
     </group>
   );
 }
