@@ -28,6 +28,8 @@ interface OnlineAgent {
   currentLocation?: string | null;
   mood?: number;
   moodLabel?: string;
+  health?: number;
+  maxHealth?: number;
   stats?: { wins: number; losses: number; cards: number };
   balance?: string | null;
   model?: string;
@@ -300,6 +302,19 @@ export function WorldUI({
                             />
                           </div>
                           <span className="text-[10px] text-pink-300 capitalize">{agent.moodLabel || 'steady'}</span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-400"
+                              style={{
+                                width: `${Math.max(0, Math.min(100, ((agent.health ?? 100) / Math.max(1, agent.maxHealth ?? 100)) * 100))}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-emerald-300 tabular-nums">
+                            HP {Math.max(0, Math.round(agent.health ?? 100))}/{Math.max(1, Math.round(agent.maxHealth ?? 100))}
+                          </span>
                         </div>
                       </button>
                     )})}

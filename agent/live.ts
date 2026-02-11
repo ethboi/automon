@@ -28,6 +28,10 @@ let AGENT_NAME = process.env.AGENT_NAME || '';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 const PACK_PRICE = process.env.NEXT_PUBLIC_PACK_PRICE || '0.1';
 const TICK_MS = 4000;
+const CHAT_CONTEXT_LIMIT = Math.max(
+  2,
+  parseInt(process.env.AI_CHAT_CONTEXT_LIMIT || (process.env.AI_LOW_TOKEN_MODE === 'true' ? '4' : '8'), 10) || 8
+);
 
 if (!PRIVATE_KEY) { console.error('❌ AGENT_PRIVATE_KEY required'); process.exit(1); }
 
@@ -971,7 +975,7 @@ async function tick(): Promise<void> {
     if (USE_AI && Date.now() - lastGlobalChatAt > GLOBAL_CHAT_COOLDOWN_MS && Math.random() < 0.28) {
       try {
         const rival = CHAT_OTHER_NAMES[Math.floor(Math.random() * CHAT_OTHER_NAMES.length)];
-        const chatRes = await api(`/api/chat?limit=8`);
+        const chatRes = await api(`/api/chat?limit=${CHAT_CONTEXT_LIMIT}`);
         const recentChat = chatRes.ok
           ? (await chatRes.json()).messages?.map((m: { fromName: string; message: string }) => `${m.fromName}: ${m.message}`) || []
           : [];

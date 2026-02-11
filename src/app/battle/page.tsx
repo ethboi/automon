@@ -213,7 +213,45 @@ export default function BattlePage() {
       const res = await fetch(`/api/battle/${battleId}`);
       const data = await res.json();
       if (!res.ok || !data?.battle) throw new Error(data?.error || 'Failed to load active battle');
-      setCurrentBattle(data.battle as Battle);
+      const battle = data.battle as Battle;
+      const addr = address?.toLowerCase();
+      const isParticipant = !!addr && (
+        battle.player1?.address?.toLowerCase() === addr ||
+        battle.player2?.address?.toLowerCase() === addr
+      );
+
+      // Spectator auto-recovery: if an active battle is still at turn 0 with no rounds,
+      // trigger server-side AI simulation so Watch Live lands in full replay view.
+      const looksStuckAtStart = (
+        battle.status === 'active' &&
+        battle.currentTurn === 0 &&
+        (!battle.rounds || battle.rounds.length === 0) &&
+        !!battle.player1?.ready &&
+        !!battle.player2?.ready
+      );
+
+      if (!isParticipant && looksStuckAtStart) {
+        const resumeRes = await fetch('/api/battle/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ battleId, action: 'start_simulation' }),
+        });
+        const resumeData = await resumeRes.json();
+        if (resumeRes.ok && resumeData?.battleLog) {
+          setBattleLog(resumeData.battleLog as BattleLog);
+          setView('replay');
+          await fetchData();
+          return;
+        }
+      }
+
+      // If already complete (or simulation just completed), open regular replay for spectators.
+      if (!isParticipant && battle.status === 'complete') {
+        await watchReplay(battleId);
+        return;
+      }
+
+      setCurrentBattle(battle);
       setView('battle');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to open live battle');
