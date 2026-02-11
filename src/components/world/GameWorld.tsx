@@ -247,7 +247,7 @@ function Scene({
       />
       <TradingPost position={WORLD_LOCATIONS.trading_post.position} />
       <group position={WORLD_LOCATIONS.crystal_caves.position}>
-        <CrystalCaves hovered={false} />
+        <CrystalCaves />
       </group>
 
       {Object.entries(WORLD_LOCATIONS)
