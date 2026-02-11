@@ -574,48 +574,163 @@ function Roads() {
         <meshStandardMaterial color="#8B7355" transparent opacity={0.5} roughness={0.9} />
       </mesh>
 
-      {/* Main cottage */}
+      {/* Main cottage — two-story manor */}
       <group position={[0, 0, -2]}>
-        {/* Walls */}
-        <mesh position={[0, 1.2, 0]} castShadow>
-          <boxGeometry args={[4, 2.4, 3.5]} />
-          <meshStandardMaterial color="#d4a574" roughness={0.85} />
+        {/* Stone foundation */}
+        <mesh position={[0, 0.15, 0]} castShadow>
+          <boxGeometry args={[4.4, 0.3, 4]} />
+          <meshStandardMaterial color="#6b7280" roughness={0.95} />
         </mesh>
-        {/* Roof — two tilted planes */}
+
+        {/* Main body — first floor */}
+        <mesh position={[0, 1.2, 0]} castShadow>
+          <boxGeometry args={[4, 2.1, 3.5]} />
+          <meshStandardMaterial color="#e8dcc8" roughness={0.8} />
+        </mesh>
+
+        {/* Darker timber beams — half-timbered look */}
+        {/* Horizontal beams */}
+        {[0.2, 1.2, 2.25].map((y, i) => (
+          <mesh key={`hbeam-${i}`} position={[0, y, 1.76]} castShadow>
+            <boxGeometry args={[4.05, 0.08, 0.06]} />
+            <meshStandardMaterial color="#4a3520" roughness={0.9} />
+          </mesh>
+        ))}
+        {/* Vertical beams */}
+        {[-2, -0.8, 0.8, 2].map((x, i) => (
+          <mesh key={`vbeam-${i}`} position={[x, 1.2, 1.76]} castShadow>
+            <boxGeometry args={[0.08, 2.1, 0.06]} />
+            <meshStandardMaterial color="#4a3520" roughness={0.9} />
+          </mesh>
+        ))}
+
+        {/* Roof — two tilted thick panels */}
         {(() => {
-          const w = 4.2, h = 1.6, d = 3.8;
+          const w = 4.6, h = 1.8, d = 4;
           const angle = Math.atan2(h, w / 2);
           const slope = Math.sqrt((w / 2) ** 2 + h ** 2);
           return (
             <>
-              <mesh position={[-w / 4, 2.4 + h / 2, 0]} rotation={[0, 0, angle]} castShadow>
-                <boxGeometry args={[slope, 0.12, d]} />
-                <meshStandardMaterial color="#8B4513" roughness={0.9} />
+              <mesh position={[-w / 4, 2.25 + h / 2, 0]} rotation={[0, 0, angle]} castShadow>
+                <boxGeometry args={[slope + 0.1, 0.2, d]} />
+                <meshStandardMaterial color="#8B4513" roughness={0.85} />
               </mesh>
-              <mesh position={[w / 4, 2.4 + h / 2, 0]} rotation={[0, 0, -angle]} castShadow>
-                <boxGeometry args={[slope, 0.12, d]} />
-                <meshStandardMaterial color="#8B4513" roughness={0.9} />
+              <mesh position={[w / 4, 2.25 + h / 2, 0]} rotation={[0, 0, -angle]} castShadow>
+                <boxGeometry args={[slope + 0.1, 0.2, d]} />
+                <meshStandardMaterial color="#8B4513" roughness={0.85} />
+              </mesh>
+              {/* Ridge beam */}
+              <mesh position={[0, 2.25 + h, 0]} castShadow>
+                <boxGeometry args={[0.15, 0.15, d + 0.2]} />
+                <meshStandardMaterial color="#5a3218" roughness={0.9} />
               </mesh>
             </>
           );
         })()}
-        {/* Door */}
-        <mesh position={[0, 0.7, 1.76]}>
-          <boxGeometry args={[0.8, 1.4, 0.05]} />
-          <meshStandardMaterial color="#5a3a1a" roughness={0.9} />
+
+        {/* Front door with frame */}
+        <mesh position={[0, 0.15, 1.76]}>
+          <boxGeometry args={[1.1, 0.06, 0.06]} />
+          <meshStandardMaterial color="#4a3520" roughness={0.9} />
         </mesh>
-        {/* Windows */}
+        <mesh position={[0, 0.85, 1.76]}>
+          <boxGeometry args={[0.9, 1.5, 0.08]} />
+          <meshStandardMaterial color="#5c3317" roughness={0.8} />
+        </mesh>
+        {/* Door handle */}
+        <mesh position={[0.3, 0.85, 1.84]}>
+          <sphereGeometry args={[0.06, 8, 8]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.2} />
+        </mesh>
+        {/* Door arch */}
+        <mesh position={[0, 1.65, 1.76]}>
+          <boxGeometry args={[1.1, 0.1, 0.06]} />
+          <meshStandardMaterial color="#4a3520" roughness={0.9} />
+        </mesh>
+
+        {/* Windows with shutters */}
         {[-1.2, 1.2].map((x, i) => (
-          <mesh key={`win-${i}`} position={[x, 1.4, 1.76]}>
-            <boxGeometry args={[0.6, 0.5, 0.05]} />
-            <meshStandardMaterial color="#87CEEB" transparent opacity={0.7} roughness={0.3} />
+          <group key={`win-${i}`} position={[x, 1.5, 1.76]}>
+            {/* Glass */}
+            <mesh>
+              <boxGeometry args={[0.7, 0.6, 0.04]} />
+              <meshStandardMaterial color="#87CEEB" emissive="#93c5fd" emissiveIntensity={0.15} transparent opacity={0.8} />
+            </mesh>
+            {/* Cross frame */}
+            <mesh position={[0, 0, 0.03]}>
+              <boxGeometry args={[0.72, 0.06, 0.03]} />
+              <meshStandardMaterial color="#4a3520" />
+            </mesh>
+            <mesh position={[0, 0, 0.03]}>
+              <boxGeometry args={[0.06, 0.62, 0.03]} />
+              <meshStandardMaterial color="#4a3520" />
+            </mesh>
+            {/* Shutters */}
+            <mesh position={[-0.42, 0, 0.02]}>
+              <boxGeometry args={[0.12, 0.65, 0.04]} />
+              <meshStandardMaterial color="#2d5a27" roughness={0.8} />
+            </mesh>
+            <mesh position={[0.42, 0, 0.02]}>
+              <boxGeometry args={[0.12, 0.65, 0.04]} />
+              <meshStandardMaterial color="#2d5a27" roughness={0.8} />
+            </mesh>
+            {/* Window box with flowers */}
+            <mesh position={[0, -0.38, 0.1]}>
+              <boxGeometry args={[0.7, 0.12, 0.15]} />
+              <meshStandardMaterial color="#5a3a1a" roughness={0.9} />
+            </mesh>
+            {[-0.2, 0, 0.2].map((fx, fi) => (
+              <mesh key={fi} position={[fx, -0.28, 0.12]}>
+                <sphereGeometry args={[0.06, 6, 6]} />
+                <meshStandardMaterial color={fi === 1 ? '#f472b6' : '#ef4444'} roughness={0.5} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+
+        {/* Side windows */}
+        {[[-2.01, 1.5, 0], [2.01, 1.5, 0], [-2.01, 1.5, -1.2], [2.01, 1.5, -1.2]].map(([x, y, z], i) => (
+          <mesh key={`swin-${i}`} position={[x, y, z]} rotation={[0, Math.PI / 2, 0]}>
+            <boxGeometry args={[0.5, 0.5, 0.04]} />
+            <meshStandardMaterial color="#87CEEB" emissive="#93c5fd" emissiveIntensity={0.1} transparent opacity={0.7} />
           </mesh>
         ))}
-        {/* Chimney */}
-        <mesh position={[1.4, 3.9, -0.5]} castShadow>
-          <boxGeometry args={[0.5, 1.4, 0.5]} />
-          <meshStandardMaterial color="#6b5b45" roughness={0.9} />
+
+        {/* Chimney — brick */}
+        <mesh position={[1.4, 3.5, -0.8]} castShadow>
+          <boxGeometry args={[0.6, 2, 0.6]} />
+          <meshStandardMaterial color="#8b4513" roughness={0.9} />
         </mesh>
+        <mesh position={[1.4, 4.55, -0.8]}>
+          <boxGeometry args={[0.7, 0.15, 0.7]} />
+          <meshStandardMaterial color="#6b3a14" />
+        </mesh>
+
+        {/* Porch with roof */}
+        <mesh position={[0, 0.08, 2.4]} receiveShadow>
+          <boxGeometry args={[2.5, 0.12, 1.2]} />
+          <meshStandardMaterial color="#8b7355" roughness={0.9} />
+        </mesh>
+        {/* Porch step */}
+        <mesh position={[0, 0.02, 3.1]} receiveShadow>
+          <boxGeometry args={[1.8, 0.06, 0.3]} />
+          <meshStandardMaterial color="#7a6548" roughness={0.9} />
+        </mesh>
+        {/* Porch columns */}
+        {[-0.95, 0.95].map((x, i) => (
+          <mesh key={`pcol-${i}`} position={[x, 1.0, 2.9]} castShadow>
+            <boxGeometry args={[0.12, 1.8, 0.12]} />
+            <meshStandardMaterial color="#e8e0d8" roughness={0.7} />
+          </mesh>
+        ))}
+        {/* Porch awning */}
+        <mesh position={[0, 1.95, 2.6]} castShadow rotation={[0.1, 0, 0]}>
+          <boxGeometry args={[2.6, 0.1, 1.2]} />
+          <meshStandardMaterial color="#8B4513" roughness={0.85} />
+        </mesh>
+
+        {/* Warm light from windows at night */}
+        <pointLight position={[0, 1.3, 2]} color="#fde68a" intensity={0.5} distance={4} />
       </group>
 
       {/* Stables — open-front barn to the right */}
