@@ -6,6 +6,18 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 const CLAUDE_MODEL_ID = 'claude-sonnet-4-20250514';
+const LOW_TOKEN_MODE = process.env.AI_LOW_TOKEN_MODE === 'true';
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function tokenLimit(envName: string, normal: number, low: number): number {
+  return envInt(envName, LOW_TOKEN_MODE ? low : normal);
+}
 
 // AI Personalities for more interesting battles
 const AI_PERSONALITIES: Record<string, AIPersonality> = {
@@ -88,7 +100,7 @@ function getOpponentMoveHistory(battle: Battle, playerAddress: string): string {
 
   if (battle.rounds.length === 0) return "No previous moves - first turn";
 
-  const recentRounds = battle.rounds.slice(-5);
+  const recentRounds = battle.rounds.slice(-(LOW_TOKEN_MODE ? 3 : 5));
   return recentRounds.map((round) => {
     const oppMove = isPlayer1 ? round.player2Move : round.player1Move;
     const myMove = isPlayer1 ? round.player1Move : round.player2Move;
@@ -208,7 +220,7 @@ export async function getAgentDecision(
   try {
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL_ID,
-      max_tokens: 800,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_BATTLE_MOVE', 800, 280),
       system: BATTLE_SYSTEM_PROMPT + personalityHint,
       messages: [
         {
@@ -364,7 +376,7 @@ Respond with JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 400,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_PACK_DECISION', 400, 180),
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -437,7 +449,7 @@ Respond with JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_JOIN_DECISION', 500, 200),
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -517,7 +529,7 @@ Respond with JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 400,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_SELECT_CARDS', 400, 180),
       messages: [{ role: 'user', content: prompt }],
     });
 

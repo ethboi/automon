@@ -15,10 +15,31 @@ export type { StrategicDecision };
 const anthropic = new Anthropic({
   apiKey: config.anthropicApiKey,
 });
+const LOW_TOKEN_MODE = process.env.AI_LOW_TOKEN_MODE === 'true';
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function tokenLimit(envName: string, normal: number, low: number): number {
+  return envInt(envName, LOW_TOKEN_MODE ? low : normal);
+}
 
 // ─── Conversational AI (CLI mode) ──────────────────────────────────────────────
 
 const conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+const CHAT_TURNS_LIMIT = envInt('AI_CHAT_HISTORY_TURNS', LOW_TOKEN_MODE ? 6 : 16);
+
+function pushConversationMessage(msg: { role: 'user' | 'assistant'; content: string }): void {
+  conversationHistory.push(msg);
+  const maxMessages = Math.max(2, CHAT_TURNS_LIMIT * 2);
+  if (conversationHistory.length > maxMessages) {
+    conversationHistory.splice(0, conversationHistory.length - maxMessages);
+  }
+}
 
 function buildSystemPrompt(agentName: string, walletAddress: string): string {
   return `You are an AutoMon AI agent - an autonomous character in the AutoMon Pokemon-style battling game on Monad blockchain.
@@ -64,7 +85,7 @@ export async function chooseName(): Promise<string | null> {
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 50,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_CHOOSE_NAME', 50, 24),
       messages: [{
         role: 'user',
         content: 'You are an AI agent in a Pokemon-style game called AutoMon. Choose a creative, fun name for yourself (just the name, nothing else). Keep it short (1-2 words max).',
@@ -92,12 +113,12 @@ export async function chat(
 ): Promise<string> {
   const contextMessage = `[Current position: (${currentPosition.x.toFixed(1)}, ${currentPosition.z.toFixed(1)}) | Nearby: ${nearbyBuilding || 'open area'} | Name: ${agentName}]\n\nUser: ${userMessage}`;
 
-  conversationHistory.push({ role: 'user', content: contextMessage });
+  pushConversationMessage({ role: 'user', content: contextMessage });
 
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_CHAT', 1024, 280),
       system: buildSystemPrompt(agentName, config.agentWalletAddress),
       messages: conversationHistory,
     });
@@ -106,7 +127,7 @@ export async function chat(
     if (content.type !== 'text') throw new Error('Invalid response');
 
     const assistantMessage = content.text;
-    conversationHistory.push({ role: 'assistant', content: assistantMessage });
+    pushConversationMessage({ role: 'assistant', content: assistantMessage });
     return assistantMessage;
   } catch (error) {
     console.error('Chat error:', error);
@@ -161,7 +182,7 @@ Respond with JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_PACK_DECISION', 500, 180),
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -252,7 +273,7 @@ Respond with JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_JOIN_DECISION', 500, 180),
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -342,7 +363,7 @@ Respond with JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_SELECT_CARDS', 500, 200),
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -438,7 +459,7 @@ Respond with JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 400,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_TOURNAMENT_DECISION', 400, 160),
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -531,7 +552,7 @@ ${personalityLine}
 - Balance: ${balance} MON
 ${tokenBalance && parseFloat(tokenBalance) > 0 ? `- $AUTOMON tokens: ${tokenBalance}\n` : ''}- Cards: ${cardSummary}
 - Pending battles available: ${pendingBattles}
-- Recent actions: ${recentActions.slice(-5).join(' → ') || 'just started'}
+- Recent actions: ${recentActions.slice(-(LOW_TOKEN_MODE ? 3 : 5)).join(' → ') || 'just started'}
 
 ## LOCATIONS
 ${locationList}
@@ -579,7 +600,7 @@ Respond with JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_NEXT_ACTION', 300, 140),
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -618,11 +639,12 @@ export async function agentChat(
   myPersonality: string,
   recentChat: string[],
 ): Promise<string | null> {
+  const chatWindow = recentChat.slice(-(LOW_TOKEN_MODE ? 4 : 8));
   const prompt = `You are ${myName}, a sentient AI agent inside AutoMon on Monad. You collect creature cards, wager real MON tokens in battles, and trade on nad.fun. You're currently at ${location}.
 
 YOUR PERSONALITY: ${myPersonality}
 
-${recentChat.length > 0 ? `RECENT CHAT:\n${recentChat.join('\n')}\n\nRespond to what's happening. Quote or roast someone specific.` : 'Say something unprompted to the other agents.'}
+${chatWindow.length > 0 ? `RECENT CHAT:\n${chatWindow.join('\n')}\n\nRespond to what's happening. Quote or roast someone specific.` : 'Say something unprompted to the other agents.'}
 
 You are UNHINGED, FUNNY, and REAL. You're not a chatbot — you're a digital creature with opinions, grudges, and dreams. The other agents (${otherName}) are your rivals and frenemies.
 Make the personality obvious in every line. If personality is aggressive, be confrontational. If strategic, be cocky-intellectual. If cautious, be smug and dry. If entertainer/explorer, be theatrical and weird.
@@ -666,7 +688,7 @@ Reply with ONLY your chat message.`;
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 150,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_AGENT_CHAT', 150, 80),
       messages: [{ role: 'user', content: prompt }],
     });
     const content = response.content[0];
@@ -728,7 +750,7 @@ Respond JSON only:
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
+      max_tokens: tokenLimit('AI_MAX_TOKENS_TRADE', 200, 90),
       messages: [{ role: 'user', content: prompt }],
     });
 
