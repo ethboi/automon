@@ -739,12 +739,12 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
         await trySettleBattle(openBattle.battleId, data.winner);
         await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
       } else {
-        console.log(`[${ts()}]   ✅ Cards selected, running simulation locally...`);
-        // Fetch full battle data and simulate agent-side
+        // Check if both players have cards selected for simulation
         const battleRes = await api(`/api/battle/${openBattle.battleId}`);
         if (battleRes.ok) {
           const { battle: fullBattle } = await battleRes.json();
           if (fullBattle?.player1?.cards?.length && fullBattle?.player2?.cards?.length) {
+            console.log(`[${ts()}]   ✅ Both players ready, running simulation locally...`);
             const simResult = await runBattleSimulation(fullBattle, API_URL, api);
             if (simResult) {
               const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
@@ -754,10 +754,13 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
               await logAction('battling', `Battle ${result}! vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
               return true;
             }
+            console.log(`[${ts()}]   ⚠️ Simulation error`);
+            lastBattleTime = Date.now();
+          } else {
+            // Opponent hasn't selected cards yet — periodic check will simulate later
+            console.log(`[${ts()}]   ⏳ Opponent hasn't selected cards yet — will auto-simulate when ready`);
           }
         }
-        console.log(`[${ts()}]   ⚠️ Simulation failed`);
-        lastBattleTime = Date.now();
         await logAction('battling', `Joined battle vs ${openBattle.player1.address.slice(0, 8)}...`, 'Town Arena', aiReason);
       }
       return true;
@@ -921,13 +924,9 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
 
 // ─── Main Loop ─────────────────────────────────────────────────────────────────
 
-let pendingBattleCheckCounter = 0;
-
 async function tick(): Promise<void> {
-  // Check for pending user battles every 3 ticks (~12s)
-  pendingBattleCheckCounter++;
-  if (pendingBattleCheckCounter >= 3 && Date.now() - lastBattleTime > 60_000) {
-    pendingBattleCheckCounter = 0;
+  // Every tick: check for pending user battles to join
+  if (Date.now() - lastBattleTime > 30_000 && parseFloat(agentBalance) >= 0.05 && cardCount >= 3) {
     try {
       const res = await api('/api/battle/list?status=pending');
       if (res.ok) {
@@ -937,40 +936,41 @@ async function tick(): Promise<void> {
             b.status === 'pending' && b.player1.address.toLowerCase() !== ADDRESS.toLowerCase()
         );
         if (openBattle) {
-          console.log(`[${ts()}] 🔔 Found pending battle from user — joining!`);
-          const joined = await tryJoinBattle('Joining user battle');
+          console.log(`[${ts()}] 🔔 Found pending battle from user — auto-joining!`);
+          const joined = await tryJoinBattle('Auto-joining pending user battle');
           if (joined) return;
         }
       }
     } catch { /* best effort */ }
   }
 
-  // Check for active battles we're in that need simulation
-  if (pendingBattleCheckCounter === 1) {
-    try {
-      const res = await api(`/api/battle/list?address=${ADDRESS}&status=active`);
-      if (res.ok) {
-        const { battles } = await res.json();
-        for (const b of (battles || [])) {
-          if (b.currentTurn === 0 && (!b.rounds || b.rounds.length === 0) && b.player1?.ready && b.player2?.ready) {
-            console.log(`[${ts()}] 🔔 Active battle ${b.battleId.slice(0, 8)} needs simulation!`);
-            const fullRes = await api(`/api/battle/${b.battleId}`);
-            if (fullRes.ok) {
-              const { battle: fullBattle } = await fullRes.json();
-              if (fullBattle?.player1?.cards?.length && fullBattle?.player2?.cards?.length) {
-                const simResult = await runBattleSimulation(fullBattle, API_URL, api);
-                if (simResult) {
-                  console.log(`[${ts()}]   ⚔️ Simulation done — winner: ${simResult.winner.slice(0, 10)}`);
-                  lastBattleTime = Date.now();
-                  await trySettleBattle(b.battleId, simResult.winner);
-                }
+  // Every tick: check for active battles we're in that need simulation
+  try {
+    const res = await api(`/api/battle/list?address=${ADDRESS}&status=active`);
+    if (res.ok) {
+      const { battles } = await res.json();
+      for (const b of (battles || [])) {
+        if (!b.rounds || b.rounds.length === 0) {
+          console.log(`[${ts()}] ⚡ Active battle ${b.battleId.slice(0, 8)} needs simulation!`);
+          const fullRes = await api(`/api/battle/${b.battleId}`);
+          if (fullRes.ok) {
+            const { battle: fullBattle } = await fullRes.json();
+            if (fullBattle?.player1?.cards?.length >= 3 && fullBattle?.player2?.cards?.length >= 3) {
+              const simResult = await runBattleSimulation(fullBattle, API_URL, api);
+              if (simResult) {
+                const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+                console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
+                lastBattleTime = Date.now();
+                await trySettleBattle(b.battleId, simResult.winner);
+                await logAction('battling', `Battle ${result}! (auto-simulated user battle)`, 'Town Arena');
+                return;
               }
             }
           }
         }
       }
-    } catch { /* best effort */ }
-  }
+    }
+  } catch { /* best effort */ }
 
   console.log(`[${ts()}] tick: pos=(${posX.toFixed(0)},${posZ.toFixed(0)}) target=${target.name}`);
   const dx = target.x - posX;
