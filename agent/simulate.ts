@@ -1,12 +1,8 @@
 /**
  * Agent-side battle simulation.
- * Fetches battle data, runs deterministic sim with AI move decisions via Claude,
- * then POSTs result back to the API. No Vercel timeout!
+ * Deterministic smart AI — no Claude API calls per turn.
+ * Runs instantly, POSTs result back to the API.
  */
-import Anthropic from '@anthropic-ai/sdk';
-
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
 // ─── Types (minimal, matching server) ───
 
@@ -258,59 +254,65 @@ function resolveTurn(battle: Battle, move1: BattleMove, move2: BattleMove): { ev
   return { events, winner, turnLog };
 }
 
-// ─── AI Move Decision via Claude ───
+// ─── Element advantage map ───
+const ELEM_ADVANTAGE: Record<string, string[]> = {
+  fire: ['earth', 'air'], water: ['fire'], earth: ['water', 'light'],
+  light: ['dark'], dark: ['light', 'water'], air: ['earth'],
+};
+
+function hasAdvantage(atk: string, def: string): boolean {
+  return (ELEM_ADVANTAGE[atk.toLowerCase()] || []).includes(def.toLowerCase());
+}
+
+// ─── Smart deterministic AI (no API calls) ───
 
 async function getAIMove(battle: Battle, playerAddress: string): Promise<BattleMove> {
   const isP1 = battle.player1.address.toLowerCase() === playerAddress.toLowerCase();
   const myCards = isP1 ? battle.player1.cards : battle.player2.cards;
-  const oppCards = isP1 ? battle.player2.cards : battle.player1.cards;
   const myActive = getActiveCard(isP1 ? battle.player1 : battle.player2);
   const oppActive = getActiveCard(isP1 ? battle.player2 : battle.player1);
+  const bench = myCards.filter(c => !c.fainted && !c.isActive);
 
-  const prompt = `You're an AI battler in AutoMon. Pick the best move.
-
-YOUR ACTIVE: ${myActive.name} (${myActive.element}) HP:${myActive.hp}/${myActive.maxHp} ATK:${myActive.attack} DEF:${myActive.defense} SPD:${myActive.speed}
-Ability: ${myActive.ability?.name || 'none'} (${myActive.ability?.damage || 0} dmg, CD: ${myActive.ability?.currentCooldown || 0}/${myActive.ability?.cooldown || 0})
-
-OPPONENT: ${oppActive.name} (${oppActive.element}) HP:${oppActive.hp}/${oppActive.maxHp} ATK:${oppActive.attack} DEF:${oppActive.defense}
-
-Your bench: ${myCards.filter(c => !c.fainted && !c.isActive).map(c => `${c.name}(${c.element} HP:${c.hp})`).join(', ') || 'none'}
-
-TRIANGLE: attack > skill > defend > attack. Winner gets 1.3x damage bonus.
-Element chart: fire>earth/air, water>fire, earth>water/light, light>dark, dark>light/water
-
-Turn ${battle.currentTurn}. Reply ONLY with JSON: {"action":"attack"|"defend"|"skill"|"switch","switchTo":INDEX_OR_NULL,"reasoning":"brief why"}`;
-
-  try {
-    const res = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 150,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const text = (res.content[0] as { type: string; text: string }).text;
-    const json = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
-    const action = ['attack', 'defend', 'skill', 'switch'].includes(json.action) ? json.action : 'attack';
-
-    // Validate
-    if (action === 'skill' && myActive.ability?.currentCooldown && myActive.ability.currentCooldown > 0) {
-      return { action: 'attack', reasoning: `${myActive.ability.name} on cooldown — attacking instead` };
+  // 1. If low HP (<25%) and bench available, consider switch to element counter
+  if (myActive.hp < myActive.maxHp * 0.25 && bench.length > 0) {
+    const counter = bench.find(c => hasAdvantage(c.element, oppActive.element));
+    if (counter) {
+      return { action: 'switch', switchTo: myCards.indexOf(counter), reasoning: `${myActive.name} critically wounded — switching to ${counter.name} for element advantage` };
     }
-    if (action === 'switch') {
-      const bench = myCards.filter(c => !c.fainted && !c.isActive);
-      if (bench.length === 0) return { action: 'attack', reasoning: 'No bench cards to switch' };
-      const idx = json.switchTo ?? myCards.indexOf(bench[0]);
-      return { action: 'switch', switchTo: idx, reasoning: json.reasoning || 'Switching' };
+    // Defend to buy time if very low
+    if (myActive.hp < myActive.maxHp * 0.15) {
+      return { action: 'defend', reasoning: `${myActive.name} critically wounded at ${Math.round(myActive.hp/myActive.maxHp*100)}% HP — raising defenses` };
     }
-    return { action, reasoning: json.reasoning || '' };
-  } catch (e) {
-    console.log(`[simulate] AI move error: ${(e as Error).message?.slice(0, 60)}`);
-    // Fallback: random weighted
-    const r = Math.random();
-    if (r < 0.5) return { action: 'attack', reasoning: 'Fallback — going aggressive' };
-    if (r < 0.75) return { action: 'skill', reasoning: 'Fallback — using skill' };
-    return { action: 'defend', reasoning: 'Fallback — playing safe' };
   }
+
+  // 2. Use skill if available and off cooldown
+  if (myActive.ability && (!myActive.ability.currentCooldown || myActive.ability.currentCooldown <= 0)) {
+    return { action: 'skill', reasoning: `${myActive.name} unleashes ${myActive.ability.name}!` };
+  }
+
+  // 3. If opponent has element advantage and bench has counter, switch (max once per 3 turns)
+  if (hasAdvantage(oppActive.element, myActive.element) && bench.length > 0 && battle.currentTurn % 3 === 0) {
+    const counter = bench.find(c => hasAdvantage(c.element, oppActive.element));
+    if (counter) {
+      return { action: 'switch', switchTo: myCards.indexOf(counter), reasoning: `Bad matchup — sending in ${counter.name}` };
+    }
+  }
+
+  // 4. Defend occasionally when HP is moderate and opponent is strong
+  if (myActive.hp < myActive.maxHp * 0.4 && oppActive.attack > myActive.defense && Math.random() < 0.25) {
+    return { action: 'defend', reasoning: `${myActive.name} bracing for impact` };
+  }
+
+  // 5. Default: attack
+  return { action: 'attack', reasoning: `${myActive.name} attacks ${oppActive.name}!` };
+}
+
+// Keep old fallback structure for compatibility
+function _fallbackMove(): BattleMove {
+  const r = Math.random();
+  if (r < 0.5) return { action: 'attack', reasoning: 'Fallback — going aggressive' };
+  if (r < 0.75) return { action: 'skill', reasoning: 'Fallback — using skill' };
+  return { action: 'defend', reasoning: 'Fallback — playing safe' };
 }
 
 // ─── Main simulation runner ───
