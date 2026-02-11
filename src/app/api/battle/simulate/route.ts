@@ -193,6 +193,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Battle log not found' }, { status: 404 });
     }
 
+    // Enrich with agent names if missing
+    if (!battleLog.player1.name || !battleLog.player2.name) {
+      const agents = await db.collection('agents').find({
+        address: { $in: [battleLog.player1.address, battleLog.player2.address].map(a => a.toLowerCase()) }
+      }).toArray();
+      const nameMap = new Map(agents.map(a => [a.address?.toLowerCase(), a.name]));
+      if (!battleLog.player1.name) battleLog.player1.name = nameMap.get(battleLog.player1.address.toLowerCase()) || undefined;
+      if (!battleLog.player2.name) battleLog.player2.name = nameMap.get(battleLog.player2.address.toLowerCase()) || undefined;
+    }
+
+    // Attach card selection reasoning from battles collection
+    const battle = await db.collection('battles').findOne({ battleId });
+    if (battle) {
+      if (battle.player1?.cardSelectionReasoning) {
+        (battleLog.player1 as any).cardSelectionReasoning = battle.player1.cardSelectionReasoning;
+      }
+      if (battle.player2?.cardSelectionReasoning) {
+        (battleLog.player2 as any).cardSelectionReasoning = battle.player2.cardSelectionReasoning;
+      }
+    }
+
     return NextResponse.json({ battleLog });
 
   } catch (error) {

@@ -132,7 +132,18 @@ export default function BattlePage() {
       const res = await fetch(`/api/battle/simulate?battleId=${battleId}`);
       if (!res.ok) throw new Error('Failed to fetch battle log');
       const data = await res.json();
-      if (data.battleLog) { setBattleLog(data.battleLog); setView('replay'); }
+      if (data.battleLog) {
+        // Inject agent names from battles list
+        const battle = battles.find(b => b.battleId === battleId);
+        if (battle) {
+          const p1n = playerName(battle.player1);
+          const p2n = playerName(battle.player2);
+          if (p1n && !data.battleLog.player1.name) data.battleLog.player1.name = p1n;
+          if (p2n && !data.battleLog.player2.name) data.battleLog.player2.name = p2n;
+        }
+        setBattleLog(data.battleLog);
+        setView('replay');
+      }
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed to load replay'); }
   };
 
