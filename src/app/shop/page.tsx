@@ -134,14 +134,14 @@ export default function ShopPage() {
 
       {/* Page header */}
       <div className="mb-4 sm:mb-8">
-        <div className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-400/20 rounded-full px-3 py-1 mb-3">
-          <span className="w-2 h-2 rounded-full bg-cyan-300 animate-pulse" />
-          <span className="text-xs font-semibold tracking-wide text-cyan-200 uppercase">Pack Market</span>
+        <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-400/20 rounded-full px-3 py-1 mb-3">
+          <span className="text-sm">🏪</span>
+          <span className="text-xs font-semibold tracking-wide text-purple-200 uppercase">AutoMon Shop</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-2 bg-gradient-to-r from-white via-cyan-100 to-blue-200 bg-clip-text text-transparent">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-2 bg-gradient-to-r from-white via-purple-100 to-violet-200 bg-clip-text text-transparent">
           Card Shop
         </h1>
-        <p className="text-sm sm:text-base lg:text-lg text-gray-300">Purchase and open card packs to expand your collection</p>
+        <p className="text-sm sm:text-base lg:text-lg text-gray-400">Buy packs, collect AutoMons, build your team</p>
       </div>
 
       {/* Error display */}
@@ -172,10 +172,10 @@ export default function ShopPage() {
               </div>
 
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-2 sm:mb-3">
-                Monster Card Pack
+                AutoMon Card Pack
               </h2>
               <p className="text-purple-200 mb-4 sm:mb-6 text-sm sm:text-lg">
-                Contains 5 random monster cards
+                5 random AutoMon cards · minted on-chain
               </p>
 
               {/* Rarity odds */}
@@ -196,19 +196,26 @@ export default function ShopPage() {
 
             {/* Pack visual and buy button */}
             <div className="flex flex-col items-center">
-              <div className="relative mb-6">
+              <div className="relative mb-6 group cursor-pointer">
                 {/* Glow effect */}
-                <div className="absolute inset-0 bg-purple-500/30 blur-3xl rounded-full" />
+                <div className="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full group-hover:bg-purple-500/30 transition-all" />
 
-                {/* Pack box */}
-                <div className="relative w-40 h-48 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl shadow-2xl shadow-purple-500/30 flex items-center justify-center transform hover:scale-105 transition-transform duration-300 cursor-pointer group">
-                  <div className="absolute inset-2 border-2 border-white/20 rounded-xl" />
-                  <div className="text-7xl group-hover:animate-bounce-subtle">🎁</div>
-
-                  {/* Sparkles */}
-                  <div className="absolute -top-2 -right-2 text-2xl animate-bounce-subtle" style={{ animationDelay: '0.1s' }}>✨</div>
-                  <div className="absolute -bottom-2 -left-2 text-xl animate-bounce-subtle" style={{ animationDelay: '0.3s' }}>⭐</div>
+                {/* Stacked cards effect */}
+                <div className="relative w-36 h-48 sm:w-44 sm:h-56">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 to-purple-900 rounded-2xl rotate-[-6deg] translate-x-[-4px] opacity-60 shadow-lg" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-indigo-800 rounded-2xl rotate-[-3deg] translate-x-[-2px] opacity-80 shadow-lg" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl shadow-2xl shadow-purple-500/40 flex flex-col items-center justify-center transform group-hover:scale-105 group-hover:-translate-y-1 transition-all duration-300">
+                    <div className="absolute inset-2 border-2 border-white/15 rounded-xl" />
+                    <div className="text-5xl sm:text-6xl mb-2">⚡</div>
+                    <div className="text-xs sm:text-sm font-bold text-white/90 tracking-wider uppercase">AutoMon</div>
+                    <div className="text-[10px] sm:text-xs text-purple-200/70 mt-0.5">Card Pack</div>
+                    <div className="absolute -top-1.5 -right-1.5 w-7 h-7 sm:w-8 sm:h-8 bg-amber-400 rounded-full flex items-center justify-center text-xs sm:text-sm font-black text-amber-900 shadow-lg shadow-amber-400/30">5</div>
+                  </div>
                 </div>
+
+                {/* Sparkles */}
+                <div className="absolute -top-3 -right-3 text-xl animate-pulse" style={{ animationDelay: '0.1s' }}>✨</div>
+                <div className="absolute -bottom-2 -left-3 text-lg animate-pulse" style={{ animationDelay: '0.5s' }}>⭐</div>
               </div>
 
               <div className="text-center">
