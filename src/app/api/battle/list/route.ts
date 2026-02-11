@@ -39,11 +39,22 @@ export async function GET(request: NextRequest) {
       .limit(50)
       .toArray();
 
+    // Fetch agent names for all participants
+    const allAddresses = new Set<string>();
+    battles.forEach(b => {
+      allAddresses.add(b.player1.address.toLowerCase());
+      if (b.player2?.address) allAddresses.add(b.player2.address.toLowerCase());
+      if (b.winner) allAddresses.add(b.winner.toLowerCase());
+    });
+    const agents = await db.collection('agents').find({ address: { $in: [...allAddresses] } }).toArray();
+    const nameMap = new Map(agents.map(a => [a.address?.toLowerCase(), a.name]));
+
     // Remove sensitive card data from listings
     const sanitizedBattles = battles.map(battle => ({
       ...battle,
       player1: {
         address: battle.player1.address,
+        name: nameMap.get(battle.player1.address.toLowerCase()) || null,
         ready: battle.player1.ready,
         cardCount: battle.player1.cards?.length || 0,
         selectedCards: (battle.player1.cards || []).map((c: { name: string; element: string; rarity?: string }) => ({
@@ -54,6 +65,7 @@ export async function GET(request: NextRequest) {
       },
       player2: battle.player2 ? {
         address: battle.player2.address,
+        name: nameMap.get(battle.player2.address.toLowerCase()) || null,
         ready: battle.player2.ready,
         cardCount: battle.player2.cards?.length || 0,
         selectedCards: (battle.player2.cards || []).map((c: { name: string; element: string; rarity?: string }) => ({
@@ -62,6 +74,7 @@ export async function GET(request: NextRequest) {
           rarity: c.rarity,
         })),
       } : null,
+      winnerName: battle.winner ? nameMap.get(battle.winner.toLowerCase()) || null : null,
       lastRound: (battle.rounds || []).length > 0
         ? (() => {
             const r = battle.rounds[battle.rounds.length - 1];
