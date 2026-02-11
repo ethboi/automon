@@ -101,6 +101,7 @@ export async function GET(
       },
       stats: {
         balance,
+        tokenBalance: agent.tokenBalance || '0',
         cards: cardsCount,
         battles: battles.length,
         wins,

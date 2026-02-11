@@ -147,6 +147,7 @@ let totalMinted = 0;
 let isRunning = true;
 let agentHealth = 100;
 let agentBalance = '0';
+let agentTokenBalance = '0';
 let agentMaxHealth = 100;
 const recentActions: string[] = [];
 let lastBattleTime = 0;
@@ -222,7 +223,7 @@ async function updatePosition(): Promise<void> {
     const timeout = setTimeout(() => controller.abort(), 5000);
     await api('/api/agents/move', {
       method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME, activity, balance: agentBalance }),
+      body: JSON.stringify({ address: ADDRESS, position: { x: posX, y: 0, z: posZ }, name: AGENT_NAME, activity, balance: agentBalance, tokenBalance: agentTokenBalance }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -321,6 +322,12 @@ async function executeTrade(aiReason?: string): Promise<void> {
       console.log(`[${ts()}]   📊 Holding — no trade this time`);
       await logAction('trading_token', 'Analyzed the charts but decided to HOLD', 'Trading Post', decision.reasoning);
     }
+    // Refresh balances after trade
+    try {
+      agentTokenBalance = await getTokenBalance(PRIVATE_KEY);
+      const bal = ethers.formatEther(await provider.getBalance(wallet.address));
+      agentBalance = parseFloat(bal).toFixed(4);
+    } catch {}
   } catch (err) {
     console.error(`[${ts()}]   ❌ Trade failed:`, err);
     await logAction('trading_token', 'Wanted to trade but market was unstable', 'Trading Post', aiReason || 'Market analysis inconclusive');
@@ -912,6 +919,7 @@ async function tick(): Promise<void> {
           recentActions,
           pendingBattles,
           AI_PERSONALITY,
+          agentTokenBalance,
         );
 
         nextAction = decision.action;
@@ -977,7 +985,15 @@ async function main() {
 
   const balance = ethers.formatEther(await provider.getBalance(wallet.address));
   agentBalance = parseFloat(balance).toFixed(4);
-  console.log(`  Balance:  ${agentBalance} MON`);
+  // Token balance
+  if (process.env.AUTOMON_TOKEN_ADDRESS) {
+    try {
+      agentTokenBalance = await getTokenBalance(process.env.AGENT_PRIVATE_KEY!);
+      console.log(`  Balance:  ${agentBalance} MON | ${agentTokenBalance} $AUTOMON`);
+    } catch { console.log(`  Balance:  ${agentBalance} MON | $AUTOMON: N/A`); }
+  } else {
+    console.log(`  Balance:  ${agentBalance} MON`);
+  }
   console.log();
 
   // Register

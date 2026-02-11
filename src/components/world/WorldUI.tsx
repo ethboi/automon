@@ -108,6 +108,7 @@ function activityBadge(activity?: string | null): { icon: string; label: string;
   if (value.includes('battle') || value.includes('arena') || value.includes('duel')) return { icon: '⚔️', label: 'battling', cls: 'text-red-300 bg-red-500/10' };
   if (value.includes('fish') || value.includes('catch')) return { icon: '🎣', label: 'fishing', cls: 'text-sky-300 bg-sky-500/10' };
   if (value.includes('train')) return { icon: '🥊', label: 'training', cls: 'text-orange-300 bg-orange-500/10' };
+  if (value.includes('trading_token') || value.includes('bought') || value.includes('sold')) return { icon: '📈', label: 'trading $AUTOMON', cls: 'text-emerald-300 bg-emerald-500/10' };
   if (value.includes('trade') || value.includes('shop') || value.includes('market')) return { icon: '🛒', label: 'trading', cls: 'text-yellow-300 bg-yellow-500/10' };
   if (value.includes('rest') || value.includes('heal') || value.includes('sleep')) return { icon: '🛌', label: 'resting', cls: 'text-lime-300 bg-lime-500/10' };
   if (value.includes('move') || value.includes('wander') || value.includes('explor') || value.includes('walk')) return { icon: '🚶', label: 'wandering', cls: 'text-cyan-300 bg-cyan-500/10' };
@@ -123,6 +124,8 @@ const TX_ICONS: Record<string, string> = {
   nft_mint: '💎',
   escrow_deposit: '🔒',
   escrow_settle: '🔓',
+  token_buy: '📈',
+  token_sell: '📉',
 };
 
 export function WorldUI({
