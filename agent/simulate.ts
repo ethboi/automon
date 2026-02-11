@@ -280,7 +280,7 @@ function hasAdvantage(atk: string, def: string): boolean {
   return (ELEM_ADVANTAGE[atk.toLowerCase()] || []).includes(def.toLowerCase());
 }
 
-// ─── Smart deterministic AI (no API calls) ───
+// ─── Smart deterministic AI (no API calls, rich reasoning) ───
 
 async function getAIMove(battle: Battle, playerAddress: string): Promise<BattleMove> {
   const isP1 = battle.player1.address.toLowerCase() === playerAddress.toLowerCase();
@@ -288,39 +288,83 @@ async function getAIMove(battle: Battle, playerAddress: string): Promise<BattleM
   const myActive = getActiveCard(isP1 ? battle.player1 : battle.player2);
   const oppActive = getActiveCard(isP1 ? battle.player2 : battle.player1);
   const bench = myCards.filter(c => !c.fainted && !c.isActive);
+  const hpPct = Math.round(myActive.hp / myActive.maxHp * 100);
+  const oppHpPct = Math.round(oppActive.hp / oppActive.maxHp * 100);
+  const iHaveAdvantage = hasAdvantage(myActive.element, oppActive.element);
+  const theyHaveAdvantage = hasAdvantage(oppActive.element, myActive.element);
 
-  // 1. If low HP (<25%) and bench available, consider switch to element counter
-  if (myActive.hp < myActive.maxHp * 0.25 && bench.length > 0) {
+  // 1. Critical HP — switch to counter or defend
+  if (hpPct < 25 && bench.length > 0) {
     const counter = bench.find(c => hasAdvantage(c.element, oppActive.element));
     if (counter) {
-      return { action: 'switch', switchTo: myCards.indexOf(counter), reasoning: `${myActive.name} critically wounded — switching to ${counter.name} for element advantage` };
+      return { action: 'switch', switchTo: myCards.indexOf(counter),
+        reasoning: `${myActive.name} hanging on at ${hpPct}% HP — tagging in ${counter.name} (${counter.element}) for the ${oppActive.element} matchup` };
     }
-    // Defend to buy time if very low
-    if (myActive.hp < myActive.maxHp * 0.15) {
-      return { action: 'defend', reasoning: `${myActive.name} critically wounded at ${Math.round(myActive.hp/myActive.maxHp*100)}% HP — raising defenses` };
+    if (hpPct < 15) {
+      return { action: 'defend',
+        reasoning: `${myActive.name} barely standing at ${hpPct}% — digging in and bracing for impact, no good bench options` };
     }
   }
 
-  // 2. Use skill if available and off cooldown
+  // 2. Finish off low HP opponent — go aggressive
+  if (oppHpPct < 20 && myActive.attack > 30) {
+    if (myActive.ability && (!myActive.ability.currentCooldown || myActive.ability.currentCooldown <= 0)) {
+      return { action: 'skill',
+        reasoning: `${oppActive.name} is on the ropes at ${oppHpPct}% — ${myActive.name} goes for the KO with ${myActive.ability.name}!` };
+    }
+    return { action: 'attack',
+      reasoning: `${oppActive.name} hanging by a thread at ${oppHpPct}% — ${myActive.name} presses the advantage!` };
+  }
+
+  // 3. Use skill when available (with element context)
   if (myActive.ability && (!myActive.ability.currentCooldown || myActive.ability.currentCooldown <= 0)) {
-    return { action: 'skill', reasoning: `${myActive.name} unleashes ${myActive.ability.name}!` };
+    const elemNote = iHaveAdvantage ? ` — ${myActive.element} is super effective vs ${oppActive.element}!` :
+                     theyHaveAdvantage ? ` — need burst damage to overcome the ${oppActive.element} advantage` : '';
+    return { action: 'skill',
+      reasoning: `${myActive.name} charges up ${myActive.ability.name} (${myActive.ability.damage} power)${elemNote}` };
   }
 
-  // 3. If opponent has element advantage and bench has counter, switch (max once per 3 turns)
-  if (hasAdvantage(oppActive.element, myActive.element) && bench.length > 0 && battle.currentTurn % 3 === 0) {
+  // 4. Bad element matchup — swap to counter
+  if (theyHaveAdvantage && bench.length > 0 && battle.currentTurn % 3 === 0) {
     const counter = bench.find(c => hasAdvantage(c.element, oppActive.element));
     if (counter) {
-      return { action: 'switch', switchTo: myCards.indexOf(counter), reasoning: `Bad matchup — sending in ${counter.name}` };
+      return { action: 'switch', switchTo: myCards.indexOf(counter),
+        reasoning: `${oppActive.element} has the edge over ${myActive.element} — pivoting to ${counter.name} to flip the matchup` };
+    }
+    const neutral = bench.find(c => !hasAdvantage(oppActive.element, c.element));
+    if (neutral) {
+      return { action: 'switch', switchTo: myCards.indexOf(neutral),
+        reasoning: `${myActive.name} taking too much ${oppActive.element} damage — rotating ${neutral.name} in for a neutral matchup` };
     }
   }
 
-  // 4. Defend occasionally when HP is moderate and opponent is strong
-  if (myActive.hp < myActive.maxHp * 0.4 && oppActive.attack > myActive.defense && Math.random() < 0.25) {
-    return { action: 'defend', reasoning: `${myActive.name} bracing for impact` };
+  // 5. Defend when hurt and outgunned
+  if (hpPct < 40 && oppActive.attack > myActive.defense && Math.random() < 0.3) {
+    return { action: 'defend',
+      reasoning: `${myActive.name} at ${hpPct}% with ${oppActive.name}'s ${oppActive.attack} ATK bearing down — needs to buy a turn to survive` };
   }
 
-  // 5. Default: attack
-  return { action: 'attack', reasoning: `${myActive.name} attacks ${oppActive.name}!` };
+  // 6. Strategic defend when opponent likely to skill (every 4th turn pattern)
+  if (battle.currentTurn % 4 === 0 && hpPct > 50 && Math.random() < 0.2) {
+    return { action: 'defend',
+      reasoning: `${myActive.name} reads the rhythm and raises guard — anticipating ${oppActive.name}'s next big move` };
+  }
+
+  // 7. Attack with element context
+  if (iHaveAdvantage) {
+    return { action: 'attack',
+      reasoning: `${myActive.name} exploits the ${myActive.element} vs ${oppActive.element} advantage — pressing the attack!` };
+  }
+
+  // 8. Default attack with varied reasoning
+  const attackReasons = [
+    `${myActive.name} closes in on ${oppActive.name} with a direct strike`,
+    `${myActive.name} goes on the offensive — ${oppActive.name} at ${oppHpPct}% can't take many more hits`,
+    `No fancy plays needed — ${myActive.name} swings hard at ${oppActive.name}`,
+    `${myActive.name} keeps up the pressure, looking for an opening in ${oppActive.name}'s guard`,
+    `Steady aggression from ${myActive.name} — wearing ${oppActive.name} down turn by turn`,
+  ];
+  return { action: 'attack', reasoning: attackReasons[battle.currentTurn % attackReasons.length] };
 }
 
 // Keep old fallback structure for compatibility
