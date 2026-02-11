@@ -4,7 +4,7 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
-import { MapControls } from '@react-three/drei';
+import { MapControls, Text } from '@react-three/drei';
 
 import { Ground } from './Ground';
 import { Character } from './Character';
@@ -277,6 +277,7 @@ function Scene({
         ))}
 
       <Roads />
+      <WorldEdgeSign />
 
       {onlineAgents.filter(a => a.online).map((agent) => (
         <AICharacter
@@ -304,6 +305,51 @@ function Scene({
         walletAddress={walletAddress}
       />
     </>
+  );
+}
+
+function WorldEdgeSign() {
+  return (
+    <group position={[0, 0.25, 63]}>
+      {/* Back layer for fake depth/extrusion */}
+      <Text
+        position={[0, 3.9, -0.45]}
+        font="/fonts/GeistMonoVF.woff"
+        fontSize={4.6}
+        letterSpacing={0.08}
+        anchorX="center"
+        anchorY="middle"
+        color="#0b1022"
+        outlineWidth={0.03}
+        outlineColor="#020617"
+      >
+        MOLTIVERSE
+      </Text>
+      {/* Front glowing face */}
+      <Text
+        position={[0, 4.15, 0]}
+        font="/fonts/GeistMonoVF.woff"
+        fontSize={4.6}
+        letterSpacing={0.08}
+        anchorX="center"
+        anchorY="middle"
+        color="#e2e8f0"
+        outlineWidth={0.045}
+        outlineColor="#4338ca"
+      >
+        MOLTIVERSE
+      </Text>
+
+      {/* Underline plinth */}
+      <mesh position={[0, 0.75, -0.4]} receiveShadow castShadow>
+        <boxGeometry args={[40, 1.2, 2.4]} />
+        <meshStandardMaterial color="#1f2937" roughness={0.85} metalness={0.15} />
+      </mesh>
+      <mesh position={[0, 1.45, 0.7]} receiveShadow castShadow>
+        <boxGeometry args={[36, 0.35, 0.55]} />
+        <meshStandardMaterial color="#312e81" roughness={0.5} metalness={0.4} emissive="#312e81" emissiveIntensity={0.2} />
+      </mesh>
+    </group>
   );
 }
 
