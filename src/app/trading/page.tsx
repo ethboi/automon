@@ -19,7 +19,14 @@ interface AgentHolding {
   monBalance: string;
 }
 
-const TOKEN_ADDRESS = process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS || '';
+const PUBLIC_NETWORK = (process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase();
+const TOKEN_ADDRESS = (
+  (PUBLIC_NETWORK === 'mainnet'
+    ? process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS_MAINNET
+    : process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS_TESTNET) ||
+  process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS ||
+  ''
+);
 
 function timeAgo(d: string): string {
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);

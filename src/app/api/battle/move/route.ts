@@ -4,6 +4,7 @@ import { resolveTurn, validateMove } from '@/lib/battle';
 import { settleBattleOnChain } from '@/lib/blockchain';
 import { Battle } from '@/lib/types';
 import { logTransaction } from '@/lib/transactions';
+import { applyBattleMoodResult } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
         // Battle is over
         battle.status = 'complete';
         battle.winner = winner;
+        await applyBattleMoodResult(db, winner, battle.player1.address, battle.player2?.address);
 
         // Settle on-chain if escrow was used
         if (battle.escrowTxHash && process.env.ESCROW_CONTRACT_ADDRESS) {

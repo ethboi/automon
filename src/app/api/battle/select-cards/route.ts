@@ -5,6 +5,7 @@ import { getAgentDecision } from '@/lib/agent';
 import { settleBattleOnChain } from '@/lib/blockchain';
 import { Card, Battle, BattleMove, BattleLog } from '@/lib/types';
 import { ObjectId } from 'mongodb';
+import { applyBattleMoodResult } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -138,6 +139,7 @@ export async function POST(request: NextRequest) {
             },
           }
         );
+        await applyBattleMoodResult(db, battleLog.winner, battleForSim.player1.address, battleForSim.player2?.address);
 
         // Save battle log for replay
         await db.collection<BattleLog>('battleLogs').insertOne({

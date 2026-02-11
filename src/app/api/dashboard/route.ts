@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { explorerUrl } from '@/lib/transactions';
+import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,10 +97,12 @@ export async function GET() {
       const isOnline = a.lastSeen >= fiveMinAgo;
       const rawAction = a.currentAction || latest.action || (isOnline ? 'wandering' : null);
       const currentAction = rawAction?.toLowerCase() === 'came online' ? 'wandering' : rawAction;
+      const mood = clampMood(typeof a.mood === 'number' ? a.mood : DEFAULT_MOOD);
       return {
         address: a.address,
         name: a.name,
         personality: a.personality,
+        model: a.model || null,
         position: a.position,
         health,
         maxHealth,
@@ -107,9 +110,12 @@ export async function GET() {
         currentReason: a.currentReason || latest.reason || null,
         currentReasoning: a.currentReasoning || latest.reasoning || null,
         currentLocation: a.currentLocation || latest.location || null,
+        mood,
+        moodLabel: a.moodLabel || getMoodTier(mood),
         lastSeen: a.lastSeen,
         online: isOnline,
         balance: a.balance || null,
+        tokenBalance: a.tokenBalance || '0',
         stats,
       };
     });
@@ -124,6 +130,8 @@ export async function GET() {
         location: a.location,
         healthDelta: a.healthDelta,
         healthAfter: a.healthAfter,
+        moodDelta: a.moodDelta,
+        moodAfter: a.moodAfter,
         timestamp: a.timestamp,
       })),
       battles: recentBattles.map(b => ({

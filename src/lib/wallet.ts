@@ -3,6 +3,7 @@
 import { ethers } from 'ethers';
 import { SiweMessage } from 'siwe';
 import { CHAIN_CONFIG } from './blockchain';
+import { getEscrowContractAddress, getNftContractAddress } from './network';
 
 declare global {
   interface Window {
@@ -103,11 +104,7 @@ export function getEscrowContract() {
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
-  const contractAddress = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS;
-
-  if (!contractAddress) {
-    throw new Error('Escrow contract not configured');
-  }
+  const contractAddress = getEscrowContractAddress();
 
   const abi = [
     'function createBattle(bytes32 battleId) external payable',
@@ -120,10 +117,11 @@ export function getEscrowContract() {
 }
 
 async function resolveNFTContractAddress(): Promise<string> {
-  const fromPublicEnv =
-    process.env.NEXT_PUBLIC_AUTOMON_NFT_ADDRESS ||
-    process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS;
-  if (fromPublicEnv) return fromPublicEnv;
+  try {
+    return getNftContractAddress();
+  } catch {
+    // Fall through to server-assisted config fetch.
+  }
 
   const res = await fetch('/api/config/nft', { cache: 'no-store' });
   const data = await res.json();
