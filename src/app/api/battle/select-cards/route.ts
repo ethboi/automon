@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
-import { initializeBattleCard, simulateAIBattle, getActiveCard } from '@/lib/battle';
+import { initializeBattleCard, simulateAIBattle } from '@/lib/battle';
+import { getAgentDecision } from '@/lib/agent';
 import { settleBattleOnChain } from '@/lib/blockchain';
-import { Card, Battle, BattleMove, BattleLog, BattleCard } from '@/lib/types';
+import { Card, Battle, BattleMove, BattleLog } from '@/lib/types';
 import { ObjectId } from 'mongodb';
 export const dynamic = 'force-dynamic';
 
@@ -110,30 +111,9 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         };
 
-        // Fast deterministic move — no Claude API calls (instant simulation)
+        // Use real AI decisioning so replay reflects actual model reasoning
         const getAIMove = async (b: Battle, playerAddress: string): Promise<BattleMove> => {
-          const isP1 = b.player1.address.toLowerCase() === playerAddress.toLowerCase();
-          const myState = isP1 ? b.player1 : b.player2!;
-          const activeCard = getActiveCard(myState) as BattleCard;
-          const roll = Math.random();
-
-          // Smart-ish strategy: use ability when ready, guard when low HP, strike otherwise
-          if (activeCard.ability?.currentCooldown === 0 && roll < 0.4) {
-            return { action: 'skill', reasoning: `${activeCard.name} uses ${activeCard.ability.name}!` };
-          }
-          if (activeCard.currentHp < (activeCard.stats?.hp || 100) * 0.3 && roll < 0.3) {
-            return { action: 'guard', reasoning: `${activeCard.name} guards to reduce damage while low on HP` };
-          }
-          // Switch if current card is almost dead and we have healthy backups
-          if (activeCard.currentHp < 15) {
-            const healthyIdx = myState.cards.findIndex((c: BattleCard, i: number) =>
-              i !== myState.activeCardIndex && c.currentHp > 30
-            );
-            if (healthyIdx >= 0) {
-              return { action: 'switch', targetIndex: healthyIdx, reasoning: `Switching to ${myState.cards[healthyIdx].name} — ${activeCard.name} is almost down` };
-            }
-          }
-          return { action: 'strike', reasoning: `${activeCard.name} attacks!` };
+          return getAgentDecision(b, playerAddress, 'balanced');
         };
 
         // Run the battle simulation

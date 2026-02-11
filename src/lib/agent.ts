@@ -5,6 +5,7 @@ import { getElementMultiplier } from './battle';
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
+const CLAUDE_MODEL_ID = 'claude-sonnet-4-20250514';
 
 // AI Personalities for more interesting battles
 const AI_PERSONALITIES: Record<string, AIPersonality> = {
@@ -206,7 +207,7 @@ export async function getAgentDecision(
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: CLAUDE_MODEL_ID,
       max_tokens: 800,
       system: BATTLE_SYSTEM_PROMPT + personalityHint,
       messages: [
@@ -278,6 +279,7 @@ export async function getAgentDecision(
       targetIndex: decision.targetIndex,
       prediction: decision.prediction,
       reasoning: decision.reasoning,
+      aiModel: 'Claude Sonnet 4',
     };
   } catch (error) {
     console.error('Agent decision error:', error);
@@ -298,6 +300,7 @@ export async function getAgentDecision(
         action: 'guard',
         prediction: 'Opponent likely to go aggressive seeing my low HP',
         reasoning: `${activeCard.name} is critically wounded at ${Math.round(hpPct * 100)}% HP — raising defenses to survive the next hit and counter if they strike.`,
+        aiModel: 'Fallback Heuristic',
       };
     }
 
@@ -308,6 +311,7 @@ export async function getAgentDecision(
         action: 'skill',
         prediction: oppHpPct < 0.4 ? 'Opponent might guard expecting aggression' : 'Opponent likely to strike back',
         reasoning: `${abilityName} is off cooldown — time to unleash it${oppHpPct < 0.5 ? ' while the opponent is weakened' : ' for early pressure'}. ${activeCard.element} type advantage could amplify the damage.`,
+        aiModel: 'Fallback Heuristic',
       };
     }
 
@@ -317,6 +321,7 @@ export async function getAgentDecision(
       action: 'strike',
       prediction: 'Opponent may guard or use ability',
       reasoning: `Going for a direct ${activeCard.name} strike against ${oppName}${oppHpPct < 0.4 ? ' to try and finish them off' : ''}. Ability is on cooldown so raw damage is the best play.`,
+      aiModel: 'Fallback Heuristic',
     };
   }
 }

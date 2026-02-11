@@ -538,12 +538,17 @@ function EventRow({ event }: { event: BattleEvent }) {
 
   const fg = isDmg ? '#fca5a5' : isHeal ? '#86efac' : isFaint ? '#9ca3af' : isElAdv ? '#fde68a' : '#d1d5db';
   const bg = isDmg ? 'rgba(239,68,68,.08)' : isHeal ? 'rgba(34,197,94,.08)' : isFaint ? 'rgba(107,114,128,.12)' : isElAdv ? 'rgba(234,179,8,.08)' : 'rgba(31,41,55,.25)';
+  const isActionReveal = event.type === 'action_reveal';
+  const modelLabel = event.aiModel || 'AI';
+  const detailText = isActionReveal && event.reasoning
+    ? `${event.message} - ${event.reasoning} - 🧠 ${modelLabel}`
+    : event.message;
 
   return (
     <div className="flex items-start gap-2 rounded-lg px-2.5 py-1.5"
       style={{ background: bg, color: fg, animation: 'br-float-up .25s ease-out' }}>
       <span className="shrink-0 text-xs sm:text-sm">{icon}</span>
-      <span className="text-[10px] sm:text-xs leading-relaxed flex-1">{event.message}</span>
+      <span className="text-[10px] sm:text-xs leading-relaxed flex-1">{detailText}</span>
       {event.value != null && event.value !== 0 && (
         <span className="ml-auto shrink-0 font-bold text-[10px] sm:text-xs"
           style={{ color: isDmg ? '#f87171' : '#4ade80' }}>

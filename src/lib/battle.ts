@@ -454,6 +454,7 @@ export function resolveTurn(
       action: move1.action,
       prediction: move1.prediction,
       reasoning: move1.reasoning,
+      aiModel: move1.aiModel,
     },
     player2: {
       address: battle.player2!.address,
@@ -462,6 +463,7 @@ export function resolveTurn(
       action: move2.action,
       prediction: move2.prediction,
       reasoning: move2.reasoning,
+      aiModel: move2.aiModel,
     },
     triangleResult: { player1Result: 'neutral', player2Result: 'neutral' },
     events: [],
@@ -479,6 +481,7 @@ export function resolveTurn(
     message: `${card1.name} chooses ${move1.action.toUpperCase()}!`,
     reasoning: move1.reasoning,
     prediction: move1.prediction,
+    aiModel: move1.aiModel,
   });
 
   events.push({
@@ -489,6 +492,7 @@ export function resolveTurn(
     message: `${card2.name} chooses ${move2.action.toUpperCase()}!`,
     reasoning: move2.reasoning,
     prediction: move2.prediction,
+    aiModel: move2.aiModel,
   });
 
   // ======================
