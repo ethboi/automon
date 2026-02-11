@@ -10,9 +10,40 @@ interface HomeProps {
   onClick?: () => void;
 }
 
+/**
+ * Build a proper pyramid geometry (4-sided, square base).
+ * Base from (-hw, 0, -hd) to (hw, 0, hd), apex at (0, height, 0).
+ */
+function createPyramidGeometry(width: number, depth: number, height: number): THREE.BufferGeometry {
+  const hw = width / 2;
+  const hd = depth / 2;
+  // 4 base corners + 1 apex
+  const vertices = new Float32Array([
+    // Front face (apex, bottom-left, bottom-right)
+     0, height, 0,   -hw, 0, hd,    hw, 0, hd,
+    // Right face
+     0, height, 0,    hw, 0, hd,    hw, 0, -hd,
+    // Back face
+     0, height, 0,    hw, 0, -hd,  -hw, 0, -hd,
+    // Left face
+     0, height, 0,   -hw, 0, -hd,  -hw, 0, hd,
+    // Bottom face 1
+    -hw, 0, hd,  -hw, 0, -hd,   hw, 0, -hd,
+    // Bottom face 2
+    -hw, 0, hd,   hw, 0, -hd,   hw, 0, hd,
+  ]);
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
 export function Home({ position, onClick }: HomeProps) {
   const smokeRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
+
+  const roofGeo = useMemo(() => createPyramidGeometry(5.6, 5.6, 2.5), []);
 
   const smokeParticles = useMemo(() => {
     return Array.from({ length: 5 }, (_, i) => ({
@@ -38,8 +69,8 @@ export function Home({ position, onClick }: HomeProps) {
     <group position={position}>
       {/* Foundation */}
       <mesh position={[0, 0.15, 0]} receiveShadow>
-        <boxGeometry args={[5.5, 0.3, 5.5]} />
-        <meshStandardMaterial color="#4B5563" />
+        <boxGeometry args={[5.8, 0.3, 5.8]} />
+        <meshStandardMaterial color="#4B5563" roughness={0.9} />
       </mesh>
 
       {/* Main house body */}
@@ -47,42 +78,37 @@ export function Home({ position, onClick }: HomeProps) {
         position={[0, 2, 0]}
         castShadow
         receiveShadow
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick?.();
-        }}
-        onPointerEnter={(e) => {
-          e.stopPropagation();
-          setHovered(true);
-          document.body.style.cursor = 'pointer';
-        }}
-        onPointerLeave={() => {
-          setHovered(false);
-          document.body.style.cursor = 'default';
-        }}
+        onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerLeave={() => { setHovered(false); document.body.style.cursor = 'default'; }}
       >
         <boxGeometry args={[5, 3.5, 5]} />
         <meshStandardMaterial color={hovered ? '#3b82f6' : '#2563eb'} />
       </mesh>
 
-      {/* Roof */}
-      <mesh position={[0, 4.5, 0]} castShadow rotation={[0, Math.PI / 4, 0]}>
-        <coneGeometry args={[3.54, 2.5, 4]} />
-        <meshStandardMaterial color={hovered ? '#1e40af' : '#1d4ed8'} />
+      {/* Roof — custom pyramid, base sits on top of walls */}
+      <mesh position={[0, 3.75, 0]} castShadow geometry={roofGeo}>
+        <meshStandardMaterial color={hovered ? '#1e40af' : '#1d4ed8'} flatShading />
       </mesh>
 
-      {/* Chimney */}
-      <mesh position={[1.5, 5, 1.5]} castShadow>
-        <boxGeometry args={[0.8, 1.8, 0.8]} />
-        <meshStandardMaterial color="#7f1d1d" />
+      {/* Roof trim / eaves — thin box at wall-roof junction */}
+      <mesh position={[0, 3.8, 0]}>
+        <boxGeometry args={[5.8, 0.12, 5.8]} />
+        <meshStandardMaterial color="#1e3a8a" />
       </mesh>
-      <mesh position={[1.5, 6, 1.5]}>
+
+      {/* Chimney — positioned to poke through roof */}
+      <mesh position={[1.5, 5.2, 1.5]} castShadow>
+        <boxGeometry args={[0.8, 2.2, 0.8]} />
+        <meshStandardMaterial color="#7f1d1d" roughness={0.85} />
+      </mesh>
+      <mesh position={[1.5, 6.4, 1.5]}>
         <boxGeometry args={[1, 0.2, 1]} />
         <meshStandardMaterial color="#991b1b" />
       </mesh>
 
       {/* Smoke particles */}
-      <group ref={smokeRef} position={[1.5, 6.2, 1.5]}>
+      <group ref={smokeRef} position={[1.5, 6.6, 1.5]}>
         {smokeParticles.map((particle) => (
           <mesh key={particle.id}>
             <sphereGeometry args={[0.2, 8, 8]} />
@@ -94,7 +120,7 @@ export function Home({ position, onClick }: HomeProps) {
       {/* Door */}
       <mesh position={[0, 1.2, 2.51]}>
         <boxGeometry args={[1.2, 2, 0.1]} />
-        <meshStandardMaterial color="#78350f" />
+        <meshStandardMaterial color="#78350f" roughness={0.8} />
       </mesh>
       <mesh position={[0.4, 1.2, 2.6]}>
         <sphereGeometry args={[0.1, 8, 8]} />
@@ -112,7 +138,6 @@ export function Home({ position, onClick }: HomeProps) {
             <boxGeometry args={[1, 1, 0.1]} />
             <meshStandardMaterial color="#7dd3fc" emissive="#7dd3fc" emissiveIntensity={0.3} />
           </mesh>
-          {/* Window frame */}
           <mesh position={[0, 0, 0.05]}>
             <boxGeometry args={[1.1, 0.08, 0.05]} />
             <meshStandardMaterial color="#1e3a5f" />
@@ -127,7 +152,7 @@ export function Home({ position, onClick }: HomeProps) {
       {/* Porch */}
       <mesh position={[0, 0.4, 3]} receiveShadow>
         <boxGeometry args={[2.5, 0.2, 1.5]} />
-        <meshStandardMaterial color="#5D4037" />
+        <meshStandardMaterial color="#5D4037" roughness={0.85} />
       </mesh>
 
       {/* Porch pillars */}
@@ -153,13 +178,9 @@ export function Home({ position, onClick }: HomeProps) {
       )}
 
       {/* Floating label */}
-      <Html position={[0, 7, 0]} center distanceFactor={15} style={{ pointerEvents: 'none' }}>
-        <div
-          className={`px-4 py-2 rounded-lg text-white font-bold whitespace-nowrap transition-all ${
-            hovered ? 'bg-blue-500 scale-110' : 'bg-blue-700/80'
-          }`}
-        >
-          Collection
+      <Html position={[0, 7.5, 0]} center distanceFactor={15} style={{ pointerEvents: 'none' }}>
+        <div className={`px-4 py-2 rounded-lg text-white font-bold whitespace-nowrap transition-all ${hovered ? 'bg-blue-500 scale-110' : 'bg-blue-700/80'}`}>
+          Home
         </div>
       </Html>
     </group>
