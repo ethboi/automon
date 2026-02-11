@@ -950,7 +950,15 @@ async function tick(): Promise<void> {
     if (res.ok) {
       const { battles } = await res.json();
       for (const b of (battles || [])) {
-        if (!b.rounds || b.rounds.length === 0) {
+        const age = Date.now() - new Date(b.createdAt).getTime();
+        const rounds = b.rounds?.length || 0;
+        // Cancel battles stuck >10 min
+        if (age > 600_000) {
+          console.log(`[${ts()}] 🧹 Cancelling stale active battle ${b.battleId.slice(0, 8)} (${Math.round(age/60000)}m old)`);
+          await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId: b.battleId, address: ADDRESS }) });
+          continue;
+        }
+        if (rounds === 0) {
           console.log(`[${ts()}] ⚡ Active battle ${b.battleId.slice(0, 8)} needs simulation!`);
           const fullRes = await api(`/api/battle/${b.battleId}`);
           if (fullRes.ok) {
@@ -1259,8 +1267,10 @@ async function main() {
       const { battles: activeBattles } = await staleActiveRes.json();
       for (const b of (activeBattles || [])) {
         const age = Date.now() - new Date(b.createdAt).getTime();
-        if (age > 120_000 && (!b.rounds || b.rounds.length === 0)) {
-          console.log(`[${ts()}] 🧹 Cancelling stale active battle ${b.battleId?.slice(0, 8)} (${Math.round(age/60000)}m old, 0 rounds)`);
+        const rounds = b.rounds?.length || 0;
+        const isStale = (age > 120_000 && rounds === 0) || (age > 600_000); // 2min w/ 0 rounds OR 10min regardless
+        if (isStale) {
+          console.log(`[${ts()}] 🧹 Cancelling stale active battle ${b.battleId?.slice(0, 8)} (${Math.round(age/60000)}m old, ${rounds} rounds)`);
           await api('/api/battle/cancel', { method: 'POST', body: JSON.stringify({ battleId: b.battleId, address: ADDRESS }) });
         }
       }
