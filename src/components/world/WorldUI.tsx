@@ -423,8 +423,15 @@ export function WorldUI({
                                   </span>
                                 )}
                                 {e.moodDelta != null && e.moodDelta !== 0 && (
-                                  <span className={`text-[10px] font-mono ${e.moodDelta > 0 ? 'text-pink-300' : 'text-purple-300'}`}>
-                                    {e.moodDelta > 0 ? '+' : ''}{e.moodDelta} mood
+                                  <span
+                                    className={`text-[10px] font-mono px-1 py-0.5 rounded ${
+                                      e.moodDelta > 0
+                                        ? 'text-pink-200 bg-pink-500/15'
+                                        : 'text-violet-200 bg-violet-500/15'
+                                    }`}
+                                    title={e.moodAfter != null ? `Mood after: ${e.moodAfter}` : undefined}
+                                  >
+                                    {e.moodDelta > 0 ? '+' : ''}{e.moodDelta} MOOD
                                   </span>
                                 )}
                                 <span className="text-[10px] text-gray-700 ml-auto flex-shrink-0">{timeAgo(e.timestamp)}</span>
