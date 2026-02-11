@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 
@@ -15,12 +15,12 @@ interface LocationMarkerProps {
 }
 
 export function LocationLabel({
-  icon: _icon,
+  icon,
   label,
   color,
-  clickable: _clickable = false,
+  clickable = false,
   hovered = false,
-  hint: _hint = 'Click to interact',
+  hint = 'Click to interact',
 }: {
   icon: string;
   label: string;
@@ -29,49 +29,67 @@ export function LocationLabel({
   hovered?: boolean;
   hint?: string;
 }) {
+  const { size } = useThree();
+  const isMobile = size.width < 768;
+
   return (
-    <group position={[0, 5.5, 0]}>
-      {/* Sign post — wooden pole */}
-      <mesh position={[0, -1.5, 0]} castShadow>
-        <cylinderGeometry args={[0.08, 0.1, 3, 6]} />
-        <meshStandardMaterial color="#5c3a1e" roughness={0.9} />
-      </mesh>
-      {/* Sign board */}
-      <mesh position={[0, 0, 0]} castShadow>
-        <boxGeometry args={[Math.max(2.5, label.length * 0.32), 0.8, 0.12]} />
-        <meshStandardMaterial
-          color={hovered ? '#1e293b' : '#0f172a'}
-          roughness={0.4}
-        />
-      </mesh>
-      {/* Sign border — colored */}
-      <mesh position={[0, 0, 0.07]}>
-        <boxGeometry args={[Math.max(2.7, label.length * 0.34), 0.95, 0.02]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={hovered ? 0.6 : 0.3}
-          metalness={0.5}
-          roughness={0.3}
-        />
-      </mesh>
-      {/* Text on sign */}
-      <Html position={[0, 0, 0.12]} center transform distanceFactor={6} zIndexRange={[1, 0]} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          fontWeight: 800,
-          fontSize: '14px',
-          color: '#f1f5f9',
-          textShadow: `0 0 8px ${color}, 0 1px 3px rgba(0,0,0,0.9)`,
+    <Html
+      position={[0, isMobile ? 5 : 6, 0]}
+      center
+      distanceFactor={isMobile ? 10 : 14}
+      style={{ pointerEvents: 'none' }}
+      zIndexRange={[1, 0]}
+    >
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          background: hovered ? 'rgba(12, 18, 36, 0.98)' : 'rgba(8, 12, 24, 0.95)',
+          backdropFilter: 'blur(12px)',
+          padding: isMobile ? '6px 12px' : '7px 14px',
+          borderRadius: 12,
+          border: `1.5px solid ${hovered ? `${color}cc` : `${color}60`}`,
+          boxShadow: hovered
+            ? `0 0 28px ${color}66, 0 8px 20px rgba(0,0,0,0.65)`
+            : `0 0 20px ${color}30, 0 4px 12px rgba(0,0,0,0.6)`,
           whiteSpace: 'nowrap',
-          letterSpacing: '1.5px',
-          textTransform: 'uppercase',
-        }}>
+          transform: hovered ? 'translateY(-1px) scale(1.03)' : 'translateY(0) scale(1)',
+          transition: 'all 150ms ease',
+        }}
+      >
+        <span style={{ fontSize: isMobile ? 18 : 16 }}>{icon}</span>
+        <span
+          style={{
+            fontSize: isMobile ? 12 : 13,
+            fontWeight: 700,
+            color: '#f1f5f9',
+            letterSpacing: '0.4px',
+            textShadow: `0 0 10px ${color}50, 0 1px 3px rgba(0,0,0,0.8)`,
+          }}
+        >
           {label}
-        </div>
-      </Html>
-      {/* Small glow */}
-      <pointLight position={[0, 0.3, 0.5]} intensity={hovered ? 0.8 : 0.3} color={color} distance={5} decay={2} />
-    </group>
+        </span>
+        {clickable && (
+          <span
+            style={{
+              fontSize: isMobile ? 10 : 11,
+              fontWeight: 700,
+              color: hovered ? '#ffffff' : '#cbd5e1',
+              border: `1px solid ${hovered ? '#ffffff99' : '#94a3b855'}`,
+              background: hovered ? '#ffffff22' : '#00000020',
+              borderRadius: 999,
+              padding: isMobile ? '2px 6px' : '2px 7px',
+              letterSpacing: '0.2px',
+              textTransform: 'uppercase',
+            }}
+          >
+            {hovered ? hint : 'Clickable'}
+          </span>
+        )}
+      </div>
+    </Html>
   );
 }
 
