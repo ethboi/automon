@@ -195,25 +195,30 @@ export function WorldUI({
     <div className="absolute inset-0 pointer-events-none">
 
       {/* ─── Controls Legend ─── */}
-      <div className="absolute top-20 right-4 pointer-events-auto hidden sm:block">
-        <div className="bg-black/60 backdrop-blur-md rounded-xl px-4 py-3 border border-white/10 space-y-1.5">
-          <div className="flex items-center gap-2 text-xs text-gray-300">
-            <span className="text-gray-500 w-20">🖱️ Left</span>
-            <span>Pan / Rotate</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-gray-300">
-            <span className="text-gray-500 w-20">🖱️ Right</span>
-            <span>Move Character</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-gray-300">
-            <span className="text-gray-500 w-20">🖱️ Scroll</span>
-            <span>Zoom</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-gray-300">
-            <span className="text-gray-500 w-20">
-              <kbd className="px-1 py-0.5 bg-white/10 rounded text-[10px] font-bold border border-white/10">E</kbd>
-            </span>
-            <span>Enter Building</span>
+      <div className="absolute top-20 right-4 pointer-events-auto hidden sm:block z-20">
+        <div className="rounded-xl border border-cyan-400/20 bg-slate-950/70 p-2.5 shadow-[0_0_20px_rgba(34,211,238,0.15)] backdrop-blur-sm w-[220px]">
+          <div className="mb-1.5 text-[10px] font-semibold tracking-wide text-cyan-300">Controls</div>
+          <div className="space-y-1 text-[10px] text-slate-200/90">
+            <div className="flex items-center justify-between">
+              <span>Pan / Rotate</span>
+              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">Left Drag</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Move Character</span>
+              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">Right Click</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Zoom</span>
+              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">Scroll</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Fly to Location</span>
+              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">Click Label</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Enter Location</span>
+              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px]">E</span>
+            </div>
           </div>
         </div>
       </div>
