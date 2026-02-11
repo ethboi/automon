@@ -107,8 +107,8 @@ function formatBattleState(battle: Battle, playerAddress: string): string {
 
   const formatCard = (card: BattleCard, index: number, isActive: boolean, _isMine: boolean) => {
     const status = card.currentHp <= 0 ? '[FAINTED]' : isActive ? '[ACTIVE]' : '';
-    const cooldown = card.ability.currentCooldown
-      ? ` (CD: ${card.ability.currentCooldown} turns)`
+    const cooldown = card?.ability?.currentCooldown
+      ? ` (CD: ${card?.ability?.currentCooldown} turns)`
       : ' [READY]';
 
     const statusEffects = card.statusEffects?.length > 0
@@ -145,7 +145,7 @@ function formatBattleState(battle: Battle, playerAddress: string): string {
   const oppHpPercent = Math.round((oppActiveCard.currentHp / oppActiveCard.stats.maxHp) * 100);
 
   const canKOWithSkill = myActiveCard.ability.effect === 'damage' &&
-    !myActiveCard.ability.currentCooldown &&
+    !myActiveCard?.ability?.currentCooldown &&
     myActiveCard.ability.power * elementMult > oppActiveCard.currentHp;
 
   const mightGetKOd = oppActiveCard.stats.attack * 0.8 * oppElementMult > myActiveCard.currentHp;
@@ -183,7 +183,7 @@ ${moveHistory}
 AVAILABLE ACTIONS
 ========================================
 - STRIKE: Basic attack (30 base power). Beats SKILL.
-- SKILL: Use ${myActiveCard.ability.name}${myActiveCard.ability.currentCooldown ? ` [ON COOLDOWN - ${myActiveCard.ability.currentCooldown} turns]` : ' [READY]'}. Beats GUARD.
+- SKILL: Use ${myActiveCard.ability.name}${myActiveCard?.ability?.currentCooldown ? ` [ON COOLDOWN - ${myActiveCard?.ability?.currentCooldown} turns]` : ' [READY]'}. Beats GUARD.
 - GUARD: Defensive stance, heal 10% if both guard. Beats STRIKE.
 - SWITCH: Change active card (specify targetIndex 0-2). Always resolves first.
 
@@ -243,7 +243,7 @@ export async function getAgentDecision(
     const myState = isPlayer1 ? battle.player1 : battle.player2!;
     const activeCard = myState.cards[myState.activeCardIndex];
 
-    if (decision.action === 'skill' && activeCard.ability.currentCooldown && activeCard.ability.currentCooldown > 0) {
+    if (decision.action === 'skill' && activeCard?.ability?.currentCooldown && activeCard?.ability?.currentCooldown > 0) {
       console.log('AI tried to use skill on cooldown, falling back to strike');
       decision.action = 'strike';
       decision.reasoning = `${decision.reasoning} [Adjusted: Skill was on cooldown, using STRIKE instead]`;
@@ -305,7 +305,7 @@ export async function getAgentDecision(
     }
 
     // If ability ready and not on cooldown, use it
-    if (!activeCard.ability.currentCooldown || activeCard.ability.currentCooldown === 0) {
+    if (!activeCard?.ability?.currentCooldown || activeCard?.ability?.currentCooldown === 0) {
       const abilityName = activeCard.ability.name || 'special ability';
       return {
         action: 'skill',

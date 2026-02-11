@@ -19,14 +19,17 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
   const [showAIThinking, setShowAIThinking] = useState(false);
 
   const isPlayer1 = battle.player1.address.toLowerCase() === address?.toLowerCase();
-  const myState = isPlayer1 ? battle.player1 : battle.player2!;
-  const opponentState = isPlayer1 ? battle.player2! : battle.player1;
+  const isPlayer2 = battle.player2?.address.toLowerCase() === address?.toLowerCase();
+  const isParticipant = !!address && (isPlayer1 || isPlayer2);
+  const perspectiveIsPlayer1 = isParticipant ? isPlayer1 : true;
+  const myState = perspectiveIsPlayer1 ? battle.player1 : battle.player2!;
+  const opponentState = perspectiveIsPlayer1 ? battle.player2! : battle.player1;
 
   const myActiveCard = myState.cards[myState.activeCardIndex];
   const opponentActiveCard = opponentState.cards[opponentState.activeCardIndex];
 
   const currentRound = battle.rounds.find(r => r.turn === battle.currentTurn);
-  const hasSubmittedMove = currentRound && (isPlayer1 ? currentRound.player1Move : currentRound.player2Move);
+  const hasSubmittedMove = isParticipant && currentRound && (isPlayer1 ? currentRound.player1Move : currentRound.player2Move);
 
   useEffect(() => {
     if (battle.rounds.length > 0) {
@@ -38,7 +41,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
   }, [battle.rounds]);
 
   const handleSubmitMove = async () => {
-    if (!selectedMove || isSubmitting) return;
+    if (!selectedMove || isSubmitting || !isParticipant) return;
 
     setIsSubmitting(true);
     try {
@@ -52,7 +55,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
   };
 
   const handleAIMove = async () => {
-    if (!onAIDecide || isSubmitting) return;
+    if (!onAIDecide || isSubmitting || !isParticipant) return;
 
     setShowAIThinking(true);
     setIsSubmitting(true);
@@ -100,7 +103,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
         )}
       </div>
 
-      {/* Battle field — side by side */}
+        {/* Battle field — side by side */}
       <div className="grid grid-cols-2 gap-2 sm:gap-6 mb-4 sm:mb-8">
         {/* Opponent side */}
         <div className="text-center">
@@ -112,7 +115,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
 
         {/* Your side */}
         <div className="text-center">
-          <p className="text-[10px] sm:text-sm text-cyan-400 mb-1 sm:mb-2">You</p>
+          <p className="text-[10px] sm:text-sm text-cyan-400 mb-1 sm:mb-2">{isParticipant ? 'You' : 'Spectator View'}</p>
           <Card card={myActiveCard} size="sm" />
         </div>
       </div>
@@ -142,7 +145,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
       </div>
 
       {/* Actions */}
-      {!hasSubmittedMove && (
+      {isParticipant && !hasSubmittedMove && (
         <div className="bg-gray-800 rounded-xl p-3 sm:p-6">
           <h3 className="text-sm sm:text-lg font-medium mb-2 sm:mb-4">Choose Action</h3>
 
@@ -165,18 +168,18 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
             {/* SKILL - beats GUARD */}
             <button
               onClick={() => setSelectedMove({ action: 'skill' })}
-              disabled={myActiveCard.ability.currentCooldown !== undefined && myActiveCard.ability.currentCooldown > 0}
+              disabled={myActiveCard?.ability?.currentCooldown !== undefined && myActiveCard?.ability?.currentCooldown > 0}
               className={`p-2 sm:p-4 rounded-lg border-2 transition ${
                 selectedMove?.action === 'skill'
                   ? 'border-purple-500 bg-purple-500/20'
                   : 'border-gray-600 hover:border-gray-500'
-              } ${myActiveCard.ability.currentCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${myActiveCard?.ability?.currentCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">✨</span>
               <span className="text-xs sm:text-sm font-medium truncate block">{myActiveCard.ability.name}</span>
               <span className="text-[10px] sm:text-xs text-gray-400 block">
-                {myActiveCard.ability.currentCooldown
-                  ? `Cooldown: ${myActiveCard.ability.currentCooldown}`
+                {myActiveCard?.ability?.currentCooldown
+                  ? `Cooldown: ${myActiveCard?.ability?.currentCooldown}`
                   : 'Beats GUARD'}
               </span>
               <span className="text-[10px] sm:text-xs text-red-400 hidden sm:block">Loses to STRIKE</span>
@@ -251,6 +254,12 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {!isParticipant && (
+        <div className="bg-blue-500/10 border border-blue-400/30 rounded-xl p-3 sm:p-4 text-xs sm:text-sm text-blue-200 mb-4 sm:mb-8">
+          👁️ Spectating live battle. Actions are disabled for non-participants.
         </div>
       )}
 

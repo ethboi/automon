@@ -430,7 +430,7 @@ function applyHeal(card: BattleCard, amount: number): number {
 }
 
 function tickCooldowns(card: BattleCard): void {
-  if (card.ability.currentCooldown && card.ability.currentCooldown > 0) {
+  if (card?.ability?.currentCooldown && card.ability.currentCooldown > 0) {
     card.ability.currentCooldown--;
   }
 }
@@ -1027,19 +1027,19 @@ function executeSkill(
   const ability = attacker.ability;
 
   // Check cooldown
-  if (ability.currentCooldown && ability.currentCooldown > 0) {
+  if (ability?.currentCooldown && ability?.currentCooldown > 0) {
     events.push({
       type: 'damage',
       source: attacker.name,
       target: defender.name,
       value: 0,
-      message: `${attacker.name}'s ${ability.name} is on cooldown (${ability.currentCooldown} turns)!`,
+      message: `${attacker.name}'s ${ability.name} is on cooldown (${ability?.currentCooldown} turns)!`,
     });
     return events;
   }
 
   // Put ability on cooldown
-  ability.currentCooldown = ability.cooldown;
+  if (ability) ability.currentCooldown = ability.cooldown;
 
   switch (ability.effect) {
     case 'damage': {
@@ -1215,8 +1215,8 @@ export function validateMove(
   }
 
   if (move.action === 'skill') {
-    if (activeCard.ability.currentCooldown && activeCard.ability.currentCooldown > 0) {
-      return { valid: false, error: `Ability on cooldown for ${activeCard.ability.currentCooldown} more turns` };
+    if (activeCard?.ability?.currentCooldown && activeCard?.ability?.currentCooldown > 0) {
+      return { valid: false, error: `Ability on cooldown for ${activeCard?.ability?.currentCooldown} more turns` };
     }
   }
 

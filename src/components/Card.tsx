@@ -228,11 +228,11 @@ export default function Card({ card, selected, onClick, showStats = true, size =
           <div className={`${s.ability} ${isLightElement ? 'text-gray-700' : 'text-white/70'} line-clamp-2`}>
             {(card.ability as unknown as Record<string, string>).description || card.ability.effect}
           </div>
-          {isBattleCard && card.ability.currentCooldown !== undefined && card.ability.currentCooldown > 0 && (
+          {isBattleCard && card?.ability?.currentCooldown !== undefined && card?.ability?.currentCooldown > 0 && (
             <div className="mt-1 flex items-center gap-1">
               <span className="text-yellow-300 text-xs">⏱️</span>
               <span className={`${s.ability} text-yellow-300 font-medium`}>
-                Cooldown: {card.ability.currentCooldown}
+                Cooldown: {card?.ability?.currentCooldown}
               </span>
             </div>
           )}
