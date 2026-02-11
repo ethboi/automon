@@ -11,7 +11,7 @@ interface LocationMarkerProps {
   icon: string;
   color: string;
   onClick?: () => void;
-  variant?: 'building' | 'nature' | 'water' | 'dark' | 'farm';
+  variant?: 'building' | 'nature' | 'water' | 'dark' | 'farm' | 'none';
 }
 
 export function LocationLabel({
