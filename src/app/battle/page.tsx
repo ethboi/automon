@@ -158,6 +158,26 @@ export default function BattlePage() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed to load replay'); }
   };
 
+  const resumeBattleSimulation = async (battleId: string) => {
+    setError(null);
+    try {
+      const res = await fetch('/api/battle/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ battleId, action: 'start_simulation' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to resume battle simulation');
+      await fetchData();
+      if (data?.battleLog) {
+        setBattleLog(data.battleLog as BattleLog);
+        setView('replay');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to resume battle simulation');
+    }
+  };
+
   const submitMove = async (move: BattleMove) => {
     if (!currentBattle) return;
     const res = await fetch('/api/battle/move', {
@@ -187,9 +207,17 @@ export default function BattlePage() {
   const activeBattles = battles.filter(b => b.status === 'active');
   const recentBattles = battles.filter(b => b.status === 'complete');
 
-  const openBattleView = (battle: Battle) => {
-    setCurrentBattle(battle);
-    setView('battle');
+  const openBattleView = async (battleId: string) => {
+    setError(null);
+    try {
+      const res = await fetch(`/api/battle/${battleId}`);
+      const data = await res.json();
+      if (!res.ok || !data?.battle) throw new Error(data?.error || 'Failed to load active battle');
+      setCurrentBattle(data.battle as Battle);
+      setView('battle');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to open live battle');
+    }
   };
 
   if (loading) return (
@@ -322,7 +350,8 @@ export default function BattlePage() {
                 battle={battle}
                 index={i}
                 onReplay={watchReplay}
-                onOpen={() => openBattleView(battle)}
+                onOpen={() => { void openBattleView(battle.battleId); }}
+                onResume={() => { void resumeBattleSimulation(battle.battleId); }}
               />
             ))}
           </div>
@@ -410,7 +439,7 @@ export default function BattlePage() {
 
 /* ─── Battle Card Component ─── */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function BattleCard({ battle, index, onReplay, onOpen }: { battle: any; index: number; onReplay: (id: string) => void; onOpen?: () => void }) {
+function BattleCard({ battle, index, onReplay, onOpen, onResume }: { battle: any; index: number; onReplay: (id: string) => void; onOpen?: () => void; onResume?: () => void }) {
   const p1 = battle.player1;
   const p2 = battle.player2;
   const p1Name = playerName(p1);
@@ -478,6 +507,14 @@ function BattleCard({ battle, index, onReplay, onOpen }: { battle: any; index: n
             className="bg-yellow-500/20 hover:bg-yellow-500/35 text-yellow-300 px-2 py-0.5 rounded-lg transition font-medium text-[10px]"
           >
             👁️ Watch Live
+          </button>
+        )}
+        {isActive && onResume && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onResume(); }}
+            className="bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-300 px-2 py-0.5 rounded-lg transition font-medium text-[10px]"
+          >
+            ▶ Resume AI
           </button>
         )}
         {battle.status === 'complete' && <button onClick={() => onReplay(battle.battleId)} className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 px-2 py-0.5 rounded-lg transition font-medium text-[10px]">📺 Replay</button>}
