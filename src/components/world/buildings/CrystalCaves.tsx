@@ -20,17 +20,17 @@ export default function CrystalCaves({ hovered }: { hovered: boolean }) {
 
   return (
     <group>
-      {/* Massive rock cliff — stacked tiers */}
+      {/* Rock cliff — tapered cylinders for natural rocky shape */}
       <mesh position={[0, 1, 0]} castShadow>
-        <boxGeometry args={[10, 2, 8]} />
+        <cylinderGeometry args={[4, 5, 2, 8]} />
         <meshStandardMaterial color={rc} roughness={0.95} flatShading />
       </mesh>
-      <mesh position={[0, 2.5, -0.5]} castShadow>
-        <boxGeometry args={[8, 1, 7]} />
+      <mesh position={[0, 2.2, -0.5]} castShadow>
+        <cylinderGeometry args={[3, 4, 1, 7]} />
         <meshStandardMaterial color="#33333b" roughness={0.95} flatShading />
       </mesh>
-      <mesh position={[0, 3.3, -1]} castShadow>
-        <boxGeometry args={[6, 0.8, 5]} />
+      <mesh position={[0, 3, -1]} castShadow>
+        <cylinderGeometry args={[2, 3, 0.8, 6]} />
         <meshStandardMaterial color="#2e2e36" roughness={0.95} flatShading />
       </mesh>
 
