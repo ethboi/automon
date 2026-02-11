@@ -16,6 +16,7 @@ dotenv.config({ path: '.env.local' });
 
 import { ethers } from 'ethers';
 import { decideNextAction, selectBattleCards, agentChat } from './strategy';
+import { getTokenPrice, getTokenBalance, buyToken, sellToken } from './trading';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ const LOCATIONS = [
   { name: 'Old Pond',        x: -36, z: -14 },
   { name: 'Dark Forest',     x: -36, z:  22 },
   { name: 'Crystal Caves',   x:  32, z:  24 },
+  { name: 'Trading Post',   x:  20, z: -20 },
 ];
 
 // Actions mapped to appropriate locations
@@ -98,6 +100,10 @@ const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> 
     { action: 'exploring', reasons: ['Mining for crystals', 'Deep cave expedition', 'Following the glow'] },
     { action: 'catching', reasons: ['Rare cave spawn detected!', 'Crystal creature spotted', 'Something gleaming ahead'] },
     { action: 'training', reasons: ['Cave endurance training', 'Meditating by the crystals', 'Power training in the caves'] },
+  ],
+  'Trading Post': [
+    { action: 'trading_token', reasons: ['Checking $AUTOMON charts', 'Analyzing the bonding curve', 'Time to make a trade'] },
+    { action: 'exploring', reasons: ['Browsing the trading floor', 'Watching the ticker', 'Studying market patterns'] },
   ],
 };
 
@@ -249,6 +255,76 @@ async function logTransaction(txHash: string, type: string, description: string)
       }),
     });
   } catch { /* silent */ }
+}
+
+async function executeTrade(aiReason?: string): Promise<void> {
+  const PRIVATE_KEY = process.env.AGENT_PRIVATE_KEY;
+  if (!PRIVATE_KEY || !process.env.AUTOMON_TOKEN_ADDRESS) {
+    console.log(`[${ts()}]   📈 Trading not configured yet (no token address)`);
+    return;
+  }
+
+  try {
+    // Get market data
+    const price = await getTokenPrice(PRIVATE_KEY);
+    const tokenBal = await getTokenBalance(PRIVATE_KEY);
+    const monBal = parseFloat(agentBalance).toFixed(4);
+
+    console.log(`[${ts()}]   📊 $AUTOMON price: ${price.price} MON | Balance: ${tokenBal} tokens, ${monBal} MON`);
+
+    // Ask Claude what to do
+    const { decideTradeAction } = await import('./strategy');
+    const decision = await decideTradeAction(
+      price.price,
+      tokenBal,
+      monBal,
+      recentActions.slice(-5).join(' → '),
+      process.env.AI_PERSONALITY || '',
+    );
+
+    console.log(`[${ts()}]   🧠 Trade decision: ${decision.action} ${decision.amount || ''} — ${decision.reasoning}`);
+
+    if (decision.action === 'BUY' && decision.amount) {
+      const result = await buyToken(PRIVATE_KEY, decision.amount, 5);
+      console.log(`[${ts()}]   💰 Bought $AUTOMON: ${result.estimatedOut} tokens for ${result.amountIn} MON | tx: ${result.txHash}`);
+      await logAction('trading_token', `Bought ${result.estimatedOut} $AUTOMON for ${result.amountIn} MON`, 'Trading Post', decision.reasoning);
+
+      // Log transaction
+      await api('/api/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          address: ADDRESS,
+          type: 'token_buy',
+          amount: result.amountIn,
+          txHash: result.txHash,
+          details: { token: 'AUTOMON', tokensReceived: result.estimatedOut },
+        }),
+      }).catch(() => {});
+
+    } else if (decision.action === 'SELL' && decision.amount) {
+      const result = await sellToken(PRIVATE_KEY, decision.amount, 5);
+      console.log(`[${ts()}]   💸 Sold ${result.amountIn} $AUTOMON for ~${result.estimatedOut} MON | tx: ${result.txHash}`);
+      await logAction('trading_token', `Sold ${result.amountIn} $AUTOMON for ~${result.estimatedOut} MON`, 'Trading Post', decision.reasoning);
+
+      await api('/api/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          address: ADDRESS,
+          type: 'token_sell',
+          amount: result.amountIn,
+          txHash: result.txHash,
+          details: { token: 'AUTOMON', monReceived: result.estimatedOut },
+        }),
+      }).catch(() => {});
+
+    } else {
+      console.log(`[${ts()}]   📊 Holding — no trade this time`);
+      await logAction('trading_token', 'Analyzed the charts but decided to HOLD', 'Trading Post', decision.reasoning);
+    }
+  } catch (err) {
+    console.error(`[${ts()}]   ❌ Trade failed:`, err);
+    await logAction('trading_token', 'Wanted to trade but market was unstable', 'Trading Post', aiReason || 'Market analysis inconclusive');
+  }
 }
 
 async function buyPack(aiReason?: string): Promise<void> {
@@ -696,6 +772,18 @@ async function tick(): Promise<void> {
       if (recentActions.length > 10) recentActions.shift();
       pendingAction = null;
       await buyPack(shopReason);
+      dwellTicks = DWELL_MIN + Math.floor(Math.random() * (DWELL_MAX - DWELL_MIN));
+      return;
+    }
+
+    // If trading at Trading Post, execute a trade
+    if (pendingAction.action === 'trading_token' && target.name === 'Trading Post') {
+      const tradeReason = pendingAction.reason;
+      await logAction('trading_token', tradeReason, target.name, tradeReason);
+      recentActions.push(`trading_token@${target.name}`);
+      if (recentActions.length > 10) recentActions.shift();
+      pendingAction = null;
+      await executeTrade(tradeReason);
       dwellTicks = DWELL_MIN + Math.floor(Math.random() * (DWELL_MAX - DWELL_MIN));
       return;
     }

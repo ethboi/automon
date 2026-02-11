@@ -492,6 +492,7 @@ const LOCATION_INFO: Record<string, string> = {
   'Old Pond': 'Fishing spot. Catching fish restores the most health (+20 HP).',
   'Dark Forest': 'Dangerous territory. Rare spawns but risky.',
   'Crystal Caves': 'Underground caverns. Find rare crystal-type resources.',
+  'Trading Post': 'Token exchange. Buy/sell $AUTOMON tokens on the bonding curve. Trade MON for tokens or cash out.',
 };
 
 /**
@@ -548,6 +549,7 @@ ${locationList}
 - Old Pond: fishing
 - Dark Forest: exploring, catching, foraging
 - Crystal Caves: exploring, foraging
+- Trading Post: trading_token (buy/sell $AUTOMON tokens for MON)
 
 ## DECISION GUIDELINES
 - Battles are the main activity but pace yourself — battle every 3-4 actions, not every turn.
@@ -658,5 +660,76 @@ Reply with ONLY your message, nothing else.`;
     return content.text.trim();
   } catch {
     return null;
+  }
+}
+
+// ─── Trade Decisions ───────────────────────────────────────────────────────────
+
+export interface TradeDecision {
+  action: 'BUY' | 'SELL' | 'HOLD';
+  amount?: string;
+  reasoning: string;
+}
+
+export async function decideTradeAction(
+  tokenPrice: string,
+  tokenBalance: string,
+  monBalance: string,
+  recentActions: string,
+  personality: string,
+): Promise<TradeDecision> {
+  const prompt = `You are an autonomous AI agent at the Trading Post in AutoMon. You can trade $AUTOMON tokens.
+
+## YOUR PERSONALITY
+${personality || 'Balanced trader'}
+
+## MARKET STATE
+- $AUTOMON price: ${tokenPrice} MON per token
+- Your $AUTOMON balance: ${tokenBalance} tokens
+- Your MON balance: ${monBalance} MON
+- Recent actions: ${recentActions || 'just arrived'}
+
+## TRADING RULES
+- You need MON for battles (wagers 0.005-0.05) and card packs (0.1 MON)
+- Keep at least 0.15 MON for gameplay
+- Token trading is speculative — small amounts only
+- Buy: spend MON to get $AUTOMON tokens (max 15% of your MON balance)
+- Sell: sell tokens back for MON (max 30% of your token holdings)
+- Hold: do nothing — sometimes the best trade is no trade
+
+## PERSONALITY-BASED TRADING
+- Aggressive: bigger buys, holds longer, buys dips
+- Conservative: takes profits early, sells partial positions
+- Balanced: follows the meta, moderate position sizes
+
+Decide: BUY, SELL, or HOLD. Be a degen but don't go broke.
+
+Respond JSON only:
+{
+  "action": "BUY" | "SELL" | "HOLD",
+  "amount": "<amount if buying (MON) or selling (tokens), omit for HOLD>",
+  "reasoning": "<1-2 sentences, in character>"
+}`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const content = response.content[0];
+    if (content.type !== 'text') throw new Error('Invalid response');
+
+    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON');
+
+    const result = JSON.parse(jsonMatch[0]) as TradeDecision;
+    if (!['BUY', 'SELL', 'HOLD'].includes(result.action)) throw new Error('Invalid action');
+
+    return result;
+  } catch (err) {
+    console.error('Trade decision error:', err);
+    return { action: 'HOLD', reasoning: 'Markets look uncertain, staying on the sideline for now.' };
   }
 }
