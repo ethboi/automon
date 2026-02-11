@@ -84,8 +84,9 @@ const rarityStyles: Record<Rarity, { border: string; badge: string; glow: string
 };
 
 export default function Card({ card, selected, onClick, showStats = true, size = 'md' }: CardProps) {
-  const element = elementStyles[card.element];
-  const rarity = rarityStyles[card.rarity];
+  const element = elementStyles[card.element] || elementStyles.fire;
+  const rarityKey: Rarity = card.rarity && rarityStyles[card.rarity] ? card.rarity : 'common';
+  const rarity = rarityStyles[rarityKey];
   const isBattleCard = 'currentHp' in card;
   const isLightElement = card.element === 'light';
 
@@ -120,8 +121,18 @@ export default function Card({ card, selected, onClick, showStats = true, size =
   };
 
   const s = sizeConfig[size];
-  const stats = card.stats || { attack: 0, defense: 0, speed: 0, hp: 0, maxHp: 0 };
-  const hpPercent = isBattleCard ? ((card as BattleCard).currentHp / (stats.maxHp || 1)) * 100 : 100;
+  const stats = {
+    attack: card.stats?.attack ?? 0,
+    defense: card.stats?.defense ?? 0,
+    speed: card.stats?.speed ?? 0,
+    hp: card.stats?.hp ?? 0,
+    maxHp: card.stats?.maxHp ?? card.stats?.hp ?? 0,
+  };
+  const battleCard = card as Partial<BattleCard>;
+  const currentHp = typeof battleCard.currentHp === 'number' ? battleCard.currentHp : stats.maxHp;
+  const buffs = Array.isArray(battleCard.buffs) ? battleCard.buffs : [];
+  const debuffs = Array.isArray(battleCard.debuffs) ? battleCard.debuffs : [];
+  const hpPercent = isBattleCard ? (currentHp / (stats.maxHp || 1)) * 100 : 100;
   const hpColor = hpPercent > 50 ? 'bg-emerald-500' : hpPercent > 25 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
@@ -185,7 +196,7 @@ export default function Card({ card, selected, onClick, showStats = true, size =
             <div className="flex justify-between items-center mb-1">
               <span className={`${s.stats} font-medium ${isLightElement ? 'text-gray-800' : 'text-white/90'}`}>HP</span>
               <span className={`${s.stats} font-bold ${isLightElement ? 'text-gray-900' : 'text-white'}`}>
-                {(card as BattleCard).currentHp}/{stats.maxHp}
+                {currentHp}/{stats.maxHp}
               </span>
             </div>
             <div className="w-full h-2 bg-black/30 rounded-full overflow-hidden backdrop-blur-sm">
@@ -240,9 +251,9 @@ export default function Card({ card, selected, onClick, showStats = true, size =
         )}
 
         {/* Buffs/Debuffs (for battle cards) */}
-        {isBattleCard && ((card as BattleCard).buffs.length > 0 || (card as BattleCard).debuffs.length > 0) && (
+        {isBattleCard && (buffs.length > 0 || debuffs.length > 0) && (
           <div className="mt-2 flex flex-wrap gap-1">
-            {(card as BattleCard).buffs.map((buff, i) => (
+            {buffs.map((buff, i) => (
               <span
                 key={`buff-${i}`}
                 className="text-[10px] bg-emerald-500/40 text-emerald-100 px-1.5 py-0.5 rounded-full font-medium border border-emerald-500/50"
@@ -250,7 +261,7 @@ export default function Card({ card, selected, onClick, showStats = true, size =
                 ↑{buff.stat}
               </span>
             ))}
-            {(card as BattleCard).debuffs.map((debuff, i) => (
+            {debuffs.map((debuff, i) => (
               <span
                 key={`debuff-${i}`}
                 className="text-[10px] bg-red-500/40 text-red-100 px-1.5 py-0.5 rounded-full font-medium border border-red-500/50"
@@ -272,7 +283,7 @@ export default function Card({ card, selected, onClick, showStats = true, size =
       )}
 
       {/* Legendary shimmer border */}
-      {card.rarity === 'legendary' && (
+      {rarityKey === 'legendary' && (
         <div className="absolute inset-0 rounded-2xl pointer-events-none">
           <div className="absolute inset-0 rounded-2xl border-2 border-yellow-400/50 animate-pulse" />
         </div>
