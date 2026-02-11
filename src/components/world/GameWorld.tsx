@@ -322,29 +322,29 @@ function WorldEdgeSign() {
       <Text
         position={[0, 3.9, -0.45]}
         font="/fonts/GeistMonoVF.woff"
-        fontSize={4.6}
-        letterSpacing={0.08}
+        fontSize={3.8}
+        letterSpacing={0.05}
         anchorX="center"
         anchorY="middle"
         color="#0b1022"
         outlineWidth={0.03}
         outlineColor="#020617"
       >
-        MOLTIVERSE
+        MONAD MOLTIVERSE
       </Text>
       {/* Front glowing face */}
       <Text
         position={[0, 4.15, 0]}
         font="/fonts/GeistMonoVF.woff"
-        fontSize={4.6}
-        letterSpacing={0.08}
+        fontSize={3.8}
+        letterSpacing={0.05}
         anchorX="center"
         anchorY="middle"
         color="#e2e8f0"
         outlineWidth={0.045}
         outlineColor="#4338ca"
       >
-        MOLTIVERSE
+        MONAD MOLTIVERSE
       </Text>
 
       {/* Underline plinth */}
