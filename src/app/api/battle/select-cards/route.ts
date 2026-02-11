@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Battle not found' }, { status: 404 });
     }
 
-    // Allow card selection in 'pending' (for player1) or 'selecting' (both players)
-    if (battle.status !== 'pending' && battle.status !== 'selecting') {
+    // Allow card selection in pending, selecting, or active (if player hasn't selected yet)
+    if (battle.status !== 'pending' && battle.status !== 'selecting' && battle.status !== 'active') {
       return NextResponse.json({ error: 'Cannot select cards at this time' }, { status: 400 });
     }
 
