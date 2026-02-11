@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card as CardType, Element, Rarity } from '@/lib/types';
-import Card from '@/components/Card';
+import _Card from '@/components/Card';
 import { useWallet } from '@/context/WalletContext';
 import { AUTOMONS } from '@/lib/automons';
 import { getCardArtDataUri } from '@/lib/cardArt';
@@ -237,65 +237,97 @@ export default function CollectionPage() {
       ) : (
         /* ═══ CARDS VIEW ═══ */
         <div>
-          {/* Filters */}
-          <div className="section-card mb-4 border border-cyan-400/15 bg-gradient-to-br from-cyan-950/20 via-transparent to-emerald-950/20">
-            <div className="flex flex-wrap gap-3 items-end">
-              <div className="min-w-[120px]">
-                <label className="block text-xs text-gray-400 mb-1">Element</label>
-                <select value={filter.element} onChange={e => setFilter(f => ({ ...f, element: e.target.value as Element | 'all' }))} className="select-field w-full text-xs">
-                  {elements.map(el => <option key={el.value} value={el.value}>{el.icon} {el.label}</option>)}
-                </select>
-              </div>
-              <div className="min-w-[120px]">
-                <label className="block text-xs text-gray-400 mb-1">Rarity</label>
-                <select value={filter.rarity} onChange={e => setFilter(f => ({ ...f, rarity: e.target.value as Rarity | 'all' }))} className="select-field w-full text-xs">
-                  {rarities.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-              </div>
-              <div className="min-w-[120px]">
-                <label className="block text-xs text-gray-400 mb-1">Sort</label>
-                <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)} className="select-field w-full text-xs">
-                  <option value="rarity">Rarity</option>
-                  <option value="name">Name</option>
-                  <option value="attack">Attack</option>
-                  <option value="defense">Defense</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2 glass-light border border-white/10 rounded-xl px-3 py-2">
-                <span className="text-lg">🎴</span>
-                <span className="text-sm text-white font-semibold">{filteredCards.length}</span>
-                <span className="text-xs text-gray-400">/ {cards.length}</span>
-              </div>
+          {/* Filters — horizontal scroll on mobile */}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+            <select value={filter.element} onChange={e => setFilter(f => ({ ...f, element: e.target.value as Element | 'all' }))}
+              className="select-field text-xs shrink-0">
+              {elements.map(el => <option key={el.value} value={el.value}>{el.icon} {el.label}</option>)}
+            </select>
+            <select value={filter.rarity} onChange={e => setFilter(f => ({ ...f, rarity: e.target.value as Rarity | 'all' }))}
+              className="select-field text-xs shrink-0">
+              {rarities.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
+              className="select-field text-xs shrink-0">
+              <option value="rarity">⬇ Rarity</option>
+              <option value="name">⬇ Name</option>
+              <option value="attack">⬇ Attack</option>
+              <option value="defense">⬇ Defense</option>
+            </select>
+            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 shrink-0">
+              <span className="text-sm">🎴</span>
+              <span className="text-xs text-white font-bold">{filteredCards.length}</span>
+              <span className="text-[10px] text-gray-500">/ {cards.length}</span>
             </div>
           </div>
 
           {/* Cards grid */}
           {filteredCards.length === 0 ? (
-            <div className="section-card text-center py-16">
-              <div className="text-6xl mb-4 opacity-50">🎴</div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+            <div className="section-card text-center py-12">
+              <div className="text-5xl mb-3 opacity-50">🎴</div>
+              <h3 className="text-lg font-semibold text-white mb-2">
                 {cards.length === 0 ? 'No cards yet' : 'No matches found'}
               </h3>
-              <p className="text-gray-400 mb-6 max-w-md mx-auto">
-                {cards.length === 0 ? 'Start your collection by purchasing card packs from the shop.' : 'Try adjusting your filters.'}
+              <p className="text-gray-400 text-sm mb-4">
+                {cards.length === 0 ? 'Buy card packs from the shop!' : 'Adjust your filters.'}
               </p>
               {cards.length === 0 && (
-                <a href="/shop" className="btn-primary inline-block">
-                  <span className="flex items-center gap-2">🛒 Visit Shop</span>
-                </a>
+                <a href="/shop" className="btn-primary inline-block text-sm">🛒 Visit Shop</a>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4">
-              {filteredCards.map((card, index) => (
-                <div
-                  key={card._id?.toString() || card.id || index}
-                  className="animate-fade-in-up opacity-0 rounded-xl p-1 bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 hover:border-cyan-300/40 transition-colors"
-                  style={{ animationDelay: `${Math.min(index * 0.05, 0.5)}s` }}
-                >
-                  <Card card={card} size="md" />
-                </div>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+              {filteredCards.map((card, index) => {
+                const elC = ELEMENT_COLORS[card.element] || '#666';
+                const rarityBg: Record<string, string> = {
+                  legendary: 'from-yellow-500/20 to-amber-900/10 border-yellow-500/30',
+                  epic: 'from-purple-500/15 to-purple-900/10 border-purple-500/25',
+                  rare: 'from-blue-500/15 to-blue-900/10 border-blue-500/25',
+                  uncommon: 'from-emerald-500/10 to-emerald-900/10 border-emerald-500/20',
+                  common: 'from-white/5 to-transparent border-white/10',
+                };
+                return (
+                  <div
+                    key={card._id?.toString() || card.id || index}
+                    className={`animate-fade-in-up opacity-0 rounded-xl overflow-hidden border bg-gradient-to-b ${rarityBg[card.rarity] || rarityBg.common} hover:border-cyan-300/40 transition-all`}
+                    style={{ animationDelay: `${Math.min(index * 0.04, 0.4)}s` }}
+                  >
+                    {/* Card art */}
+                    <div className="relative aspect-square">
+                      <img
+                        src={getCardArtDataUri(card.automonId ?? 1, card.element, card.rarity)}
+                        alt={card.name}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Element strip */}
+                      <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: elC }} />
+                      {/* Rarity badge */}
+                      <div className={`absolute top-1.5 right-1.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider
+                        ${card.rarity === 'legendary' ? 'bg-yellow-500/90 text-black' :
+                          card.rarity === 'epic' ? 'bg-purple-500/90 text-white' :
+                          card.rarity === 'rare' ? 'bg-blue-500/90 text-white' :
+                          card.rarity === 'uncommon' ? 'bg-emerald-500/90 text-white' :
+                          'bg-gray-600/80 text-gray-200'}`}
+                      >
+                        {card.rarity}
+                      </div>
+                    </div>
+                    {/* Info */}
+                    <div className="p-2">
+                      <div className="text-xs font-bold text-white truncate">{card.name}</div>
+                      <div className="text-[10px] font-semibold uppercase mt-0.5" style={{ color: elC }}>
+                        {ELEMENT_ICONS[card.element]} {card.element}
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5 text-[10px] text-gray-400">
+                        <span>⚔️{card.stats.attack}</span>
+                        <span>🛡️{card.stats.defense}</span>
+                        <span>💨{card.stats.speed}</span>
+                        <span>❤️{card.stats.hp}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
