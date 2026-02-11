@@ -255,14 +255,15 @@ export default function BattlePage() {
         }
       }
 
-      // If already complete (or simulation just completed), open regular replay for spectators.
-      if (!isParticipant && battle.status === 'complete') {
+      // If already complete, open replay
+      if (battle.status === 'complete') {
         await watchReplay(battleId);
         return;
       }
 
       setCurrentBattle(battle);
-      setView('battle');
+      // Auto-simulated battles go to simulating view (polls until complete)
+      setView('simulating');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to open live battle');
     }
@@ -505,8 +506,13 @@ export default function BattlePage() {
                     </div>
                     <div className="shrink-0">
                       {battle.status === 'complete' && <button onClick={() => watchReplay(battle.battleId)} className="btn-secondary text-xs">📺 Replay</button>}
-                      {battle.status === 'active' && <button onClick={() => { setCurrentBattle(battle); setView('battle'); }} className="btn-primary text-xs">Continue</button>}
-                      {(battle.status === 'selecting' || (battle.status === 'pending' && isMyBattle)) && <button onClick={() => { setCurrentBattle(battle); setView('select-cards'); }} className="btn-primary text-xs">Select Cards</button>}
+                      {battle.status === 'active' && <button onClick={() => { setCurrentBattle(battle); setView('simulating'); }} className="btn-primary text-xs">⚡ Watch Battle</button>}
+                      {(battle.status === 'selecting' || (battle.status === 'pending' && isMyBattle)) && (() => {
+                        const myReady = isMyBattle ? (battle.player1 as unknown as { ready?: boolean })?.ready : (battle.player2 as unknown as { ready?: boolean })?.ready;
+                        return myReady
+                          ? <button onClick={() => { setCurrentBattle(battle); setView('simulating'); }} className="btn-primary text-xs">⏳ Waiting...</button>
+                          : <button onClick={() => { setCurrentBattle(battle); setView('select-cards'); }} className="btn-primary text-xs">Select Cards</button>;
+                      })()}
                     </div>
                   </div>
                 );
