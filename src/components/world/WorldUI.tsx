@@ -24,6 +24,7 @@ interface OnlineAgent {
   isAI: boolean;
   online?: boolean;
   currentAction?: string | null;
+  currentMoodDelta?: number;
   currentReason?: string | null;
   currentLocation?: string | null;
   mood?: number;
@@ -283,6 +284,19 @@ export function WorldUI({
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${activity.cls}`}>
                               {activity.icon} {activity.label}
                             </span>
+                            {typeof agent.currentMoodDelta === 'number' && (
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${
+                                  agent.currentMoodDelta > 0
+                                    ? 'text-emerald-300 bg-emerald-500/10'
+                                    : agent.currentMoodDelta < 0
+                                      ? 'text-red-300 bg-red-500/10'
+                                      : 'text-gray-400 bg-white/5'
+                                }`}
+                              >
+                                Mood {agent.currentMoodDelta > 0 ? '+' : ''}{agent.currentMoodDelta}
+                              </span>
+                            )}
                             {agent.model && <span className="text-[9px] text-violet-400/60 hidden sm:inline">🧠</span>}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0 ml-1">
