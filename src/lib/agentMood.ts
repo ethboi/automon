@@ -9,15 +9,20 @@ export function clampMood(value: number): number {
 
 export function getActionMoodDelta(action: string): number {
   const a = (action || '').toLowerCase();
+  if (a.includes('battle_result')) return 0; // explicit win/loss deltas are logged separately
   if (a.includes('battle')) return -2;
   if (a.includes('rest')) return 4;
   if (a.includes('fish')) return 3;
   if (a.includes('farm')) return 3;
+  if (a.includes('forag')) return 2;
   if (a.includes('catch')) return 2;
   if (a.includes('explor')) return 1;
+  if (a.includes('wander') || a.includes('move')) return 1;
+  if (a.includes('trading_token')) return -2;
   if (a.includes('trade')) return -1;
   if (a.includes('shop')) return 1;
   if (a.includes('train')) return -1;
+  if (a.includes('online')) return 1;
   return 0;
 }
 
@@ -49,15 +54,75 @@ export async function applyBattleMoodResult(
   if (!p1 || !p2 || !winner || winner === 'draw') return;
 
   const loser = winner === p1 ? p2 : p1;
+  const now = new Date();
+  const [winnerAgent, loserAgent] = await Promise.all([
+    db.collection('agents').findOne({ address: winner }),
+    db.collection('agents').findOne({ address: loser }),
+  ]);
+
+  const winnerBefore = clampMood(typeof winnerAgent?.mood === 'number' ? winnerAgent.mood : DEFAULT_MOOD);
+  const loserBefore = clampMood(typeof loserAgent?.mood === 'number' ? loserAgent.mood : DEFAULT_MOOD);
+  const winnerDelta = 14;
+  const loserDelta = -12;
+  const winnerAfter = clampMood(winnerBefore + winnerDelta);
+  const loserAfter = clampMood(loserBefore + loserDelta);
 
   await Promise.all([
     db.collection('agents').updateOne(
       { address: winner },
-      [{ $set: { mood: { $min: [MAX_MOOD, { $max: [MIN_MOOD, { $add: [{ $ifNull: ['$mood', DEFAULT_MOOD] }, 14] }] }] } } }] as any,
+      {
+        $set: {
+          mood: winnerAfter,
+          moodLabel: getMoodTier(winnerAfter),
+          currentAction: 'battle_result',
+          currentReason: 'Won a battle',
+          currentReasoning: 'Won battle and got a confidence boost.',
+          currentLocation: winnerAgent?.currentLocation || 'Town Arena',
+          lastActionAt: now,
+          lastSeen: now,
+        },
+      },
     ),
     db.collection('agents').updateOne(
       { address: loser },
-      [{ $set: { mood: { $min: [MAX_MOOD, { $max: [MIN_MOOD, { $add: [{ $ifNull: ['$mood', DEFAULT_MOOD] }, -12] }] }] } } }] as any,
+      {
+        $set: {
+          mood: loserAfter,
+          moodLabel: getMoodTier(loserAfter),
+          currentAction: 'battle_result',
+          currentReason: 'Lost a battle',
+          currentReasoning: 'Lost battle and took a morale hit.',
+          currentLocation: loserAgent?.currentLocation || 'Town Arena',
+          lastActionAt: now,
+          lastSeen: now,
+        },
+      },
     ),
+    db.collection('agent_actions').insertMany([
+      {
+        address: winner,
+        action: 'battle_result',
+        reason: 'Won a battle',
+        reasoning: 'Won battle and got a confidence boost.',
+        location: winnerAgent?.currentLocation || 'Town Arena',
+        healthDelta: 0,
+        healthAfter: typeof winnerAgent?.health === 'number' ? winnerAgent.health : undefined,
+        moodDelta: winnerDelta,
+        moodAfter: winnerAfter,
+        timestamp: now,
+      },
+      {
+        address: loser,
+        action: 'battle_result',
+        reason: 'Lost a battle',
+        reasoning: 'Lost battle and took a morale hit.',
+        location: loserAgent?.currentLocation || 'Town Arena',
+        healthDelta: 0,
+        healthAfter: typeof loserAgent?.health === 'number' ? loserAgent.health : undefined,
+        moodDelta: loserDelta,
+        moodAfter: loserAfter,
+        timestamp: now,
+      },
+    ]),
   ]);
 }

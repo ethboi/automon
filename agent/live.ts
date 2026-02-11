@@ -205,6 +205,8 @@ let cardCount = 0;
 let totalMinted = 0;
 let isRunning = true;
 let agentHealth = 100;
+let agentMood = 60;
+let agentMoodLabel = 'steady';
 let agentBalance = '0';
 let agentTokenBalance = '0';
 let agentMaxHealth = 100;
@@ -1017,6 +1019,8 @@ async function tick(): Promise<void> {
         const data = await agentRes.json();
         agentHealth = data.agent?.health ?? agentHealth;
         agentMaxHealth = data.agent?.maxHealth ?? agentMaxHealth;
+        agentMood = data.agent?.mood ?? agentMood;
+        agentMoodLabel = data.agent?.moodLabel ?? agentMoodLabel;
       }
 
       // Get pending battle count
@@ -1043,6 +1047,8 @@ async function tick(): Promise<void> {
         target.name,
         agentHealth,
         agentMaxHealth,
+        agentMood,
+        agentMoodLabel,
         balance,
         cardsData.cards || [],
         recentActions,
@@ -1055,6 +1061,21 @@ async function tick(): Promise<void> {
       nextReason = decision.reasoning || decision.action;
       nextLocationName = decision.location;
       nextWager = decision.wager;
+
+      // Mood-driven behavior tuning: low mood = recover/low risk, high mood = bolder.
+      if (agentMood <= 30 && nextAction === 'battling') {
+        nextAction = 'fishing';
+        nextLocationName = 'Old Pond';
+        nextWager = undefined;
+        nextReason = `${nextReason} Mood is low (${agentMoodLabel}), recovering before taking more fights.`;
+      }
+      if (nextAction === 'battling' && nextWager) {
+        const wagerNum = parseFloat(nextWager);
+        if (Number.isFinite(wagerNum)) {
+          const adjusted = agentMood <= 35 ? Math.max(0.005, wagerNum * 0.75) : agentMood >= 75 ? Math.min(0.05, wagerNum * 1.15) : wagerNum;
+          nextWager = adjusted.toFixed(3);
+        }
+      }
 
       console.log(`[${ts()}] 🧠 AI decided: ${nextAction} @ ${nextLocationName || target.name}${nextWager ? ` (wager: ${nextWager} MON)` : ''} — "${nextReason}"`);
     } catch (err) {
