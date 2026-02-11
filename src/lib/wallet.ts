@@ -61,7 +61,7 @@ export async function signInWithEthereum(address: string, nonce: string): Promis
     throw new Error('No wallet found');
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  const provider = getMonadProvider();
   const signer = await provider.getSigner();
   const signerAddress = ethers.getAddress(await signer.getAddress());
   const normalizedAddress = ethers.getAddress(address);
@@ -92,7 +92,7 @@ export async function getBalance(address: string): Promise<string> {
     throw new Error('No wallet found');
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  const provider = getMonadProvider();
   const balance = await provider.getBalance(ethers.getAddress(address));
 
   return ethers.formatEther(balance);
@@ -103,7 +103,7 @@ export function getEscrowContract() {
     throw new Error('No wallet found');
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  const provider = getMonadProvider();
   const contractAddress = ethers.getAddress(getEscrowContractAddress());
 
   const abi = [
@@ -131,12 +131,19 @@ async function resolveNFTContractAddress(): Promise<string> {
   return data.address as string;
 }
 
+function getMonadProvider() {
+  const network = new ethers.Network('monad-testnet', 10143);
+  // Disable ENS on this network
+  network.getPlugin = () => null;
+  return new ethers.BrowserProvider(window.ethereum, network);
+}
+
 export async function getNFTContract() {
   if (!window.ethereum) {
     throw new Error('No wallet found');
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  const provider = getMonadProvider();
   const contractAddress = ethers.getAddress(await resolveNFTContractAddress());
 
   const abi = [
@@ -151,7 +158,7 @@ export async function buyPackOnChain(packPriceWei: string): Promise<string> {
     throw new Error('No wallet found');
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  const provider = getMonadProvider();
   const signer = await provider.getSigner();
   const contract = (await getNFTContract()).connect(signer) as ethers.Contract;
   const value = packPriceWei.includes('.') ? ethers.parseEther(packPriceWei) : BigInt(packPriceWei);
@@ -166,7 +173,7 @@ export async function createBattleOnChain(battleId: string, wager: string): Prom
     throw new Error('No wallet found');
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  const provider = getMonadProvider();
   const signer = await provider.getSigner();
   const contract = getEscrowContract().connect(signer) as ethers.Contract;
 
@@ -184,7 +191,7 @@ export async function joinBattleOnChain(battleId: string, wager: string): Promis
     throw new Error('No wallet found');
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  const provider = getMonadProvider();
   const signer = await provider.getSigner();
   const contract = getEscrowContract().connect(signer) as ethers.Contract;
 
@@ -202,7 +209,7 @@ export async function cancelBattleOnChain(battleId: string): Promise<string> {
     throw new Error('No wallet found');
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  const provider = getMonadProvider();
   const signer = await provider.getSigner();
   const contract = getEscrowContract().connect(signer) as ethers.Contract;
 
