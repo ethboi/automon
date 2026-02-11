@@ -1063,7 +1063,12 @@ async function tick(): Promise<void> {
       nextWager = decision.wager;
 
       // Mood-driven behavior tuning: low mood = recover/low risk, high mood = bolder.
-      if (agentMood <= 30 && nextAction === 'battling') {
+      if (agentMood <= 25 && (nextAction === 'battling' || nextAction === 'training' || nextAction === 'trading_token')) {
+        nextAction = Math.random() < 0.5 ? 'fishing' : 'resting';
+        nextLocationName = nextAction === 'fishing' ? 'Old Pond' : 'Home';
+        nextWager = undefined;
+        nextReason = `${nextReason} Mood crashed (${agentMoodLabel}); taking a reset action first.`;
+      } else if (agentMood <= 38 && nextAction === 'battling') {
         nextAction = 'fishing';
         nextLocationName = 'Old Pond';
         nextWager = undefined;
@@ -1072,7 +1077,11 @@ async function tick(): Promise<void> {
       if (nextAction === 'battling' && nextWager) {
         const wagerNum = parseFloat(nextWager);
         if (Number.isFinite(wagerNum)) {
-          const adjusted = agentMood <= 35 ? Math.max(0.005, wagerNum * 0.75) : agentMood >= 75 ? Math.min(0.05, wagerNum * 1.15) : wagerNum;
+          const adjusted = agentMood <= 45
+            ? Math.max(0.005, wagerNum * 0.6)
+            : agentMood >= 82
+              ? Math.min(0.05, wagerNum * 1.25)
+              : wagerNum;
           nextWager = adjusted.toFixed(3);
         }
       }
