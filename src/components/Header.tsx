@@ -107,7 +107,7 @@ export default function Header() {
                 </span>
               </div>
               <div className="text-[10px] sm:text-xs font-semibold tracking-[0.14em] sm:tracking-[0.16em] uppercase text-cyan-300/80">
-                gotta mint em all
+                mint · battle · trade
               </div>
             </Link>
 
@@ -230,7 +230,7 @@ export default function Header() {
         {/* Mobile Navigation */}
         {address && mobileMenuOpen && (
           <nav className="lg:hidden py-4 border-t border-white/5 animate-fade-in-up">
-            <p className="text-center text-[10px] font-semibold tracking-[0.16em] uppercase text-cyan-300/60 pb-3">gotta mint em all</p>
+            <p className="text-center text-[10px] font-semibold tracking-[0.16em] uppercase text-cyan-300/60 pb-3">mint · battle · trade</p>
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <Link
