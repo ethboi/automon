@@ -40,6 +40,10 @@ function ago(value: string): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
+function shortAddr(addr: string): string {
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
 export default function LocationLivePanel({ worldLabel }: { worldLabel: string }) {
   const [data, setData] = useState<DashboardResponse | null>(null);
 
@@ -69,6 +73,28 @@ export default function LocationLivePanel({ worldLabel }: { worldLabel: string }
     () => (data?.events || []).filter(e => e.location === worldLabel).slice(0, 6),
     [data?.events, worldLabel],
   );
+
+  const visitsByAgent = useMemo(() => {
+    const agentMap = new Map<string, { name: string; address: string; visits: DashboardEvent[] }>();
+    const nameByAddress = new Map((data?.agents || []).map(a => [a.address.toLowerCase(), a.name || shortAddr(a.address)]));
+
+    for (const event of data?.events || []) {
+      if (event.location !== worldLabel) continue;
+      const key = (event.agent || '').toLowerCase();
+      if (!key) continue;
+      if (!agentMap.has(key)) {
+        agentMap.set(key, {
+          name: nameByAddress.get(key) || shortAddr(event.agent),
+          address: event.agent,
+          visits: [],
+        });
+      }
+      const entry = agentMap.get(key)!;
+      if (entry.visits.length < 5) entry.visits.push(event);
+    }
+
+    return Array.from(agentMap.values());
+  }, [data?.agents, data?.events, worldLabel]);
 
   const recentChat = useMemo(
     () => (data?.chat || []).filter(c => c.location === worldLabel).slice(-6).reverse(),
@@ -121,6 +147,33 @@ export default function LocationLivePanel({ worldLabel }: { worldLabel: string }
                 <div className="text-xs text-cyan-300 font-semibold">{msg.fromName}</div>
                 <div className="text-sm text-gray-200 mt-1">{msg.message}</div>
                 <div className="text-[11px] text-gray-500 mt-1">{ago(msg.timestamp)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="section-card border border-white/10 lg:col-span-3">
+        <h2 className="text-lg font-bold text-white mb-3">Recent Visits by Agent</h2>
+        {visitsByAgent.length === 0 ? (
+          <p className="text-sm text-gray-400">No recent visits logged at this location yet.</p>
+        ) : (
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {visitsByAgent.map((agent) => (
+              <div key={agent.address} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="text-sm font-semibold text-cyan-300">{agent.name}</div>
+                  <div className="text-[11px] text-gray-500">{ago(agent.visits[0].timestamp)}</div>
+                </div>
+                <div className="space-y-1.5">
+                  {agent.visits.map((visit, idx) => (
+                    <div key={`${visit.timestamp}-${idx}`} className="rounded-lg border border-white/5 bg-black/20 px-2 py-1.5">
+                      <div className="text-xs text-white">{visit.action}</div>
+                      <div className="text-[11px] text-gray-400 mt-0.5">{visit.reason}</div>
+                      <div className="text-[10px] text-gray-600 mt-0.5">{ago(visit.timestamp)}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
