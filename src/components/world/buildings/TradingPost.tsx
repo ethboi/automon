@@ -150,8 +150,8 @@ export function TradingPost({ position }: TradingPostProps) {
         </mesh>
       ))}
 
-      {/* === 3D "nad.fun" ON ROOFTOP === */}
-      <group position={[-1.2, 5.8, 0]} rotation={[0, 0, 0]}>
+      {/* === 3D "nad.fun" ON ROOFTOP — BIG === */}
+      <group position={[-2.1, 6.2, 0]} rotation={[0, 0, 0]} scale={[1.8, 1.8, 1.8]}>
         {'nad.fun'.split('').map((char, i) => {
           const spacing = [0, 0.55, 1.1, 1.5, 1.75, 2.3, 2.85];
           return (
@@ -164,18 +164,17 @@ export function TradingPost({ position }: TradingPostProps) {
             />
           );
         })}
-        {/* Glow light behind text */}
-        <pointLight position={[1.4, 0, -0.5]} intensity={1} color="#fbbf24" distance={8} decay={2} />
+        <pointLight position={[1.4, 0, -0.5]} intensity={1.5} color="#fbbf24" distance={12} decay={2} />
       </group>
 
       {/* Sign backing board on roof */}
-      <mesh position={[0, 5.7, 0]} castShadow>
-        <boxGeometry args={[4.5, 1.2, 0.1]} />
+      <mesh position={[0, 6.3, 0]} castShadow>
+        <boxGeometry args={[7, 2, 0.15]} />
         <meshStandardMaterial color="#7c3aed" roughness={0.4} />
       </mesh>
       {/* Sign border - gold */}
-      <mesh position={[0, 5.7, -0.02]}>
-        <boxGeometry args={[4.7, 1.4, 0.05]} />
+      <mesh position={[0, 6.3, -0.03]}>
+        <boxGeometry args={[7.3, 2.3, 0.05]} />
         <meshStandardMaterial color="#fbbf24" metalness={0.7} roughness={0.3} />
       </mesh>
 
@@ -190,8 +189,8 @@ export function TradingPost({ position }: TradingPostProps) {
         <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={0.8} roughness={0.3} />
       </mesh>
 
-      {/* === GOLDEN BULL — BIGGER === */}
-      <group position={[4.5, 0.3, 5.5]} scale={[2.2, 2.2, 2.2]}>
+      {/* === GOLDEN BULL — BIG, AWAY FROM BUILDING === */}
+      <group position={[6.5, 0.3, 7]} scale={[2.8, 2.8, 2.8]} rotation={[0, -0.4, 0]}>
         {/* Pedestal */}
         <mesh position={[0, 0.1, 0]} castShadow>
           <boxGeometry args={[2, 0.2, 1.2]} />
@@ -200,43 +199,43 @@ export function TradingPost({ position }: TradingPostProps) {
         {/* Body */}
         <mesh position={[0, 0.7, 0]} castShadow>
           <boxGeometry args={[1.5, 1, 0.8]} />
-          <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.15} />
+          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.08} />
         </mesh>
         {/* Hump / shoulders */}
         <mesh position={[-0.3, 1.1, 0]} castShadow>
           <boxGeometry args={[0.7, 0.4, 0.7]} />
-          <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.15} />
+          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.08} />
         </mesh>
         {/* Head */}
         <mesh position={[0.8, 1.0, 0]} castShadow>
           <boxGeometry args={[0.6, 0.6, 0.6]} />
-          <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.15} />
+          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.08} />
         </mesh>
         {/* Snout */}
         <mesh position={[1.15, 0.85, 0]} castShadow>
           <boxGeometry args={[0.3, 0.35, 0.45]} />
-          <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.15} />
+          <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.08} />
         </mesh>
         {/* Horns */}
         <mesh position={[0.85, 1.4, -0.3]} rotation={[-0.4, 0, 0.3]} castShadow>
           <coneGeometry args={[0.08, 0.5, 6]} />
-          <meshStandardMaterial color="#f59e0b" metalness={0.9} roughness={0.1} />
+          <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.05} />
         </mesh>
         <mesh position={[0.85, 1.4, 0.3]} rotation={[0.4, 0, 0.3]} castShadow>
           <coneGeometry args={[0.08, 0.5, 6]} />
-          <meshStandardMaterial color="#f59e0b" metalness={0.9} roughness={0.1} />
+          <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.05} />
         </mesh>
         {/* Legs — thick */}
         {[[-0.5, 0, -0.3], [-0.5, 0, 0.3], [0.4, 0, -0.3], [0.4, 0, 0.3]].map((p, i) => (
           <mesh key={`leg-${i}`} position={p as [number, number, number]} castShadow>
             <boxGeometry args={[0.18, 0.4, 0.18]} />
-            <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.15} />
+            <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.08} />
           </mesh>
         ))}
         {/* Tail */}
         <mesh position={[-0.85, 0.9, 0]} rotation={[0, 0, -0.6]} castShadow>
           <cylinderGeometry args={[0.03, 0.05, 0.6, 6]} />
-          <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.15} />
+          <meshStandardMaterial color="#ffcc00" metalness={0.95} roughness={0.08} />
         </mesh>
       </group>
 
