@@ -19,6 +19,15 @@ function tokenLimit(envName: string, normal: number, low: number): number {
   return envInt(envName, LOW_TOKEN_MODE ? low : normal);
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
 // AI Personalities for more interesting battles
 const AI_PERSONALITIES: Record<string, AIPersonality> = {
   aggressive: {
@@ -216,19 +225,24 @@ export async function getAgentDecision(
 - Caution: ${aiPersonality.caution * 100}% (higher = prefer GUARD)
 - Skill preference: ${aiPersonality.skillPreference * 100}%
 - Adaptability: ${aiPersonality.adaptability * 100}% (ability to read opponent)`;
+  const decisionTimeoutMs = envInt('AI_BATTLE_DECISION_TIMEOUT_MS', LOW_TOKEN_MODE ? 7000 : 12000);
 
   try {
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL_ID,
-      max_tokens: tokenLimit('AI_MAX_TOKENS_BATTLE_MOVE', 800, 280),
-      system: BATTLE_SYSTEM_PROMPT + personalityHint,
-      messages: [
-        {
-          role: 'user',
-          content: `Current battle state:\n${battleState}\n\nMake your move. Show your strategic thinking.`,
-        },
-      ],
-    });
+    const response = await withTimeout(
+      anthropic.messages.create({
+        model: CLAUDE_MODEL_ID,
+        max_tokens: tokenLimit('AI_MAX_TOKENS_BATTLE_MOVE', 800, 280),
+        system: BATTLE_SYSTEM_PROMPT + personalityHint,
+        messages: [
+          {
+            role: 'user',
+            content: `Current battle state:\n${battleState}\n\nMake your move. Show your strategic thinking.`,
+          },
+        ],
+      }),
+      decisionTimeoutMs,
+      'Battle AI decision'
+    );
 
     const content = response.content[0];
     if (content.type !== 'text') {

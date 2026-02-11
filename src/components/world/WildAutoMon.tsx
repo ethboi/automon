@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
+import { createPortal } from 'react-dom';
 
 const WILD_SPECIES = [
   { name: 'Emberfox', element: 'fire', bodyColor: '#ef4444', headColor: '#f87171', glowColor: '#ff6b6b', emoji: '🔥', level: 3 },
@@ -269,17 +270,23 @@ export function WildAutoMons({ playerPosition, walletAddress }: WildAutoMonsProp
         />
       ))}
 
-      {/* Tame Dialog — rendered as HTML overlay via drei */}
-      {tameState && (
-        <Html position={[0, 30, 0]} center zIndexRange={[1, 0]} style={{ pointerEvents: 'auto' }}>
-          <div className="fixed inset-0 flex items-center justify-center" style={{ pointerEvents: 'auto' }}>
-            {/* Backdrop */}
-            {tameState.phase === 'confirm' && (
-              <div className="absolute inset-0" onClick={handleCancel} />
-            )}
+      {/* Tame Dialog — screen-centered portal modal */}
+      {typeof document !== 'undefined' && tameState && createPortal(
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
+          {/* Backdrop */}
+          {tameState.phase === 'confirm' ? (
+            <button
+              type="button"
+              aria-label="Close tame dialog"
+              className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"
+              onClick={handleCancel}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
+          )}
 
-            {/* Dialog */}
-            <div className="relative bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl p-6 w-80 animate-scale-in">
+          {/* Dialog */}
+          <div className="relative bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl p-6 w-full max-w-sm animate-scale-in">
               
               {/* Confirm Phase */}
               {tameState.phase === 'confirm' && (
@@ -362,9 +369,9 @@ export function WildAutoMons({ playerPosition, walletAddress }: WildAutoMonsProp
                   )}
                 </div>
               )}
-            </div>
           </div>
-        </Html>
+        </div>,
+        document.body
       )}
     </>
   );
