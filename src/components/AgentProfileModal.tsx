@@ -23,11 +23,12 @@ interface AgentDetails {
 }
 
 const ICONS: Record<string, string> = {
-  battle: '⚔️', fish: '🎣', train: '🥊', trade: '🛒', shop: '🛒',
+  battle: '⚔️', fish: '🎣', train: '🥊', trading_token: '📈', trade: '🛒', shop: '🛒',
   rest: '🛌', heal: '🛌', farm: '🌾', walk: '🚶', move: '🚶', explor: '🚶', mint: '🎴',
 };
 const TX_ICONS: Record<string, string> = {
   escrow_deposit: '🔒', battle_join: '⚔️', battle_settle: '🏆', mint_pack: '🎴', settlement: '💸',
+  token_buy: '📈', token_sell: '📉',
 };
 
 function icon(a?: string | null) {
@@ -283,6 +284,13 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                 <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 mb-3">
                   <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Balance</div>
                   <div className="text-2xl font-bold text-yellow-400">{parseFloat(d.stats.balance).toFixed(3)} <span className="text-sm text-gray-500">MON</span></div>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {parseFloat((d.stats as any).tokenBalance || '0') > 0 && (
+                    <div className="text-sm font-semibold text-emerald-400 mt-1">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      📈 {parseFloat((d.stats as any).tokenBalance).toFixed(0)} <span className="text-xs text-gray-500">$AUTOMON</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* HP */}

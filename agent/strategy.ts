@@ -507,6 +507,7 @@ export async function decideNextAction(
   recentActions: string[],
   pendingBattles: number,
   personality?: string,
+  tokenBalance?: string,
 ): Promise<LocationDecision> {
   const locationList = Object.entries(LOCATION_INFO)
     .map(([name, desc]) => `- ${name}: ${desc}`)
@@ -528,7 +529,7 @@ ${personalityLine}
 - Location: ${currentLocation}
 - Health: ${health}/${maxHealth} HP
 - Balance: ${balance} MON
-- Cards: ${cardSummary}
+${tokenBalance && parseFloat(tokenBalance) > 0 ? `- $AUTOMON tokens: ${tokenBalance}\n` : ''}- Cards: ${cardSummary}
 - Pending battles available: ${pendingBattles}
 - Recent actions: ${recentActions.slice(-5).join(' → ') || 'just started'}
 
@@ -562,6 +563,8 @@ ${locationList}
 - Higher wagers when you have strong/rare cards, high HP, and are feeling confident
 - Lower wagers when low HP, only common cards, or being cautious
 - Vary non-battle actions — explore, fish, farm between fights
+- Visit the Trading Post occasionally (every 5-8 actions) to trade $AUTOMON tokens
+- Trading is speculative — small amounts, don't go broke. Keep at least 0.15 MON for gameplay
 - Show personality — be curious, strategic, sometimes bold
 
 Respond with JSON only:
