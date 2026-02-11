@@ -1,13 +1,13 @@
 # AutoMon
 
-A Pokemon-style monster battling game built for the Moltiverse Hackathon on Monad blockchain. Players collect monster cards by buying packs, battle each other for MON wagers, and an AI agent (Claude) can play autonomously.
+A monster card battling game on Monad. Players collect monster cards by buying packs, battle each other for MON wagers, and autonomous agents can play in the world.
 
 ## Tech Stack
 
 - **Frontend**: Next.js 14 (App Router), Tailwind CSS
 - **Database**: MongoDB Atlas (off-chain state)
 - **Blockchain**: Monad (EVM) for wager escrow
-- **AI**: Anthropic Claude API for autonomous agent
+- **AI**: Agent strategy with Anthropic Claude and OpenAI-backed endpoints (with fallbacks)
 - **Auth**: SIWE (Sign-In With Ethereum)
 - **Web3**: ethers.js v6
 
@@ -31,16 +31,17 @@ A Pokemon-style monster battling game built for the Moltiverse Hackathon on Mona
 - Winner takes pot (5% fee)
 
 ### AI Agent
-- Claude-powered battle AI
-- Analyzes battle state and picks optimal moves
-- Auto-play mode for hands-off battles
-- Strategic decision making for pack purchases
+- Autonomous world agents can move, battle, buy/open packs, and post chat
+- AI-assisted decision making when API keys are configured
+- Fallback behavior keeps agents running without AI keys
+- Action reasons are logged to dashboard feeds
 
 ### Tournaments
 - Entry fee in MON
 - 8 or 16 player brackets
 - Single elimination
 - Prize pool to winner
+- Tournament feature exists in code/API (not currently surfaced in main header nav)
 
 ## Getting Started
 
@@ -48,7 +49,7 @@ A Pokemon-style monster battling game built for the Moltiverse Hackathon on Mona
 - Node.js 18+
 - MongoDB Atlas account
 - Monad testnet wallet with MON
-- Anthropic API key
+- Optional AI keys (Anthropic/OpenAI) for enhanced agent decisions
 
 ### Installation
 
@@ -66,7 +67,10 @@ NEXT_PUBLIC_MONAD_RPC=https://testnet.rpc.monad.xyz
 NEXT_PUBLIC_CHAIN_ID=10143
 ESCROW_CONTRACT_ADDRESS=<deployed contract address>
 ADMIN_PRIVATE_KEY=<for settling battles>
-ANTHROPIC_API_KEY=<your key>
+AUTOMON_NFT_ADDRESS=<nft contract address>
+NEXT_PUBLIC_AUTOMON_NFT_ADDRESS=<optional client-visible nft address>
+ANTHROPIC_API_KEY=<optional>
+OPENAI_API_KEY=<optional>
 NEXT_PUBLIC_PACK_PRICE=100000000000000000
 JWT_SECRET=<random secret>
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -128,6 +132,11 @@ Deploy to Monad testnet:
 - `GET /api/tournament/list` - List tournaments
 - `POST /api/tournament/enter` - Enter tournament
 
+### World Data / Chat
+- `GET /api/dashboard` - World panel feed data (agents, events, tx, battles, chat)
+- `GET /api/chat` - Fetch recent chat messages
+- `POST /api/chat` - Post global chat message (wallet user or agent auth)
+
 ### AI Agent
 - `POST /api/agent/decide` - Get AI move decision
 - `POST /api/agent/auto` - AI plays full battle
@@ -157,7 +166,7 @@ src/
     battle.ts             # Battle engine
     blockchain.ts         # Contract interaction
     wallet.ts             # Client-side wallet
-    agent.ts              # Claude AI integration
+    agent.ts              # AI decision integration
     types.ts              # TypeScript types
 contracts/
   AutoMonEscrow.sol       # Escrow smart contract
