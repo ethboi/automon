@@ -28,17 +28,6 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
   const myActiveCard = myState?.cards?.[myState?.activeCardIndex ?? 0];
   const opponentActiveCard = opponentState?.cards?.[opponentState?.activeCardIndex ?? 0];
 
-  // Guard: if cards not loaded yet, show loading state
-  if (!myActiveCard || !opponentActiveCard) {
-    return (
-      <div className="section-card text-center py-12">
-        <div className="spinner mb-4 mx-auto" />
-        <p className="text-gray-400">Waiting for battle to start...</p>
-        <p className="text-xs text-gray-600 mt-2">Both players need to select cards</p>
-      </div>
-    );
-  }
-
   const currentRound = battle.rounds.find(r => r.turn === battle.currentTurn);
   const hasSubmittedMove = isParticipant && currentRound && (isPlayer1 ? currentRound.player1Move : currentRound.player2Move);
 
@@ -96,6 +85,17 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
             Settlement TX: {battle.settleTxHash.slice(0, 10)}...
           </p>
         )}
+      </div>
+    );
+  }
+
+  // Guard: if cards not loaded yet, show loading state
+  if (!myActiveCard || !opponentActiveCard) {
+    return (
+      <div className="section-card text-center py-12">
+        <div className="spinner mb-4 mx-auto" />
+        <p className="text-gray-400">Waiting for battle to start...</p>
+        <p className="text-xs text-gray-600 mt-2">Both players need to select cards</p>
       </div>
     );
   }
