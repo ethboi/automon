@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { explorerUrl } from '@/lib/transactions';
-import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
+import { clampMood, DEFAULT_MOOD, getActionMoodDelta, getMoodTier } from '@/lib/agentMood';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,7 +76,7 @@ export async function GET() {
       }
     }
 
-    const latestActionByAgent = new Map<string, { action?: string; reason?: string; reasoning?: string; location?: string }>();
+    const latestActionByAgent = new Map<string, { action?: string; reason?: string; reasoning?: string; location?: string; moodDelta?: number }>();
     for (const action of recentActions) {
       const addr = action.address?.toLowerCase?.();
       if (!addr || latestActionByAgent.has(addr)) continue;
@@ -85,6 +85,7 @@ export async function GET() {
         reason: action.reason,
         reasoning: action.reasoning,
         location: action.location,
+        moodDelta: typeof action.moodDelta === 'number' ? action.moodDelta : undefined,
       });
     }
 
@@ -97,6 +98,9 @@ export async function GET() {
       const isOnline = a.lastSeen >= fiveMinAgo;
       const rawAction = a.currentAction || latest.action || (isOnline ? 'wandering' : null);
       const currentAction = rawAction?.toLowerCase() === 'came online' ? 'wandering' : rawAction;
+      const currentMoodDelta = typeof latest.moodDelta === 'number'
+        ? latest.moodDelta
+        : getActionMoodDelta(currentAction || '');
       const mood = clampMood(typeof a.mood === 'number' ? a.mood : DEFAULT_MOOD);
       return {
         address: a.address,
@@ -107,6 +111,7 @@ export async function GET() {
         health,
         maxHealth,
         currentAction,
+        currentMoodDelta,
         currentReason: a.currentReason || latest.reason || null,
         currentReasoning: a.currentReasoning || latest.reasoning || null,
         currentLocation: a.currentLocation || latest.location || null,

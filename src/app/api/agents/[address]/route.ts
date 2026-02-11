@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { ethers } from 'ethers';
 import { getRpcUrl } from '@/lib/network';
-import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
+import { clampMood, DEFAULT_MOOD, getActionMoodDelta, getMoodTier } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -76,6 +76,9 @@ export async function GET(
     const latestAction = actions[0];
     const rawAction = agent.currentAction || latestAction?.action || null;
     const currentAction = rawAction?.toLowerCase() === 'came online' ? 'wandering' : rawAction;
+    const currentMoodDelta = typeof latestAction?.moodDelta === 'number'
+      ? latestAction.moodDelta
+      : getActionMoodDelta(currentAction || '');
     const currentReason = agent.currentReason || latestAction?.reason || null;
     const currentReasoning = agent.currentReasoning || latestAction?.reasoning || null;
     const currentLocation = agent.currentLocation || latestAction?.location || null;
@@ -97,6 +100,7 @@ export async function GET(
         mood,
         moodLabel: agent.moodLabel || getMoodTier(mood),
         currentAction,
+        currentMoodDelta,
         currentReason,
         currentReasoning,
         currentLocation,

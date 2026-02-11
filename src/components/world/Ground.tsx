@@ -26,6 +26,29 @@ export function Ground({ size = 200, onClick }: GroundProps) {
     [22, -18], [18, 14], [2, 34], [38, -8],
   ], []);
 
+  // Keep ambient props away from major location footprints.
+  const locationClearZones = useMemo(
+    () => [
+      { x: 0, z: 0, r: 8 },       // Home
+      { x: 0, z: -30, r: 9 },     // Town Arena
+      { x: 28, z: 0, r: 9 },      // Shop
+      { x: -28, z: 0, r: 10 },    // Community Farm
+      { x: -36, z: -14, r: 10 },  // Old Pond
+      { x: -36, z: 22, r: 11 },   // Dark Forest
+      { x: 32, z: 24, r: 11 },    // Crystal Caves
+      { x: 20, z: -20, r: 10 },   // Trading Post
+    ],
+    []
+  );
+
+  const isInClearZone = (x: number, z: number, extraRadius = 0) =>
+    locationClearZones.some(zone => {
+      const dx = x - zone.x;
+      const dz = z - zone.z;
+      const rr = zone.r + extraRadius;
+      return dx * dx + dz * dz <= rr * rr;
+    });
+
   // stream removed
 
   const hillDomes = useMemo(() => [
@@ -36,6 +59,28 @@ export function Ground({ size = 200, onClick }: GroundProps) {
     [-31, 0.1, 4, 2.6, 0.95, 0.8],
     [4, 0.1, 24, 2.4, 1.0, 0.86],
   ], []);
+
+  const groundColorBlobs = useMemo(() => ([
+    [-8, 10, 5, '#4a9e42'], [5, -12, 4, '#358030'], [12, 8, 6, '#4a9e42'],
+    [-10, -8, 4, '#2d7528'], [0, 15, 5, '#4a9e42'], [-15, 0, 4, '#358030'],
+    [25, -5, 5, '#4a9e42'], [-25, 8, 4.5, '#358030'], [15, -20, 4, '#2d7528'],
+    [-20, -15, 5, '#358030'], [28, 12, 4, '#4a9e42'], [-12, 22, 4.5, '#2d7528'],
+    [8, 25, 4, '#358030'], [-28, -5, 5, '#4a9e42'], [20, -25, 4, '#2d7528'],
+    [-35, 10, 6, '#358030'], [35, -15, 5, '#4a9e42'], [0, -35, 6, '#2d7528'],
+    [40, 5, 5, '#358030'], [-40, -20, 6, '#4a9e42'],
+  ] as const), []);
+
+  const rockProps = useMemo(() => ([
+    [-6, -15, 0.55], [8, -20, 0.44], [-16, 5, 0.72], [14, 12, 0.38],
+    [26, -8, 0.58], [-26, -12, 0.78], [0, -35, 0.52], [-10, 28, 0.63],
+    [38, -3, 0.42], [-38, 18, 0.48], [45, 15, 0.52], [-45, -10, 0.62],
+    [15, 40, 0.4], [-20, -40, 0.5], [-31, 20, 0.6], [34, 22, 0.54],
+  ] as const), []);
+
+  const mushrooms = useMemo(() => ([
+    [-38.5, 0, 18.8], [-34.8, 0, 20.6], [-40.1, 0, 23.7],
+    [-35.2, 0, 25.1], [-32.7, 0, 22.9],
+  ] as const), []);
 
   const flowerPatches = useMemo(() => [
     { c: [-8, 5], col: ['#f59e0b', '#ef4444', '#fde047'] },
@@ -72,15 +117,9 @@ export function Ground({ size = 200, onClick }: GroundProps) {
         <meshStandardMaterial color="#3d8b37" roughness={0.85} />
       </mesh>
 
-      {[
-        [-8, 10, 5, '#4a9e42'], [5, -12, 4, '#358030'], [12, 8, 6, '#4a9e42'],
-        [-10, -8, 4, '#2d7528'], [0, 15, 5, '#4a9e42'], [-15, 0, 4, '#358030'],
-        [25, -5, 5, '#4a9e42'], [-25, 8, 4.5, '#358030'], [15, -20, 4, '#2d7528'],
-        [-20, -15, 5, '#358030'], [28, 12, 4, '#4a9e42'], [-12, 22, 4.5, '#2d7528'],
-        [8, 25, 4, '#358030'], [-28, -5, 5, '#4a9e42'], [20, -25, 4, '#2d7528'],
-        [-35, 10, 6, '#358030'], [35, -15, 5, '#4a9e42'], [0, -35, 6, '#2d7528'],
-        [40, 5, 5, '#358030'], [-40, -20, 6, '#4a9e42'],
-      ].map(([x, z, r, color], i) => (
+      {groundColorBlobs
+        .filter(([x, z, r]) => !isInClearZone(x, z, r + 1))
+        .map(([x, z, r, color], i) => (
         <mesh key={`g-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x as number, 0.005, z as number]}>
           <circleGeometry args={[r as number, 16]} />
           <meshStandardMaterial color={color as string} transparent opacity={0.6} />
@@ -88,7 +127,9 @@ export function Ground({ size = 200, onClick }: GroundProps) {
       ))}
 
       {/* Subtle terrain undulation */}
-      {hillDomes.map(([x, y, z, radius, sx, sz], i) => (
+      {hillDomes
+        .filter(([x, _y, z, radius]) => !isInClearZone(x as number, z as number, radius as number))
+        .map(([x, y, z, radius, sx, sz], i) => (
         <mesh key={`hill-dome-${i}`} position={[x as number, y as number, z as number]} scale={[sx as number, 1, sz as number]} receiveShadow>
           <sphereGeometry args={[radius as number, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
           <meshStandardMaterial color={i % 2 === 0 ? '#4e9a45' : '#45893f'} roughness={0.9} />
@@ -123,7 +164,7 @@ export function Ground({ size = 200, onClick }: GroundProps) {
       </mesh>
 
       {/* Diverse trees: pine, oak, shrub */}
-      {trees.map(([x, z], i) => {
+      {trees.filter(([x, z]) => !isInClearZone(x, z, 1.2)).map(([x, z], i) => {
         const h = 1.9 + (i % 4) * 0.55;
         const treeType = i % 3;
         if (treeType === 0) {
@@ -183,12 +224,9 @@ export function Ground({ size = 200, onClick }: GroundProps) {
       })}
 
       {/* Rocks with mossy variants */}
-      {[
-        [-6, -15, 0.55], [8, -20, 0.44], [-16, 5, 0.72], [14, 12, 0.38],
-        [26, -8, 0.58], [-26, -12, 0.78], [0, -35, 0.52], [-10, 28, 0.63],
-        [38, -3, 0.42], [-38, 18, 0.48], [45, 15, 0.52], [-45, -10, 0.62],
-        [15, 40, 0.4], [-20, -40, 0.5], [-31, 20, 0.6], [34, 22, 0.54],
-      ].map(([x, z, s], i) => (
+      {rockProps
+        .filter(([x, z, s]) => !isInClearZone(x, z, s + 0.8))
+        .map(([x, z, s], i) => (
         <group key={`r-${i}`} position={[x as number, (s as number) * 0.4, z as number]}>
           <mesh castShadow>
             <dodecahedronGeometry args={[s as number, 0]} />
@@ -204,7 +242,9 @@ export function Ground({ size = 200, onClick }: GroundProps) {
       ))}
 
       {/* Flower patches with clustered blooms */}
-      {flowerPatches.map((patch, patchIndex) => (
+      {flowerPatches
+        .filter((patch) => !isInClearZone(patch.c[0], patch.c[1], 1.4))
+        .map((patch, patchIndex) => (
         <group key={`patch-${patchIndex}`} position={[patch.c[0], 0, patch.c[1]]}>
           {[0, 1, 2, 3, 4, 5, 6].map((i) => {
             const ox = Math.cos(i * 0.9) * (0.25 + (i % 3) * 0.15);
@@ -226,10 +266,9 @@ export function Ground({ size = 200, onClick }: GroundProps) {
       ))}
 
       {/* Mushrooms near Dark Forest */}
-      {[
-        [-38.5, 0, 18.8], [-34.8, 0, 20.6], [-40.1, 0, 23.7],
-        [-35.2, 0, 25.1], [-32.7, 0, 22.9],
-      ].map((m, i) => (
+      {mushrooms
+        .filter(([x, _y, z]) => !isInClearZone(x, z, 0.8))
+        .map((m, i) => (
         <group key={`mush-${i}`} position={m as [number, number, number]}>
           <mesh position={[0, 0.14, 0]} castShadow>
             <cylinderGeometry args={[0.05, 0.06, 0.28, 6]} />
