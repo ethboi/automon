@@ -59,13 +59,9 @@ export function TradingPost({ position }: TradingPostProps) {
         </mesh>
       ))}
 
-      {/* Roof */}
+      {/* Roof — flat */}
       <mesh position={[0, 5.0, 0]} castShadow>
         <boxGeometry args={[10, 0.4, 7.5]} />
-        <meshStandardMaterial color="#334155" roughness={0.5} />
-      </mesh>
-      <mesh position={[0, 5.6, 3.0]} castShadow>
-        <coneGeometry args={[5.5, 1.5, 4]} />
         <meshStandardMaterial color="#334155" roughness={0.5} />
       </mesh>
 
