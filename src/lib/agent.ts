@@ -287,27 +287,36 @@ export async function getAgentDecision(
     const myState = isPlayer1 ? battle.player1 : battle.player2!;
     const activeCard = myState.cards[myState.activeCardIndex];
 
+    const hpPct = activeCard.currentHp / activeCard.stats.maxHp;
+    const opponentState = isPlayer1 ? battle.player2! : battle.player1;
+    const oppCard = opponentState.cards[opponentState.activeCardIndex];
+    const oppHpPct = oppCard ? oppCard.currentHp / oppCard.stats.maxHp : 1;
+
     // If very low HP, try to guard
-    if (activeCard.currentHp / activeCard.stats.maxHp < 0.25) {
+    if (hpPct < 0.25) {
       return {
         action: 'guard',
-        prediction: 'Error fallback - opponent might attack',
-        reasoning: 'Fallback: Very low HP, using GUARD defensively',
+        prediction: 'Opponent likely to go aggressive seeing my low HP',
+        reasoning: `${activeCard.name} is critically wounded at ${Math.round(hpPct * 100)}% HP — raising defenses to survive the next hit and counter if they strike.`,
       };
     }
 
     // If ability ready and not on cooldown, use it
     if (!activeCard.ability.currentCooldown || activeCard.ability.currentCooldown === 0) {
+      const abilityName = activeCard.ability.name || 'special ability';
       return {
         action: 'skill',
-        prediction: 'Error fallback - using ability',
-        reasoning: 'Fallback: Ability ready, using SKILL',
+        prediction: oppHpPct < 0.4 ? 'Opponent might guard expecting aggression' : 'Opponent likely to strike back',
+        reasoning: `${abilityName} is off cooldown — time to unleash it${oppHpPct < 0.5 ? ' while the opponent is weakened' : ' for early pressure'}. ${activeCard.element} type advantage could amplify the damage.`,
       };
     }
 
+    // Default strike with reasoning
+    const oppName = oppCard?.name || 'opponent';
     return {
       action: 'strike',
-      prediction: 'Error fallback',
+      prediction: 'Opponent may guard or use ability',
+      reasoning: `Going for a direct ${activeCard.name} strike against ${oppName}${oppHpPct < 0.4 ? ' to try and finish them off' : ''}. Ability is on cooldown so raw damage is the best play.`,
       reasoning: 'Fallback to STRIKE due to error',
     };
   }
