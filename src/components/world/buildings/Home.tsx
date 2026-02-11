@@ -11,26 +11,26 @@ interface HomeProps {
 }
 
 /**
- * Build a proper pyramid geometry (4-sided, square base).
- * Base from (-hw, 0, -hd) to (hw, 0, hd), apex at (0, height, 0).
+ * Gable roof — triangular prism (ridge along Z axis).
+ * Base from (-hw, 0, -hd) to (hw, 0, hd), ridge at (0, height, z).
  */
-function createPyramidGeometry(width: number, depth: number, height: number): THREE.BufferGeometry {
+function createGableRoofGeometry(width: number, depth: number, height: number): THREE.BufferGeometry {
   const hw = width / 2;
   const hd = depth / 2;
-  // 4 base corners + 1 apex
   const vertices = new Float32Array([
-    // Front face (apex, bottom-left, bottom-right)
-     0, height, 0,   -hw, 0, hd,    hw, 0, hd,
-    // Right face
-     0, height, 0,    hw, 0, hd,    hw, 0, -hd,
-    // Back face
-     0, height, 0,    hw, 0, -hd,  -hw, 0, -hd,
-    // Left face
-     0, height, 0,   -hw, 0, -hd,  -hw, 0, hd,
-    // Bottom face 1
-    -hw, 0, hd,  -hw, 0, -hd,   hw, 0, -hd,
-    // Bottom face 2
-    -hw, 0, hd,   hw, 0, -hd,   hw, 0, hd,
+    // Left slope (front-left, back-left, back-ridge, front-ridge)
+    -hw, 0, hd,   -hw, 0, -hd,   0, height, -hd,
+    -hw, 0, hd,    0, height, -hd, 0, height, hd,
+    // Right slope
+     hw, 0, hd,    0, height, hd,  0, height, -hd,
+     hw, 0, hd,    0, height, -hd, hw, 0, -hd,
+    // Front gable triangle
+    -hw, 0, hd,    0, height, hd,  hw, 0, hd,
+    // Back gable triangle
+     hw, 0, -hd,   0, height, -hd, -hw, 0, -hd,
+    // Bottom face
+    -hw, 0, hd,   hw, 0, hd,   hw, 0, -hd,
+    -hw, 0, hd,   hw, 0, -hd,  -hw, 0, -hd,
   ]);
 
   const geo = new THREE.BufferGeometry();
@@ -43,7 +43,7 @@ export function Home({ position, onClick }: HomeProps) {
   const smokeRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
-  const roofGeo = useMemo(() => createPyramidGeometry(5.6, 5.6, 2.5), []);
+  const roofGeo = useMemo(() => createGableRoofGeometry(5.4, 5.4, 2), []);
 
   const smokeParticles = useMemo(() => {
     return Array.from({ length: 5 }, (_, i) => ({
