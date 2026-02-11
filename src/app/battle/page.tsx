@@ -13,7 +13,7 @@ const ELEMENT_COLORS: Record<string, string> = {
   fire: '#ef4444', water: '#3b82f6', earth: '#84cc16', air: '#a78bfa', crystal: '#06b6d4',
   dark: '#8b5cf6', light: '#fbbf24',
 };
-const ACTION_ICONS: Record<string, string> = {
+const _ACTION_ICONS: Record<string, string> = {
   strike: '⚔️', skill: '✨', guard: '🛡️', switch: '🔄',
 };
 
@@ -374,7 +374,7 @@ function BattleCard({ battle, index, onReplay }: { battle: any; index: number; o
   const p1Cards = p1.selectedCards || [];
   const p2Cards = p2?.selectedCards || [];
   const payout = (parseFloat(battle.wager || '0') * 2 * 0.95).toFixed(4);
-  const lastRound = battle.lastRound;
+  const _lastRound = battle.lastRound;
 
   return (
     <div className="bg-gray-900/60 border border-white/5 hover:border-white/10 rounded-xl p-3 sm:p-4 transition animate-fade-in-up opacity-0" style={{ animationDelay: `${index * 0.04}s` }}>
@@ -391,30 +391,30 @@ function BattleCard({ battle, index, onReplay }: { battle: any; index: number; o
         </div>
       </div>
 
-      {/* Card thumbnails */}
+      {/* Card thumbnails — centered */}
       {(p1Cards.length > 0 || p2Cards.length > 0) && (
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex -space-x-1.5">
+        <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="flex gap-1.5">
             {p1Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
               <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-md object-cover border-2 shadow-sm"
-                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444', zIndex: 3 - i }} />
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover border-2 shadow-md"
+                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444' }} />
             ))}
           </div>
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shrink-0">
-            <span className="text-[8px] font-black text-white">VS</span>
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shrink-0 shadow-lg">
+            <span className="text-[9px] font-black text-white">VS</span>
           </div>
-          <div className="flex -space-x-1.5">
+          <div className="flex gap-1.5">
             {p2Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
               <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-md object-cover border-2 shadow-sm"
-                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444', zIndex: 3 - i }} />
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover border-2 shadow-md"
+                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444' }} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Bottom row: wager, winner, last action */}
+      {/* Bottom row: wager + winner */}
       <div className="flex items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-3 text-gray-500">
           <span className="text-yellow-400 font-semibold">💰 {battle.wager} MON</span>
@@ -422,27 +422,6 @@ function BattleCard({ battle, index, onReplay }: { battle: any; index: number; o
         </div>
         {battle.createdAt && <span className="text-gray-600 shrink-0">{timeAgo(battle.createdAt)}</span>}
       </div>
-
-      {/* Last round reasoning */}
-      {lastRound && (
-        <div className="mt-2 bg-white/[0.02] border border-white/[0.04] rounded-lg px-3 py-2">
-          <div className="flex items-center gap-3 text-xs text-gray-400">
-            <span className="text-gray-600">Turn {lastRound.turn}</span>
-            {lastRound.player1Move && (
-              <span>{ACTION_ICONS[lastRound.player1Move.action] || '❓'} {p1Name}: <span className="text-gray-300 uppercase">{lastRound.player1Move.action}</span></span>
-            )}
-            {lastRound.player2Move && (
-              <span>{ACTION_ICONS[lastRound.player2Move.action] || '❓'} {p2Name}: <span className="text-gray-300 uppercase">{lastRound.player2Move.action}</span></span>
-            )}
-          </div>
-          {(lastRound.player1Move?.reasoning || lastRound.player2Move?.reasoning) && (
-            <div className="mt-1 text-xs text-gray-500 italic flex items-start gap-1">
-              <span>🧠</span>
-              <span className="line-clamp-1">{lastRound.player1Move?.reasoning || lastRound.player2Move?.reasoning}</span>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
