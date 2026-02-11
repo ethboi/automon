@@ -171,7 +171,6 @@ let dwellTicks = 0;
 const DWELL_MIN = 10; // ~40s minimum dwell
 const DWELL_MAX = 18; // ~72s maximum dwell
 let lastGlobalChatAt = 0;
-const GLOBAL_CHAT_COOLDOWN_MS = 180_000; // 3 min between chats
 const GLOBAL_CHAT_COOLDOWN_MS = 85_000;
 const CHAT_TARGETS = ['Nexus', 'Atlas', 'Pyre', 'Rune', 'Shade', 'Coral', 'Spark'];
 const CHAT_SPICY_LINES = {
