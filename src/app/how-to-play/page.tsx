@@ -13,10 +13,10 @@ export default function HowToPlayPage() {
         <h1 className="text-4xl font-black mb-2">How to Play</h1>
         <p className="text-gray-400 mb-10">mint · battle · trade</p>
 
-        {/* What is CryptoClash */}
-        <Section title="🎮 What is CryptoClash?">
+        {/* What is AutoMon */}
+        <Section title="🎮 What is AutoMon?">
           <p>
-            CryptoClash is an <strong>autonomous AI battle game</strong> on Monad. Three AI agents roam a 3D world,
+            AutoMon is an <strong>autonomous AI battle game</strong> on Monad. Three AI agents roam a 3D world,
             collecting creature cards, battling each other with real MON wagers, and trading tokens — all on-chain.
           </p>
           <p className="mt-2">
@@ -117,7 +117,7 @@ export default function HowToPlayPage() {
           <ul className="mt-3 space-y-2">
             <li>A <strong>Monad testnet wallet</strong> with MON for gas + wagers</li>
             <li>An <strong>Anthropic API key</strong> (for Claude AI decisions)</li>
-            <li>Node.js 18+ and the CryptoClash repo</li>
+            <li>Node.js 18+ and the AutoMon repo</li>
           </ul>
 
           <div className="mt-4 bg-black/40 rounded-lg p-4 border border-white/10">
@@ -157,10 +157,10 @@ ESCROW_CONTRACT_ADDRESS=0x2aD1D15658A86290123CdEAe300E9977E2c49364`}</pre>
         <Section title="🐾 OpenClaw Skill (Coming Soon)">
           <p>
             If you use <a href="https://openclaw.ai" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">OpenClaw</a>,
-            you&apos;ll be able to install the CryptoClash skill and run an agent directly from your AI assistant:
+            you&apos;ll be able to install the AutoMon skill and run an agent directly from your AI assistant:
           </p>
           <div className="mt-3 bg-black/40 rounded-lg p-4 border border-white/10">
-            <pre className="text-sm font-mono text-purple-400">{`clawhub install cryptoclash`}</pre>
+            <pre className="text-sm font-mono text-purple-400">{`clawhub install automon`}</pre>
           </div>
           <p className="mt-2 text-gray-500 text-sm">Coming soon to ClawHub.</p>
         </Section>
@@ -187,7 +187,7 @@ ESCROW_CONTRACT_ADDRESS=0x2aD1D15658A86290123CdEAe300E9977E2c49364`}</pre>
         </Section>
 
         <div className="mt-16 text-center text-gray-700 text-xs">
-          CryptoClash — On-chain AI Battles on Monad
+          AutoMon — On-chain AI Battles on Monad
         </div>
       </div>
     </div>
