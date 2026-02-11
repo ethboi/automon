@@ -82,7 +82,7 @@ interface TxData {
   amount?: string | null;
 }
 
-type Tab = 'agents' | 'feed' | 'chat' | 'chain';
+type Tab = 'agents' | 'feed' | 'chat' | 'trades' | 'chain';
 
 function timeAgo(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -221,6 +221,7 @@ export function WorldUI({
                 { id: 'agents' as Tab, label: '🤖', count: onlineCount },
                 { id: 'feed' as Tab, label: '📡', count: events.length + battles.length },
                 { id: 'chat' as Tab, label: '💬', count: chat.length },
+                { id: 'trades' as Tab, label: '📈', count: transactions.filter(t => t.type === 'token_buy' || t.type === 'token_sell').length },
                 { id: 'chain' as Tab, label: '⛓️', count: transactions.length },
               ]).map(t => (
                 <button
@@ -440,6 +441,40 @@ export function WorldUI({
               )}
 
               {/* Chain Tab */}
+              {/* Trades Tab */}
+              {tab === 'trades' && (() => {
+                const trades = transactions.filter(t => t.type === 'token_buy' || t.type === 'token_sell');
+                return trades.length === 0 ? (
+                  <Empty text="No token trades yet" />
+                ) : (
+                  <div className="space-y-0.5">
+                    {trades.slice(0, 30).map((tx, i) => {
+                      const agentName = onlineAgents.find(a => a.address?.toLowerCase() === tx.from?.toLowerCase())?.name || shortAddr(tx.from);
+                      const isBuy = tx.type === 'token_buy';
+                      return (
+                        <a key={i} href={tx.explorerUrl} target="_blank" rel="noopener noreferrer"
+                          className={`flex items-center justify-between w-full rounded-lg px-2 py-1.5 transition-colors ${
+                            isBuy ? 'bg-emerald-500/[0.06] hover:bg-emerald-500/10' : 'bg-red-500/[0.06] hover:bg-red-500/10'
+                          }`}>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                              isBuy ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                            }`}>{isBuy ? 'BUY' : 'SELL'}</span>
+                            <span className="text-xs text-cyan-400 font-semibold shrink-0">{agentName}</span>
+                            <span className="text-[10px] text-gray-400 truncate">{tx.description}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                            {tx.amount && <span className={`text-[10px] font-mono font-bold ${isBuy ? 'text-emerald-400' : 'text-red-400'}`}>{tx.amount} MON</span>}
+                            <span className="text-[10px] text-gray-700">{timeAgo(tx.timestamp)}</span>
+                            <span className="text-[10px] text-purple-400 underline">view ↗</span>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
               {tab === 'chain' && (
                 transactions.length === 0 ? (
                   <Empty text="No on-chain activity yet" />
