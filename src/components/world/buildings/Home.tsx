@@ -43,7 +43,7 @@ export function Home({ position, onClick }: HomeProps) {
   const smokeRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
-  const roofGeo = useMemo(() => createGableRoofGeometry(5.4, 5.4, 2), []);
+  const roofGeo = useMemo(() => createGableRoofGeometry(5, 5, 2), []);
 
   const smokeParticles = useMemo(() => {
     return Array.from({ length: 5 }, (_, i) => ({
@@ -89,12 +89,6 @@ export function Home({ position, onClick }: HomeProps) {
       {/* Roof — custom pyramid, base sits on top of walls */}
       <mesh position={[0, 3.75, 0]} castShadow geometry={roofGeo}>
         <meshStandardMaterial color={hovered ? '#1e40af' : '#1d4ed8'} flatShading />
-      </mesh>
-
-      {/* Roof trim / eaves — thin box at wall-roof junction */}
-      <mesh position={[0, 3.8, 0]}>
-        <boxGeometry args={[5.8, 0.12, 5.8]} />
-        <meshStandardMaterial color="#1e3a8a" />
       </mesh>
 
       {/* Chimney — positioned to poke through roof */}
