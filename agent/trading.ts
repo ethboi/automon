@@ -1,142 +1,345 @@
+// @ts-nocheck
 /**
- * Trading Service — wraps nad.fun SDK for agent token trading
+ * Trading service for nad.fun — pure viem, no SDK dependency.
+ * Handles buy/sell of $AUTOMON token on bonding curve.
  */
-import { initSDK, parseEther, formatEther, type NadFunSDK } from '@nadfun/sdk';
-import type { Address, Hex } from 'viem';
+import { createPublicClient, createWalletClient, http, parseEther, formatEther, erc20Abi, defineChain, type Address } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
-const RPC_URL = process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz';
-const NETWORK = 'testnet' as const;
+// --- Network Config (testnet) ---
+const CONFIG = {
+  chainId: 10143,
+  rpcUrl: 'https://monad-testnet.drpc.org',
+  apiUrl: 'https://dev-api.nad.fun',
+  BONDING_CURVE_ROUTER: '0x865054F0F6A288adaAc30261731361EA7E908003' as Address,
+  LENS: '0xB056d79CA5257589692699a46623F901a3BB76f1' as Address,
+  CURVE: '0x1228b0dc9481C11D3071E7A924B794CfB038994e' as Address,
+  WMON: '0x5a4E0bFDeF88C9032CB4d24338C5EB3d3870BfDd' as Address,
+};
 
-// Token address — set after launch
-const TOKEN_ADDRESS = (process.env.AUTOMON_TOKEN_ADDRESS || '') as Address;
+const chain = defineChain({
+  id: CONFIG.chainId,
+  name: 'Monad Testnet',
+  nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+  rpcUrls: { default: { http: [CONFIG.rpcUrl] } },
+});
 
-// Cache SDK instances per key
-const sdkCache = new Map<string, NadFunSDK>();
+// --- ABIs (minimal, from nad.fun/abi.md) ---
+const lensAbi = [
+  {
+    type: 'function', name: 'getAmountOut', stateMutability: 'view',
+    inputs: [
+      { name: '_token', type: 'address' },
+      { name: '_amountIn', type: 'uint256' },
+      { name: '_isBuy', type: 'bool' },
+    ],
+    outputs: [
+      { name: 'router', type: 'address' },
+      { name: 'amountOut', type: 'uint256' },
+    ],
+  },
+  {
+    type: 'function', name: 'getProgress', stateMutability: 'view',
+    inputs: [{ name: '_token', type: 'address' }],
+    outputs: [{ name: 'progress', type: 'uint256' }],
+  },
+  {
+    type: 'function', name: 'getInitialBuyAmountOut', stateMutability: 'view',
+    inputs: [{ name: 'amountIn', type: 'uint256' }],
+    outputs: [{ type: 'uint256' }],
+  },
+] as const;
 
-function getSDK(privateKey: string): NadFunSDK {
-  if (sdkCache.has(privateKey)) return sdkCache.get(privateKey)!;
-  const sdk = initSDK({
-    rpcUrl: RPC_URL,
-    privateKey: privateKey as `0x${string}`,
-    network: NETWORK,
-  });
-  sdkCache.set(privateKey, sdk);
-  return sdk;
+const routerAbi = [
+  {
+    type: 'function', name: 'buy', stateMutability: 'payable',
+    inputs: [{
+      name: 'params', type: 'tuple',
+      components: [
+        { name: 'amountOutMin', type: 'uint256' },
+        { name: 'token', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'deadline', type: 'uint256' },
+      ],
+    }],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+  },
+  {
+    type: 'function', name: 'sell', stateMutability: 'nonpayable',
+    inputs: [{
+      name: 'params', type: 'tuple',
+      components: [
+        { name: 'amountIn', type: 'uint256' },
+        { name: 'amountOutMin', type: 'uint256' },
+        { name: 'token', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'deadline', type: 'uint256' },
+      ],
+    }],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+  },
+] as const;
+
+const curveAbi = [
+  {
+    type: 'function', name: 'curves', stateMutability: 'view',
+    inputs: [{ name: 'token', type: 'address' }],
+    outputs: [
+      { name: 'realMonReserve', type: 'uint256' },
+      { name: 'realTokenReserve', type: 'uint256' },
+      { name: 'virtualMonReserve', type: 'uint256' },
+      { name: 'virtualTokenReserve', type: 'uint256' },
+      { name: 'k', type: 'uint256' },
+      { name: 'targetTokenAmount', type: 'uint256' },
+      { name: 'initVirtualMonReserve', type: 'uint256' },
+      { name: 'initVirtualTokenReserve', type: 'uint256' },
+    ],
+  },
+  {
+    type: 'function', name: 'feeConfig', stateMutability: 'view',
+    inputs: [],
+    outputs: [
+      { name: 'deployFeeAmount', type: 'uint256' },
+      { name: 'graduateFeeAmount', type: 'uint256' },
+      { name: 'protocolFee', type: 'uint24' },
+    ],
+  },
+] as const;
+
+const bondingCurveRouterAbi = [{
+  type: 'function', name: 'create', stateMutability: 'payable',
+  inputs: [{
+    name: 'params', type: 'tuple',
+    components: [
+      { name: 'name', type: 'string' },
+      { name: 'symbol', type: 'string' },
+      { name: 'tokenURI', type: 'string' },
+      { name: 'amountOut', type: 'uint256' },
+      { name: 'salt', type: 'bytes32' },
+      { name: 'actionId', type: 'uint8' },
+    ],
+  }],
+  outputs: [
+    { name: 'token', type: 'address' },
+    { name: 'pool', type: 'address' },
+  ],
+}] as const;
+
+// --- Client cache per private key ---
+const clientCache = new Map<string, {
+  publicClient: ReturnType<typeof createPublicClient>;
+  walletClient: ReturnType<typeof createWalletClient>;
+  account: ReturnType<typeof privateKeyToAccount>;
+}>();
+
+function getClients(privateKey: string) {
+  if (clientCache.has(privateKey)) return clientCache.get(privateKey)!;
+  const account = privateKeyToAccount(privateKey as `0x${string}`);
+  const publicClient = createPublicClient({ chain, transport: http(CONFIG.rpcUrl) });
+  const walletClient = createWalletClient({ account, chain, transport: http(CONFIG.rpcUrl) });
+  const entry = { publicClient, walletClient, account };
+  clientCache.set(privateKey, entry);
+  return entry;
 }
 
-export interface TokenQuote {
-  price: string;       // price per token in MON
-  amountOut: string;   // tokens you'd get for 0.01 MON
+const GAS_OVERRIDE = BigInt(105000000000); // 105 gwei
+
+// --- Public API ---
+
+export async function getTokenPrice(privateKey: string, tokenAddress: string): Promise<number> {
+  const { publicClient } = getClients(privateKey);
+  const token = tokenAddress as Address;
+  try {
+    const [, amountOut] = await publicClient.readContract({
+      address: CONFIG.LENS, abi: lensAbi, functionName: 'getAmountOut',
+      args: [token, parseEther('0.01'), true],
+    });
+    if (amountOut === BigInt(0)) return 0;
+    return 0.01 / Number(formatEther(amountOut));
+  } catch (e) {
+    console.error('[trading] getTokenPrice error:', e);
+    return 0;
+  }
 }
 
-export interface TradeResult {
-  txHash: string;
-  amountIn: string;
-  estimatedOut: string;
-  action: 'buy' | 'sell';
+export async function getTokenBalance(privateKey: string, tokenAddress: string): Promise<bigint> {
+  const { publicClient, account } = getClients(privateKey);
+  try {
+    return await publicClient.readContract({
+      address: tokenAddress as Address, abi: erc20Abi, functionName: 'balanceOf',
+      args: [account.address],
+    });
+  } catch {
+    return BigInt(0);
+  }
 }
 
-/**
- * Get current token price (quote for a small buy)
- */
-export async function getTokenPrice(privateKey: string): Promise<TokenQuote> {
-  if (!TOKEN_ADDRESS) throw new Error('AUTOMON_TOKEN_ADDRESS not set');
-  const sdk = getSDK(privateKey);
-
-  // Quote: how many tokens for 0.01 MON?
-  const smallAmount = parseEther('0.01');
-  const quote = await sdk.getAmountOut(TOKEN_ADDRESS, smallAmount, true);
-  const tokensOut = parseFloat(formatEther(quote.amount));
-  const pricePerToken = tokensOut > 0 ? 0.01 / tokensOut : 0;
-
-  return {
-    price: pricePerToken.toFixed(8),
-    amountOut: formatEther(quote.amount),
-  };
+export async function getCurveInfo(privateKey: string, tokenAddress: string) {
+  const { publicClient } = getClients(privateKey);
+  const token = tokenAddress as Address;
+  try {
+    const [realMonReserve, realTokenReserve, virtualMonReserve, virtualTokenReserve] =
+      await publicClient.readContract({ address: CONFIG.CURVE, abi: curveAbi, functionName: 'curves', args: [token] });
+    const progress = await publicClient.readContract({ address: CONFIG.LENS, abi: lensAbi, functionName: 'getProgress', args: [token] });
+    return {
+      realMonReserve: formatEther(realMonReserve),
+      realTokenReserve: formatEther(realTokenReserve),
+      virtualMonReserve: formatEther(virtualMonReserve),
+      virtualTokenReserve: formatEther(virtualTokenReserve),
+      progress: Number(progress) / 100,
+    };
+  } catch (e) {
+    console.error('[trading] getCurveInfo error:', e);
+    return null;
+  }
 }
 
-/**
- * Get agent's $AUTOMON token balance
- */
-export async function getTokenBalance(privateKey: string, address?: string): Promise<string> {
-  if (!TOKEN_ADDRESS) return '0';
-  const sdk = getSDK(privateKey);
-  const [, formatted] = await sdk.getBalanceFormatted(TOKEN_ADDRESS, address as Address | undefined);
-  return formatted;
+export async function buyToken(privateKey: string, tokenAddress: string, monAmount: string): Promise<string | null> {
+  const { publicClient, walletClient, account } = getClients(privateKey);
+  const token = tokenAddress as Address;
+  const value = parseEther(monAmount);
+
+  try {
+    const [router, amountOut] = await publicClient.readContract({
+      address: CONFIG.LENS, abi: lensAbi, functionName: 'getAmountOut',
+      args: [token, value, true],
+    });
+    console.log(`[trading] BUY quote: ${monAmount} MON → ${formatEther(amountOut)} tokens (router: ${router})`);
+
+    const amountOutMin = (amountOut * BigInt(98)) / BigInt(100);
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
+
+    const hash = await walletClient.writeContract({
+    // @ts-ignore viem strict typing
+      address: router as Address, abi: routerAbi, functionName: 'buy',
+      args: [{ amountOutMin, token, to: account.address, deadline }],
+      value, maxFeePerGas: GAS_OVERRIDE,
+    });
+    console.log(`[trading] BUY tx: ${hash}`);
+    await publicClient.waitForTransactionReceipt({ hash });
+    return hash;
+  } catch (e) {
+    console.error('[trading] buyToken error:', e);
+    return null;
+  }
 }
 
-/**
- * Buy $AUTOMON tokens
- */
-export async function buyToken(
+export async function sellToken(privateKey: string, tokenAddress: string, tokenAmount?: bigint): Promise<string | null> {
+  const { publicClient, walletClient, account } = getClients(privateKey);
+  const token = tokenAddress as Address;
+
+  try {
+    const amountIn = tokenAmount ?? await publicClient.readContract({
+      address: token, abi: erc20Abi, functionName: 'balanceOf', args: [account.address],
+    });
+    if (amountIn === BigInt(0)) { console.log('[trading] No tokens to sell'); return null; }
+
+    const [router, amountOut] = await publicClient.readContract({
+      address: CONFIG.LENS, abi: lensAbi, functionName: 'getAmountOut',
+      args: [token, amountIn, false],
+    });
+    console.log(`[trading] SELL quote: ${formatEther(amountIn)} tokens → ${formatEther(amountOut)} MON (router: ${router})`);
+
+    // Approve router
+    const approveTx = await walletClient.writeContract({
+      address: token, abi: erc20Abi, functionName: 'approve',
+      args: [router as Address, amountIn], maxFeePerGas: GAS_OVERRIDE,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: approveTx });
+
+    const amountOutMin = (amountOut * BigInt(98)) / BigInt(100);
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
+
+    const hash = await walletClient.writeContract({
+    // @ts-ignore viem strict typing
+      address: router as Address, abi: routerAbi, functionName: 'sell',
+      args: [{ amountIn, amountOutMin, token, to: account.address, deadline }],
+      maxFeePerGas: GAS_OVERRIDE,
+    });
+    console.log(`[trading] SELL tx: ${hash}`);
+    await publicClient.waitForTransactionReceipt({ hash });
+    return hash;
+  } catch (e) {
+    console.error('[trading] sellToken error:', e);
+    return null;
+  }
+}
+
+// --- Token Creation ---
+export async function createToken(
   privateKey: string,
-  amountMON: string,
-  slippage = 5
-): Promise<TradeResult> {
-  if (!TOKEN_ADDRESS) throw new Error('AUTOMON_TOKEN_ADDRESS not set');
-  const sdk = getSDK(privateKey);
-  const amountIn = parseEther(amountMON);
+  name: string,
+  symbol: string,
+  description: string,
+  imageBuffer?: Buffer,
+): Promise<{ tokenAddress: string; txHash: string } | null> {
+  const { publicClient, walletClient, account } = getClients(privateKey);
+  const headers: Record<string, string> = {};
 
-  // Get quote first
-  const quote = await sdk.getAmountOut(TOKEN_ADDRESS, amountIn, true);
+  try {
+    // 1. Upload image
+    let image_uri = '';
+    if (imageBuffer) {
+      const imgRes = await fetch(`${CONFIG.apiUrl}/agent/token/image`, {
+        method: 'POST', headers: { 'Content-Type': 'image/png', ...headers }, body: imageBuffer,
+      });
+      const imgData = await imgRes.json() as { image_uri: string };
+      image_uri = imgData.image_uri;
+    }
 
-  const txHash = await sdk.simpleBuy({
-    token: TOKEN_ADDRESS,
-    amountIn,
-    slippagePercent: slippage,
-  });
+    // 2. Upload metadata
+    const metaRes = await fetch(`${CONFIG.apiUrl}/agent/token/metadata`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ image_uri, name, symbol, description }),
+    });
+    const { metadata_uri } = await metaRes.json() as { metadata_uri: string };
 
-  return {
-    txHash,
-    amountIn: amountMON,
-    estimatedOut: formatEther(quote.amount),
-    action: 'buy',
-  };
-}
+    // 3. Mine salt
+    const saltRes = await fetch(`${CONFIG.apiUrl}/agent/salt`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ creator: account.address, name, symbol, metadata_uri }),
+    });
+    const { salt } = await saltRes.json() as { salt: string; address: string };
 
-/**
- * Sell $AUTOMON tokens
- */
-export async function sellToken(
-  privateKey: string,
-  amountTokens: string,
-  slippage = 5
-): Promise<TradeResult> {
-  if (!TOKEN_ADDRESS) throw new Error('AUTOMON_TOKEN_ADDRESS not set');
-  const sdk = getSDK(privateKey);
-  const amountIn = parseEther(amountTokens);
+    // 4. Get deploy fee
+    const [deployFeeAmount] = await publicClient.readContract({
+      address: CONFIG.CURVE, abi: curveAbi, functionName: 'feeConfig',
+    });
 
-  // Get quote
-  const quote = await sdk.getAmountOut(TOKEN_ADDRESS, amountIn, false);
+    // 5. Create on-chain (no initial buy)
+    const createArgs = {
+      name, symbol, tokenURI: metadata_uri,
+      amountOut: BigInt(0), salt: salt as `0x${string}`, actionId: 1,
+    };
 
-  const txHash = await sdk.simpleSell({
-    token: TOKEN_ADDRESS,
-    amountIn,
-    slippagePercent: slippage,
-  });
+    const estimatedGas = await publicClient.estimateContractGas({
+      address: CONFIG.BONDING_CURVE_ROUTER, abi: bondingCurveRouterAbi, functionName: 'create',
+      args: [createArgs], account: account.address, value: deployFeeAmount,
+    });
 
-  return {
-    txHash,
-    amountIn: amountTokens,
-    estimatedOut: formatEther(quote.amount),
-    action: 'sell',
-  };
-}
+    const hash = await walletClient.writeContract({
+    // @ts-ignore viem strict typing
+      address: CONFIG.BONDING_CURVE_ROUTER, abi: bondingCurveRouterAbi, functionName: 'create',
+      args: [createArgs], value: deployFeeAmount,
+      gas: estimatedGas + estimatedGas / BigInt(10),
+      maxFeePerGas: GAS_OVERRIDE,
+    });
 
-/**
- * Get curve state (reserves, progress)
- */
-export async function getCurveInfo(privateKey: string) {
-  if (!TOKEN_ADDRESS) throw new Error('AUTOMON_TOKEN_ADDRESS not set');
-  const sdk = getSDK(privateKey);
-  const state = await sdk.getCurveState(TOKEN_ADDRESS);
-  const progress = await sdk.getProgress(TOKEN_ADDRESS);
-  const graduated = await sdk.isGraduated(TOKEN_ADDRESS);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-  return {
-    realMonReserve: formatEther(state.realMonReserve),
-    realTokenReserve: formatEther(state.realTokenReserve),
-    progress: Number(progress) / 100, // percentage
-    graduated,
-  };
+    // Find token address from CurveCreate event logs
+    let tokenAddress = '';
+    for (const log of receipt.logs) {
+      if (log.topics[0] && log.topics[2]) {
+        tokenAddress = `0x${log.topics[2].slice(26)}`;
+        break;
+      }
+    }
+
+    console.log(`[trading] Token created: ${tokenAddress} tx: ${hash}`);
+    return { tokenAddress, txHash: hash };
+  } catch (e) {
+    console.error('[trading] createToken error:', e);
+    return null;
+  }
 }
