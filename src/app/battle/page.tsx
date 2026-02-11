@@ -9,9 +9,32 @@ import BattleReplay from '@/components/BattleReplay';
 import { AUTOMONS } from '@/lib/automons';
 import { getCardArtDataUri } from '@/lib/cardArt';
 
+const ELEMENT_COLORS: Record<string, string> = {
+  fire: '#ef4444', water: '#3b82f6', earth: '#84cc16', air: '#a78bfa', crystal: '#06b6d4',
+  dark: '#8b5cf6', light: '#fbbf24',
+};
+const ACTION_ICONS: Record<string, string> = {
+  strike: '⚔️', skill: '✨', guard: '🛡️', switch: '🔄',
+};
+
 function cardImage(name: string): string {
   const mon = AUTOMONS.find(a => a.name === name);
   return getCardArtDataUri(mon?.id ?? 1, mon?.element || 'fire', 'common');
+}
+
+function shortAddr(addr: string) { return `${addr.slice(0, 6)}…${addr.slice(-4)}`; }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function playerName(p: any): string {
+  return p?.name || shortAddr(p?.address || '');
+}
+
+function timeAgo(d: string | Date): string {
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
 
 type View = 'list' | 'create' | 'select-cards' | 'battle' | 'replay';
@@ -28,35 +51,26 @@ export default function BattlePage() {
   const [wagerAmount, setWagerAmount] = useState('0.01');
   const [battleLog, setBattleLog] = useState<BattleLog | null>(null);
 
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
-
+  useEffect(() => { fetchData(); }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (currentBattle && currentBattle.status === 'active') {
-      const interval = setInterval(() => refreshBattle(), 3000);
-      return () => clearInterval(interval);
+      const iv = setInterval(() => refreshBattle(), 3000);
+      return () => clearInterval(iv);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBattle]);
+  }, [currentBattle]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     try {
       const battlesRes = await fetch('/api/battle/list?type=all');
       const battlesData = await battlesRes.json();
       setBattles(battlesData.battles || []);
-
       if (address) {
         const cardsRes = await fetch(`/api/cards?address=${address}`);
         const cardsData = await cardsRes.json();
         setMyCards(cardsData.cards || []);
       }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error('Failed to fetch:', e); }
+    finally { setLoading(false); }
   };
 
   const refreshBattle = async () => {
@@ -64,699 +78,428 @@ export default function BattlePage() {
     try {
       const res = await fetch(`/api/battle/${currentBattle.battleId}`);
       const data = await res.json();
-      if (data.battle) {
-        setCurrentBattle(data.battle);
-      }
-    } catch (error) {
-      console.error('Failed to refresh battle:', error);
-    }
+      if (data.battle) setCurrentBattle(data.battle);
+    } catch (e) { console.error('Refresh failed:', e); }
   };
 
   const createBattle = async () => {
     setError(null);
     try {
       const res = await fetch('/api/battle/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wager: wagerAmount, address }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create battle');
-      }
-
+      if (!res.ok) throw new Error(data.error || 'Failed to create battle');
       setCurrentBattle(data.battle);
       setView('select-cards');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : 'Error'); }
   };
 
   const joinBattle = async (battleId: string) => {
     setError(null);
     try {
       const res = await fetch('/api/battle/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ battleId, address }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to join battle');
-      }
-
+      if (!res.ok) throw new Error(data.error || 'Failed to join');
       setCurrentBattle(data.battle);
       setView('select-cards');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : 'Error'); }
   };
 
   const selectCards = async () => {
-    if (selectedCards.length !== 3) {
-      setError('Select exactly 3 cards');
-      return;
-    }
-
+    if (selectedCards.length !== 3) { setError('Select exactly 3 cards'); return; }
     setError(null);
     try {
       const res = await fetch('/api/battle/select-cards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          battleId: currentBattle?.battleId,
-          cardIds: selectedCards,
-          address,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ battleId: currentBattle?.battleId, cardIds: selectedCards, address }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to select cards');
-      }
+      if (!res.ok) throw new Error(data.error || 'Failed to select');
       setCurrentBattle(data.battle);
-
-      // If simulation completed, show the replay
-      if (data.simulationComplete && data.battleLog) {
-        setBattleLog(data.battleLog);
-        setView('replay');
-      } else if (data.battle.status === 'active') {
-        setView('battle');
-      } else {
-        // Cards selected, waiting for opponent — go back to list
-        setCurrentBattle(data.battle);
-        setSelectedCards([]);
-        setView('list');
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
-    }
+      if (data.simulationComplete && data.battleLog) { setBattleLog(data.battleLog); setView('replay'); }
+      else if (data.battle.status === 'active') { setView('battle'); }
+      else { setSelectedCards([]); setView('list'); }
+    } catch (e) { setError(e instanceof Error ? e.message : 'Error'); }
   };
 
   const watchReplay = async (battleId: string) => {
     try {
       const res = await fetch(`/api/battle/simulate?battleId=${battleId}`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch battle log');
-      }
+      if (!res.ok) throw new Error('Failed to fetch battle log');
       const data = await res.json();
-      if (data.battleLog) {
-        setBattleLog(data.battleLog);
-        setView('replay');
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load replay');
-    }
+      if (data.battleLog) { setBattleLog(data.battleLog); setView('replay'); }
+    } catch (e) { setError(e instanceof Error ? e.message : 'Failed to load replay'); }
   };
 
   const submitMove = async (move: BattleMove) => {
     if (!currentBattle) return;
-
     const res = await fetch('/api/battle/move', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        battleId: currentBattle.battleId,
-        move,
-        address,
-      }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ battleId: currentBattle.battleId, move, address }),
     });
-
     const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to submit move');
-    }
-
-    const { battle } = data;
-    setCurrentBattle(battle);
-
-    if (battle.status === 'complete') {
-      refreshBalance();
-    }
+    if (!res.ok) throw new Error(data.error || 'Failed to submit move');
+    setCurrentBattle(data.battle);
+    if (data.battle.status === 'complete') refreshBalance();
   };
 
   const getAIDecision = async (): Promise<BattleMove> => {
     const res = await fetch('/api/agent/decide', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ battleId: currentBattle?.battleId }),
     });
-
-    const data = await res.json();
-    return data.decision;
+    return (await res.json()).decision;
   };
 
   const toggleCardSelection = (cardId: string) => {
-    setSelectedCards(prev => {
-      if (prev.includes(cardId)) {
-        return prev.filter(id => id !== cardId);
-      }
-      if (prev.length >= 3) {
-        return prev;
-      }
-      return [...prev, cardId];
-    });
+    setSelectedCards(prev => prev.includes(cardId) ? prev.filter(id => id !== cardId) : prev.length >= 3 ? prev : [...prev, cardId]);
   };
 
-  const openBattles = battles.filter(
-    b => b.status === 'pending' && b.player1.address.toLowerCase() !== address?.toLowerCase()
+  const openBattles = battles.filter(b => b.status === 'pending' && b.player1.address.toLowerCase() !== address?.toLowerCase());
+  const myBattles = battles.filter(b => b.player1.address.toLowerCase() === address?.toLowerCase() || b.player2?.address.toLowerCase() === address?.toLowerCase());
+  const recentBattles = battles.filter(b => b.status === 'complete' || b.status === 'active');
+
+  if (loading) return (
+    <div className="page-container flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="spinner mb-4" />
+        <p className="text-gray-500 text-sm">Loading battles…</p>
+      </div>
+    </div>
   );
 
-  const myBattles = battles.filter(
-    b =>
-      b.player1.address.toLowerCase() === address?.toLowerCase() ||
-      b.player2?.address.toLowerCase() === address?.toLowerCase()
+  if (view === 'replay' && battleLog) return (
+    <BattleReplay battleLog={battleLog} onClose={() => { setBattleLog(null); setView('list'); fetchData(); }} />
   );
 
-  const allBattles = battles.filter(b => b.status === 'complete' || b.status === 'active');
+  if (view === 'battle' && currentBattle) return (
+    <div className="page-container page-transition">
+      <button onClick={() => { setCurrentBattle(null); setView('list'); fetchData(); }}
+        className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition group">
+        <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>Back to battles
+      </button>
+      <BattleArena battle={currentBattle} onMove={submitMove} onAIDecide={getAIDecision} />
+    </div>
+  );
 
-  if (loading) {
-    return (
-      <div className="page-container">
-        <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <div className="spinner mb-4" />
-          <p className="text-gray-400 animate-pulse">Loading battles...</p>
-        </div>
+  if (view === 'select-cards') return (
+    <div className="page-container page-transition">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Select Your Team</h1>
+        <p className="text-sm text-gray-400 mt-1">Choose 3 cards for battle</p>
       </div>
-    );
-  }
-
-  // Replay view
-  if (view === 'replay' && battleLog) {
-    return (
-      <BattleReplay
-        battleLog={battleLog}
-        onClose={() => {
-          setBattleLog(null);
-          setView('list');
-          fetchData();
-        }}
-      />
-    );
-  }
-
-  // Battle view
-  if (view === 'battle' && currentBattle) {
-    return (
-      <div className="page-container page-transition">
-        <button
-          onClick={() => {
-            setCurrentBattle(null);
-            setView('list');
-            fetchData();
-          }}
-          className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
-        >
-          <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span>Back to battles</span>
-        </button>
-
-        <BattleArena
-          battle={currentBattle}
-          onMove={submitMove}
-          onAIDecide={getAIDecision}
-        />
-      </div>
-    );
-  }
-
-  // Card selection view
-  if (view === 'select-cards') {
-    return (
-      <div className="page-container page-transition">
-        <div className="mb-4 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Select Your Team
-          </h1>
-          <p className="text-sm sm:text-base text-gray-400">Choose 3 cards for battle</p>
+      {error && <ErrorBanner msg={error} />}
+      <div className="section-card mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-white">Your Team</h3>
+          <span className={`text-sm font-medium ${selectedCards.length === 3 ? 'text-emerald-400' : 'text-gray-400'}`}>{selectedCards.length}/3</span>
         </div>
-
-        {error && (
-          <div className="glass border border-red-500/30 rounded-2xl p-4 mb-6 animate-scale-in">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">⚠️</span>
+        <div className="flex gap-2 min-h-[60px] items-center">
+          {[0, 1, 2].map(slot => {
+            const cid = selectedCards[slot];
+            const card = cid ? myCards.find(c => (c._id?.toString() || c.id) === cid) : null;
+            return (
+              <div key={slot} className={`w-16 h-20 rounded-xl border-2 border-dashed flex items-center justify-center transition ${card ? 'border-purple-500 bg-purple-500/20' : 'border-gray-600 bg-white/5'}`}>
+                {card ? <img src={cardImage(card.name)} alt={card.name} className="w-12 h-16 rounded object-cover" /> : <span className="text-gray-500 text-2xl">+</span>}
               </div>
-              <p className="text-red-400">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Selected cards preview */}
-        <div className="section-card mb-4 sm:mb-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h3 className="text-sm sm:text-lg font-semibold text-white">Your Team</h3>
-            <span className={`text-sm font-medium ${selectedCards.length === 3 ? 'text-emerald-400' : 'text-gray-400'}`}>
-              {selectedCards.length}/3 selected
-            </span>
-          </div>
-          <div className="flex gap-2 sm:gap-4 min-h-[60px] sm:min-h-[80px] items-center">
-            {[0, 1, 2].map((slot) => {
-              const cardId = selectedCards[slot];
-              const card = cardId ? myCards.find(c => (c._id?.toString() || c.id) === cardId) : null;
-              return (
-                <div
-                  key={slot}
-                  className={`w-16 h-20 rounded-xl border-2 border-dashed flex items-center justify-center transition-all ${
-                    card ? 'border-purple-500 bg-purple-500/20' : 'border-gray-600 bg-white/5'
-                  }`}
-                >
-                  {card ? (
-                    <span className="text-2xl">{card.element === 'fire' ? '🔥' : card.element === 'water' ? '💧' : card.element === 'earth' ? '🌍' : card.element === 'air' ? '💨' : card.element === 'dark' ? '🌑' : '✨'}</span>
-                  ) : (
-                    <span className="text-gray-500 text-2xl">+</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+            );
+          })}
         </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-8">
+        {myCards.map((card, i) => (
+          <div key={card._id?.toString() || card.id} className="animate-fade-in-up opacity-0" style={{ animationDelay: `${Math.min(i * 0.05, 0.3)}s` }}>
+            <Card card={card} selected={selectedCards.includes(card._id?.toString() || card.id || '')} onClick={() => toggleCardSelection(card._id?.toString() || card.id || '')} size="md" />
+          </div>
+        ))}
+      </div>
+      <div className="section-card flex items-center justify-between sticky bottom-4">
+        <button onClick={() => { setSelectedCards([]); setView('list'); }} className="btn-secondary">Cancel</button>
+        <button onClick={selectCards} disabled={selectedCards.length !== 3} className="btn-primary disabled:opacity-50">Confirm Selection →</button>
+      </div>
+    </div>
+  );
 
-        {/* Cards grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-8">
-          {myCards.map((card, index) => (
-            <div
-              key={card._id?.toString() || card.id}
-              className="animate-fade-in-up opacity-0"
-              style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}
-            >
-              <Card
-                card={card}
-                selected={selectedCards.includes(card._id?.toString() || card.id || '')}
-                onClick={() => toggleCardSelection(card._id?.toString() || card.id || '')}
-                size="md"
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Action bar */}
-        <div className="section-card flex items-center justify-between sticky bottom-4">
-          <button
-            onClick={() => {
-              setSelectedCards([]);
-              setView('list');
-            }}
-            className="btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={selectCards}
-            disabled={selectedCards.length !== 3}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="flex items-center gap-2">
-              <span>Confirm Selection</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </span>
+  if (view === 'create') return (
+    <div className="page-container page-transition">
+      <button onClick={() => setView('list')} className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition group">
+        <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>Back
+      </button>
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Create Battle</h1>
+        <p className="text-sm text-gray-400 mt-1">Set your wager and challenge</p>
+      </div>
+      {error && <ErrorBanner msg={error} />}
+      <div className="max-w-lg">
+        <div className="section-card">
+          <label className="block text-sm text-gray-400 mb-2 font-medium">Wager Amount (MON)</label>
+          <div className="relative mb-6">
+            <input type="number" value={wagerAmount} onChange={e => setWagerAmount(e.target.value)} min="0.001" step="0.001" className="input-field text-2xl font-bold pr-16" />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400 font-medium">MON</span>
+          </div>
+          <div className="glass-light rounded-xl p-4 mb-6 space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-gray-400">Total Pool</span><span className="text-white font-medium">{(parseFloat(wagerAmount) * 2).toFixed(4)} MON</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Fee (5%)</span><span className="text-red-400">-{(parseFloat(wagerAmount) * 2 * 0.05).toFixed(4)}</span></div>
+            <div className="border-t border-white/10 pt-2 flex justify-between font-medium"><span className="text-white">Winner Takes</span><span className="text-emerald-400 font-bold">{(parseFloat(wagerAmount) * 2 * 0.95).toFixed(4)} MON</span></div>
+          </div>
+          <button onClick={createBattle} disabled={myCards.length < 3} className="w-full btn-primary py-4 text-lg disabled:opacity-50">
+            {myCards.length < 3 ? '⚠️ Need 3 cards' : '⚔️ Create Battle'}
           </button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // Create battle view
-  if (view === 'create') {
-    return (
-      <div className="page-container page-transition">
-        <button
-          onClick={() => setView('list')}
-          className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
-        >
-          <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span>Back</span>
-        </button>
-
-        <div className="mb-4 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Create Battle
-          </h1>
-          <p className="text-sm sm:text-base text-gray-400">Set your wager and challenge other players</p>
-        </div>
-
-        {error && (
-          <div className="glass border border-red-500/30 rounded-2xl p-4 mb-6 animate-scale-in">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">⚠️</span>
-              </div>
-              <p className="text-red-400">{error}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="max-w-lg">
-          <div className="section-card">
-            <div className="mb-6">
-              <label className="block text-sm text-gray-400 mb-2 font-medium">Wager Amount (MON)</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={wagerAmount}
-                  onChange={e => setWagerAmount(e.target.value)}
-                  min="0.001"
-                  step="0.001"
-                  className="input-field text-2xl font-bold pr-16"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400 font-medium">MON</span>
-              </div>
-            </div>
-
-            {/* Prize breakdown */}
-            <div className="glass-light rounded-xl p-4 mb-6">
-              <h4 className="text-sm font-medium text-gray-400 mb-3">Prize Breakdown</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Total Pool</span>
-                  <span className="text-white font-medium">{(parseFloat(wagerAmount) * 2).toFixed(4)} MON</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Platform Fee (5%)</span>
-                  <span className="text-red-400">-{(parseFloat(wagerAmount) * 2 * 0.05).toFixed(4)} MON</span>
-                </div>
-                <div className="border-t border-white/10 my-2" />
-                <div className="flex justify-between">
-                  <span className="text-white font-medium">Winner Takes</span>
-                  <span className="text-emerald-400 font-bold">{(parseFloat(wagerAmount) * 2 * 0.95).toFixed(4)} MON</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={createBattle}
-              disabled={myCards.length < 3}
-              className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {myCards.length < 3 ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span>⚠️</span>
-                  <span>Need at least 3 cards</span>
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <span>⚔️</span>
-                  <span>Create Battle</span>
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Battle list view
+  /* ═══════════ BATTLE LIST (main view) ═══════════ */
   return (
     <div className="page-container page-transition">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Battle Arena
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+            ⚔️ Battle Arena
           </h1>
-          <p className="text-sm sm:text-base text-gray-400">Challenge players and win rewards</p>
+          <p className="text-sm text-gray-400 mt-1">Challenge trainers • Win MON</p>
         </div>
-        <button
-          onClick={() => setView('create')}
-          className="btn-primary"
-        >
-          <span className="flex items-center gap-2">
-            <span>⚔️</span>
-            <span>Create Battle</span>
-          </span>
+        <button onClick={() => setView('create')} className="btn-primary flex items-center gap-2">
+          <span>⚔️</span><span>Create Battle</span>
         </button>
       </div>
 
-      {error && (
-        <div className="glass border border-red-500/30 rounded-2xl p-4 mb-6 animate-scale-in">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-xl">⚠️</span>
-            </div>
-            <p className="text-red-400">{error}</p>
-          </div>
-        </div>
-      )}
+      {error && <ErrorBanner msg={error} />}
 
-      {/* Open battles */}
-      <div className="mb-4 sm:mb-8">
-        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <h2 className="text-xl font-bold text-white">Open Battles</h2>
-          {openBattles.length > 0 && (
-            <div className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-sm font-medium animate-pulse">
-              {openBattles.length} available
-            </div>
-          )}
-        </div>
+      {/* Stats bar */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+        <StatCard label="Active" value={battles.filter(b => b.status === 'active').length} color="text-yellow-400" icon="⚡" />
+        <StatCard label="Open" value={openBattles.length} color="text-emerald-400" icon="🏟️" />
+        <StatCard label="Completed" value={recentBattles.filter(b => b.status === 'complete').length} color="text-purple-400" icon="🏆" />
+      </div>
 
-        {openBattles.length === 0 ? (
-          <div className="section-card text-center py-12">
-            <div className="text-5xl mb-4 opacity-50">🏟️</div>
-            <h3 className="text-lg font-semibold text-white mb-2">No open battles</h3>
-            <p className="text-gray-400">Create one or wait for other players!</p>
-          </div>
-        ) : (
-          <div className="grid gap-2 sm:gap-4">
-            {openBattles.map((battle, index) => (
-              <div
-                key={battle.battleId}
-                className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 animate-fade-in-up opacity-0"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-lg sm:text-xl flex-shrink-0">
-                    👤
-                  </div>
-                  <div>
-                    <p className="text-sm sm:text-base font-medium text-white font-mono">
-                      {battle.player1.address.slice(0, 6)}...{battle.player1.address.slice(-4)}
-                    </p>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                      <span className="text-yellow-400 text-sm">💰</span>
-                      <span className="text-xs sm:text-sm text-gray-400">Wager: <span className="text-white font-medium">{battle.wager} MON</span></span>
+      {/* Open Battles */}
+      {openBattles.length > 0 && (
+        <Section title="Open Battles" count={openBattles.length} pulse>
+          <div className="grid gap-2">
+            {openBattles.map((b, i) => (
+              <div key={b.battleId} className="bg-gray-900/60 border border-emerald-500/20 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3 animate-fade-in-up opacity-0" style={{ animationDelay: `${i * 0.05}s` }}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center text-lg shrink-0">⚔️</div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white truncate">{playerName(b.player1)}</div>
+                    <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                      <span className="text-yellow-400">💰 {b.wager} MON</span>
+                      {b.createdAt && <span>• {timeAgo(b.createdAt as unknown as string)}</span>}
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => joinBattle(battle.battleId)}
-                  disabled={myCards.length < 3}
-                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                >
-                  {myCards.length < 3 ? 'Need 3 cards' : 'Join Battle'}
+                <button onClick={() => joinBattle(b.battleId)} disabled={myCards.length < 3}
+                  className="shrink-0 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+                  {myCards.length < 3 ? 'Need 3 cards' : 'Join ⚔️'}
                 </button>
               </div>
             ))}
           </div>
+        </Section>
+      )}
+
+      {/* Recent Battles */}
+      <Section title="Recent Battles" count={recentBattles.length}>
+        {recentBattles.length === 0 ? (
+          <EmptyState icon="📺" title="No battles yet" desc="Create one or wait for agents!" />
+        ) : (
+          <div className="grid gap-2">
+            {recentBattles.map((battle, i) => <BattleCard key={battle.battleId} battle={battle} index={i} onReplay={watchReplay} />)}
+          </div>
         )}
+      </Section>
+
+      {/* My Battles */}
+      {address && (
+        <Section title="My Battles" count={myBattles.length}>
+          {myBattles.length === 0 ? (
+            <EmptyState icon="⚔️" title="No battles yet" desc="Create or join a battle!" />
+          ) : (
+            <div className="grid gap-2">
+              {myBattles.map((battle, i) => {
+                const isMyBattle = battle.player1.address.toLowerCase() === address?.toLowerCase();
+                const isWinner = battle.winner?.toLowerCase() === address?.toLowerCase();
+                return (
+                  <div key={battle.battleId} className="bg-gray-900/60 border border-white/5 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3 animate-fade-in-up opacity-0" style={{ animationDelay: `${i * 0.05}s` }}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 ${battle.status === 'complete' ? (isWinner ? 'bg-emerald-500/20' : 'bg-red-500/20') : 'bg-yellow-500/20'}`}>
+                        {battle.status === 'complete' ? (isWinner ? '🏆' : '💀') : '⏳'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <StatusBadge status={battle.status} isWinner={isWinner} />
+                          <span className="text-sm text-gray-300">vs {playerName(isMyBattle ? battle.player2 : battle.player1)}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">💰 {battle.wager} MON</div>
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      {battle.status === 'complete' && <button onClick={() => watchReplay(battle.battleId)} className="btn-secondary text-xs">📺 Replay</button>}
+                      {battle.status === 'active' && <button onClick={() => { setCurrentBattle(battle); setView('battle'); }} className="btn-primary text-xs">Continue</button>}
+                      {(battle.status === 'selecting' || (battle.status === 'pending' && isMyBattle)) && <button onClick={() => { setCurrentBattle(battle); setView('select-cards'); }} className="btn-primary text-xs">Select Cards</button>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Section>
+      )}
+    </div>
+  );
+}
+
+/* ─── Battle Card Component ─── */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function BattleCard({ battle, index, onReplay }: { battle: any; index: number; onReplay: (id: string) => void }) {
+  const p1 = battle.player1;
+  const p2 = battle.player2;
+  const p1Name = playerName(p1);
+  const p2Name = playerName(p2);
+  const isActive = battle.status === 'active';
+  const winner = battle.winner;
+  const winnerName = battle.winnerName || (winner ? shortAddr(winner) : null);
+  const p1Cards = p1.selectedCards || [];
+  const p2Cards = p2?.selectedCards || [];
+  const payout = (parseFloat(battle.wager || '0') * 2 * 0.95).toFixed(4);
+  const lastRound = battle.lastRound;
+
+  return (
+    <div className="bg-gray-900/60 border border-white/5 hover:border-white/10 rounded-xl p-3 sm:p-4 transition animate-fade-in-up opacity-0" style={{ animationDelay: `${index * 0.04}s` }}>
+      {/* Top row: players + status */}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-sm sm:text-base font-bold text-cyan-400 truncate">{p1Name}</span>
+          <span className="text-xs text-gray-600 shrink-0">vs</span>
+          <span className="text-sm sm:text-base font-bold text-purple-400 truncate">{p2Name || '…'}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isActive && <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-semibold animate-pulse">LIVE</span>}
+          {battle.status === 'complete' && <button onClick={() => onReplay(battle.battleId)} className="text-xs bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 px-3 py-1 rounded-lg transition font-medium">📺 Replay</button>}
+        </div>
       </div>
 
-      {/* All recent battles */}
-      <div className="mb-4 sm:mb-8">
-        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <h2 className="text-xl font-bold text-white">Recent Battles</h2>
-          {allBattles.length > 0 && (
-            <div className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-sm font-medium">
-              {allBattles.length}
+      {/* Card thumbnails */}
+      {(p1Cards.length > 0 || p2Cards.length > 0) && (
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex -space-x-1.5">
+            {p1Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
+              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-md object-cover border-2 shadow-sm"
+                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444', zIndex: 3 - i }} />
+            ))}
+          </div>
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shrink-0">
+            <span className="text-[8px] font-black text-white">VS</span>
+          </div>
+          <div className="flex -space-x-1.5">
+            {p2Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
+              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-md object-cover border-2 shadow-sm"
+                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444', zIndex: 3 - i }} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom row: wager, winner, last action */}
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-3 text-gray-500">
+          <span className="text-yellow-400 font-semibold">💰 {battle.wager} MON</span>
+          {winner && <span className="text-emerald-400">🏆 {winnerName} won {payout} MON</span>}
+        </div>
+        {battle.createdAt && <span className="text-gray-600 shrink-0">{timeAgo(battle.createdAt)}</span>}
+      </div>
+
+      {/* Last round reasoning */}
+      {lastRound && (
+        <div className="mt-2 bg-white/[0.02] border border-white/[0.04] rounded-lg px-3 py-2">
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            <span className="text-gray-600">Turn {lastRound.turn}</span>
+            {lastRound.player1Move && (
+              <span>{ACTION_ICONS[lastRound.player1Move.action] || '❓'} {p1Name}: <span className="text-gray-300 uppercase">{lastRound.player1Move.action}</span></span>
+            )}
+            {lastRound.player2Move && (
+              <span>{ACTION_ICONS[lastRound.player2Move.action] || '❓'} {p2Name}: <span className="text-gray-300 uppercase">{lastRound.player2Move.action}</span></span>
+            )}
+          </div>
+          {(lastRound.player1Move?.reasoning || lastRound.player2Move?.reasoning) && (
+            <div className="mt-1 text-xs text-gray-500 italic flex items-start gap-1">
+              <span>🧠</span>
+              <span className="line-clamp-1">{lastRound.player1Move?.reasoning || lastRound.player2Move?.reasoning}</span>
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
 
-        {allBattles.length === 0 ? (
-          <div className="section-card text-center py-8">
-            <div className="text-4xl mb-3 opacity-50">📺</div>
-            <p className="text-gray-400">No battles to show yet</p>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {allBattles.map((battle, index) => {
-              const p1 = battle.player1.address;
-              const p2 = battle.player2?.address;
-              const p1Short = `${p1.slice(0, 6)}...${p1.slice(-4)}`;
-              const p2Short = p2 ? `${p2.slice(0, 6)}...${p2.slice(-4)}` : 'waiting...';
-              const isActive = battle.status === 'active';
-              const p1Cards = (battle.player1 as Battle['player1'] & { selectedCards?: { name: string }[] }).selectedCards || [];
-              const p2Cards = (battle.player2 as (NonNullable<Battle['player2']> & { selectedCards?: { name: string }[] }) | null)?.selectedCards || [];
-              const lastRound = (battle as Battle & {
-                lastRound?: {
-                  turn: number;
-                  player1Move?: { action: string; reasoning?: string | null } | null;
-                  player2Move?: { action: string; reasoning?: string | null } | null;
-                } | null;
-              }).lastRound;
+/* ─── Helpers ─── */
+function ErrorBanner({ msg }: { msg: string }) {
+  return (
+    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 flex items-center gap-3">
+      <span className="text-lg">⚠️</span>
+      <p className="text-sm text-red-400">{msg}</p>
+    </div>
+  );
+}
 
-              return (
-                <div
-                  key={battle.battleId}
-                  className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in-up opacity-0"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${isActive ? 'bg-yellow-500/20' : 'bg-purple-500/20'}`}>
-                      {isActive ? '⚡' : '🏆'}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-cyan-400 font-medium">{p1Short}</span>
-                        <span className="text-xs text-gray-500">vs</span>
-                        <span className="text-sm text-cyan-400 font-medium">{p2Short}</span>
-                        {isActive && <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded font-medium animate-pulse">LIVE</span>}
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-xs text-gray-500">💰 {battle.wager} MON</span>
-                        {battle.winner && (
-                          <span className="text-xs text-emerald-400">🏆 {battle.winner.slice(0, 6)}...{battle.winner.slice(-4)}</span>
-                        )}
-                      </div>
-                      {(p1Cards.length > 0 || p2Cards.length > 0) && (
-                        <div className="flex items-center gap-1 mt-1.5">
-                          <div className="flex -space-x-1">
-                            {p1Cards.slice(0, 3).map((c, i) => (
-                              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name} className="w-7 h-7 rounded border border-gray-700 object-cover" />
-                            ))}
-                          </div>
-                          <span className="text-xs text-gray-500 mx-1">vs</span>
-                          <div className="flex -space-x-1">
-                            {p2Cards.slice(0, 3).map((c, i) => (
-                              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name} className="w-7 h-7 rounded border border-gray-700 object-cover" />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {lastRound && (
-                        <div className="text-xs text-gray-500 mt-1 leading-tight">
-                          <div>Turn {lastRound.turn}: {lastRound.player1Move?.action || '—'} / {lastRound.player2Move?.action || '—'}</div>
-                          {(lastRound.player1Move?.reasoning || lastRound.player2Move?.reasoning) && (
-                            <div>💭 {lastRound.player1Move?.reasoning || lastRound.player2Move?.reasoning}</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {battle.status === 'complete' && (
-                    <button
-                      onClick={() => watchReplay(battle.battleId)}
-                      className="btn-secondary text-sm w-full sm:w-auto"
-                    >
-                      📺 Watch Replay
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+function Section({ title, count, pulse, children }: { title: string; count: number; pulse?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="mb-6 sm:mb-8">
+      <div className="flex items-center gap-2 mb-3">
+        <h2 className="text-lg font-bold text-white">{title}</h2>
+        {count > 0 && (
+          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${pulse ? 'bg-emerald-500/20 text-emerald-300 animate-pulse' : 'bg-white/10 text-gray-300'}`}>
+            {count}
+          </span>
         )}
       </div>
+      {children}
+    </div>
+  );
+}
 
-      {/* My battles */}
-      <div>
-        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <h2 className="text-xl font-bold text-white">My Battles</h2>
-          {myBattles.length > 0 && (
-            <div className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-sm font-medium">
-              {myBattles.length}
-            </div>
-          )}
-        </div>
+function StatCard({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) {
+  return (
+    <div className="bg-gray-900/60 border border-white/5 rounded-xl p-3 text-center">
+      <div className="text-lg mb-1">{icon}</div>
+      <div className={`text-xl sm:text-2xl font-bold ${color}`}>{value}</div>
+      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">{label}</div>
+    </div>
+  );
+}
 
-        {myBattles.length === 0 ? (
-          <div className="section-card text-center py-12">
-            <div className="text-5xl mb-4 opacity-50">⚔️</div>
-            <h3 className="text-lg font-semibold text-white mb-2">No battles yet</h3>
-            <p className="text-gray-400">Create or join a battle to get started!</p>
-          </div>
-        ) : (
-          <div className="grid gap-2 sm:gap-4">
-            {myBattles.map((battle, index) => {
-              const isMyBattle = battle.player1.address.toLowerCase() === address?.toLowerCase();
-              const opponent = isMyBattle ? battle.player2 : battle.player1;
-              const isWinner = battle.winner?.toLowerCase() === address?.toLowerCase();
+function StatusBadge({ status, isWinner }: { status: string; isWinner?: boolean }) {
+  const map: Record<string, { bg: string; text: string; label: string }> = {
+    complete: isWinner ? { bg: 'bg-emerald-500/20', text: 'text-emerald-400', label: 'Victory' } : { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Defeat' },
+    active: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Live' },
+    pending: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Waiting' },
+    selecting: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'Selecting' },
+  };
+  const s = map[status] || map.pending;
+  return <span className={`${s.bg} ${s.text} px-2 py-0.5 rounded text-[10px] font-semibold`}>{s.label}</span>;
+}
 
-              const statusConfig = {
-                complete: isWinner
-                  ? { bg: 'bg-emerald-500/20', text: 'text-emerald-400', label: 'Victory' }
-                  : { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Defeat' },
-                active: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'In Progress' },
-                pending: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Waiting' },
-                selecting: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'Selecting' },
-              };
-
-              const status = statusConfig[battle.status as keyof typeof statusConfig] || statusConfig.pending;
-
-              return (
-                <div
-                  key={battle.battleId}
-                  className="section-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 animate-fade-in-up opacity-0"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-lg sm:text-xl flex-shrink-0 ${status.bg}`}>
-                      {battle.status === 'complete' ? (isWinner ? '🏆' : '💀') : battle.status === 'active' ? '⚔️' : '⏳'}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className={`${status.bg} ${status.text} px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium`}>
-                          {status.label}
-                        </span>
-                        <span className="text-xs sm:text-sm text-gray-400">
-                          vs {opponent ? `${opponent.address.slice(0, 6)}...${opponent.address.slice(-4)}` : 'Waiting...'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                        <span className="text-yellow-400 text-sm">💰</span>
-                        <span className="text-xs sm:text-sm text-gray-400">Wager: <span className="text-white font-medium">{battle.wager} MON</span></span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {battle.status === 'complete' && (
-                    <button
-                      onClick={() => watchReplay(battle.battleId)}
-                      className="btn-secondary w-full sm:w-auto"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span>📺</span>
-                        <span>Watch Replay</span>
-                      </span>
-                    </button>
-                  )}
-
-                  {battle.status === 'active' && (
-                    <button
-                      onClick={() => {
-                        setCurrentBattle(battle);
-                        setView('battle');
-                      }}
-                      className="btn-primary w-full sm:w-auto"
-                    >
-                      Continue Battle
-                    </button>
-                  )}
-
-                  {(battle.status === 'selecting' || (battle.status === 'pending' && isMyBattle)) && (
-                    <button
-                      onClick={() => {
-                        setCurrentBattle(battle);
-                        setView('select-cards');
-                      }}
-                      className="btn-primary w-full sm:w-auto"
-                    >
-                      Select Cards
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+function EmptyState({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+  return (
+    <div className="section-card text-center py-10">
+      <div className="text-4xl mb-3 opacity-50">{icon}</div>
+      <h3 className="text-base font-semibold text-white mb-1">{title}</h3>
+      <p className="text-sm text-gray-400">{desc}</p>
     </div>
   );
 }
