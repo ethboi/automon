@@ -12,6 +12,7 @@ import { AICharacter } from './AICharacter';
 import { WorldUI } from './WorldUI';
 import { LocationMarker } from './locations/LocationMarker';
 import { BattleArena } from './buildings/BattleArena';
+import { TradingPost } from './buildings/TradingPost';
 import { WildAutoMons } from './WildAutoMon';
 import AgentProfileModal from '@/components/AgentProfileModal';
 import { useWallet } from '@/context/WalletContext';
@@ -45,6 +46,7 @@ export const WORLD_LOCATIONS = {
   old_pond:       { position: [-36, 0, -14] as [number, number, number],   label: 'Old Pond',        icon: '🎣', color: '#3b82f6', variant: 'water' as const,    route: null },
   dark_forest:    { position: [-36, 0, 22] as [number, number, number],    label: 'Dark Forest',     icon: '🌑', color: '#7c3aed', variant: 'dark' as const,     route: null },
   crystal_caves:  { position: [32, -0.6, 24] as [number, number, number],  label: 'Crystal Caves',   icon: '💎', color: '#a78bfa', variant: 'dark' as const,       route: null },
+  trading_post:   { position: [20, 0, -20] as [number, number, number],   label: 'Trading Post',    icon: '📈', color: '#10b981', variant: 'nature' as const,     route: null },
 };
 
 const INTERACTION_DISTANCE = 5;
@@ -242,9 +244,10 @@ function Scene({
         position={WORLD_LOCATIONS.town_arena.position}
         onClick={() => onLocationClick(WORLD_LOCATIONS.town_arena.route!)}
       />
+      <TradingPost position={WORLD_LOCATIONS.trading_post.position} />
 
       {Object.entries(WORLD_LOCATIONS)
-        .filter(([key]) => key !== 'town_arena')
+        .filter(([key]) => key !== 'town_arena' && key !== 'trading_post')
         .map(([key, loc]) => (
           <LocationMarker
             key={key}
