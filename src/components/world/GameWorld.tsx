@@ -317,7 +317,7 @@ function Scene({
 
 function WorldEdgeSign() {
   return (
-    <group position={[0, 0.25, 63]}>
+    <group position={[0, 0.25, -63]}>
       {/* Back layer for fake depth/extrusion */}
       <Text
         position={[0, 3.9, -0.45]}
