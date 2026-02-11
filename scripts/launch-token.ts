@@ -61,7 +61,7 @@ async function main() {
     image: imageBuffer,
     imageContentType: 'image/png',
     website: 'https://automon.xyz',
-    initialBuyAmount: parseEther('0.5'),
+    // initialBuyAmount: parseEther('0.5'), // Need ~10.5 MON total (deploy fee + buy)
   });
 
   console.log('\n✅ Token launched!');

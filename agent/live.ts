@@ -32,6 +32,16 @@ const TICK_MS = 4000;
 if (!PRIVATE_KEY) { console.error('❌ AGENT_PRIVATE_KEY required'); process.exit(1); }
 
 const provider = new ethers.JsonRpcProvider(RPC_URL);
+// Override fee data: use tight EIP-1559 params instead of ethers defaults
+// Base fee is 100 gwei. ethers defaults to maxFeePerGas=202 gwei (2x), wasting gas budget
+// Setting maxFee=105 gwei saves ~48% vs default 202 gwei
+provider.getFeeData = async () => {
+  return new ethers.FeeData(
+    null,  // gasPrice
+    ethers.parseUnits('105', 'gwei'), // maxFeePerGas — just above 100 base fee
+    ethers.parseUnits('1', 'gwei'),   // maxPriorityFeePerGas — minimal tip
+  );
+};
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const ADDRESS = wallet.address.toLowerCase();
 
@@ -339,6 +349,11 @@ async function buyPack(aiReason?: string): Promise<void> {
     console.log(`[${ts()}]    ⚠ No NFT contract address configured`);
     return;
   }
+  // Balance guard — need pack price + gas
+  if (parseFloat(agentBalance) < 0.15) {
+    console.log(`[${ts()}]    ⚠ Too broke for packs (${agentBalance} MON)`);
+    return;
+  }
 
   try {
     const contract = new ethers.Contract(NFT_ADDRESS, NFT_ABI, wallet);
@@ -518,6 +533,11 @@ async function trySettleBattle(battleId: string, winner: string): Promise<void> 
 }
 
 async function tryJoinBattle(aiReason?: string): Promise<boolean> {
+  // Balance guard
+  if (parseFloat(agentBalance) < 0.05) {
+    console.log(`[${ts()}]   ⚠ Too broke to battle (${agentBalance} MON)`);
+    return false;
+  }
   try {
     // Check for pending battles we can join
     const res = await api('/api/battle/list');
@@ -620,6 +640,11 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
 }
 
 async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Promise<void> {
+  // Balance guard — need wager + gas
+  if (parseFloat(agentBalance) < 0.05) {
+    console.log(`[${ts()}]   ⚠ Too broke to create battle (${agentBalance} MON)`);
+    return;
+  }
   try {
     // Check if we already have a pending/active battle
     const myBattlesRes = await api(`/api/battle/list?address=${ADDRESS}&status=pending,active`);
@@ -631,7 +656,9 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
       }
     }
 
-    const wager = aiWager || (0.005 + Math.random() * 0.015).toFixed(4);
+    const maxWager = Math.max(0.005, parseFloat(agentBalance) * 0.10); // cap at 10% of balance
+    let wager = aiWager || (0.005 + Math.random() * 0.015).toFixed(4);
+    if (parseFloat(wager) > maxWager) wager = maxWager.toFixed(4);
 
     // Create on-chain escrow first
     let txHash: string;
