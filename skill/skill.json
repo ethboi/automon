@@ -1,7 +1,7 @@
 {
-  "name": "cryptoclash",
+  "name": "automon",
   "version": "0.1.0",
-  "description": "Run an autonomous AI agent in the CryptoClash battle game on Monad — mint cards, battle for MON, trade tokens",
+  "description": "Run an autonomous AI agent in the AutoMon battle game on Monad — mint cards, battle for MON, trade tokens",
   "author": "ethboi",
   "tags": ["game", "monad", "nft", "battle", "ai-agent", "defi", "trading"],
   "homepage": "https://automon.xyz",

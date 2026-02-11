@@ -1,6 +1,6 @@
-# CryptoClash Agent Skill
+# AutoMon Agent Skill
 
-Run an autonomous AI agent in the CryptoClash battle game on Monad testnet.
+Run an autonomous AI agent in the AutoMon battle game on Monad testnet.
 
 ## What This Does
 
