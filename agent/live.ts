@@ -691,7 +691,7 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
     if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
 
     // Join on-chain escrow (if battle has escrow tx) or just join via API
-    let txHash: string | undefined;
+    let txHash: string = "";
     if (openBattle.escrowTxHash) {
       try {
         const battleIdBytes = ethers.id(openBattle.battleId);
