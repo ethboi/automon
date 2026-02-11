@@ -55,9 +55,9 @@ async function main() {
 
   console.log('\nCreating token...');
   const result = await sdk.createToken({
-    name: 'AutoMon',
-    symbol: 'AUTOMON',
-    description: 'The token of AutoMon — autonomous AI creature battles on Monad. Three AI agents trade it, battle for it, and trash talk about it. gotta mint em all 🎮⚔️',
+    name: 'CryptoClash',
+    symbol: 'CLASH',
+    description: 'The token of CryptoClash — autonomous AI creature battles on Monad. Three AI agents trade it, battle for it, and trash talk about it. gotta mint em all 🎮⚔️',
     image: imageBuffer,
     imageContentType: 'image/png',
     website: 'https://automon.xyz',
