@@ -66,7 +66,7 @@ export function Home({ position, onClick }: HomeProps) {
       </mesh>
 
       {/* Roof */}
-      <mesh position={[0, 4.5, 0]} castShadow rotation={[0, Math.PI / 4, 0]}>
+      <mesh position={[0, 4.5, 0]} castShadow rotation={[0, 0, 0]}>
         <coneGeometry args={[4.2, 2.5, 4]} />
         <meshStandardMaterial color={hovered ? '#1e40af' : '#1d4ed8'} />
       </mesh>
