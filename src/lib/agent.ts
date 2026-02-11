@@ -317,7 +317,6 @@ export async function getAgentDecision(
       action: 'strike',
       prediction: 'Opponent may guard or use ability',
       reasoning: `Going for a direct ${activeCard.name} strike against ${oppName}${oppHpPct < 0.4 ? ' to try and finish them off' : ''}. Ability is on cooldown so raw damage is the best play.`,
-      reasoning: 'Fallback to STRIKE due to error',
     };
   }
 }

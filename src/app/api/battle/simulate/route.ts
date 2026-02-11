@@ -92,6 +92,15 @@ export async function POST(request: NextRequest) {
       const nameMap = new Map(agents.map(a => [a.address?.toLowerCase(), a.name]));
       battleLog.player1.name = nameMap.get(battle.player1.address.toLowerCase()) || undefined;
       battleLog.player2.name = nameMap.get(battle.player2!.address.toLowerCase()) || undefined;
+      // Attach card selection reasoning if stored
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawBattle = battle as any;
+      if (rawBattle.player1?.cardSelectionReasoning) {
+        (battleLog.player1 as any).cardSelectionReasoning = rawBattle.player1.cardSelectionReasoning;
+      }
+      if (rawBattle.player2?.cardSelectionReasoning) {
+        (battleLog.player2 as any).cardSelectionReasoning = rawBattle.player2.cardSelectionReasoning;
+      }
 
       console.log('\n========================================');
       console.log('BATTLE COMPLETE');
