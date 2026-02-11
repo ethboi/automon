@@ -506,10 +506,10 @@ function BattleCard({ battle, index, onReplay, onOpen, onResume }: { battle: any
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           <span className={`text-sm font-bold truncate max-w-full ${winner?.toLowerCase() === p1?.address?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
           <div className="flex gap-1">
-            {p1Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
-              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
+            {p1Cards.slice(0, 3).filter(Boolean).map((c: { name?: string; element?: string }, i: number) => (
+              <img key={i} src={cardImage(c?.name || '?')} alt={c?.name || '?'} title={c?.name || '?'}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover border-2 shadow-md"
-                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444' }} />
+                style={{ borderColor: ELEMENT_COLORS[c?.element || ''] || '#444' }} />
             ))}
           </div>
         </div>
@@ -523,10 +523,10 @@ function BattleCard({ battle, index, onReplay, onOpen, onResume }: { battle: any
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           <span className={`text-sm font-bold truncate max-w-full ${winner?.toLowerCase() === p2?.address?.toLowerCase() ? 'text-yellow-300' : 'text-purple-400'}`}>{p2Name || '…'}</span>
           <div className="flex gap-1">
-            {p2Cards.slice(0, 3).map((c: { name: string; element?: string }, i: number) => (
-              <img key={i} src={cardImage(c.name)} alt={c.name} title={c.name}
+            {p2Cards.slice(0, 3).filter(Boolean).map((c: { name?: string; element?: string }, i: number) => (
+              <img key={i} src={cardImage(c?.name || '?')} alt={c?.name || '?'} title={c?.name || '?'}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover border-2 shadow-md"
-                style={{ borderColor: ELEMENT_COLORS[c.element || ''] || '#444' }} />
+                style={{ borderColor: ELEMENT_COLORS[c?.element || ''] || '#444' }} />
             ))}
           </div>
         </div>

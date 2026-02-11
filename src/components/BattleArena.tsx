@@ -25,8 +25,19 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
   const myState = perspectiveIsPlayer1 ? battle.player1 : battle.player2!;
   const opponentState = perspectiveIsPlayer1 ? battle.player2! : battle.player1;
 
-  const myActiveCard = myState.cards[myState.activeCardIndex];
-  const opponentActiveCard = opponentState.cards[opponentState.activeCardIndex];
+  const myActiveCard = myState?.cards?.[myState?.activeCardIndex ?? 0];
+  const opponentActiveCard = opponentState?.cards?.[opponentState?.activeCardIndex ?? 0];
+
+  // Guard: if cards not loaded yet, show loading state
+  if (!myActiveCard || !opponentActiveCard) {
+    return (
+      <div className="section-card text-center py-12">
+        <div className="spinner mb-4 mx-auto" />
+        <p className="text-gray-400">Waiting for battle to start...</p>
+        <p className="text-xs text-gray-600 mt-2">Both players need to select cards</p>
+      </div>
+    );
+  }
 
   const currentRound = battle.rounds.find(r => r.turn === battle.currentTurn);
   const hasSubmittedMove = isParticipant && currentRound && (isPlayer1 ? currentRound.player1Move : currentRound.player2Move);
@@ -176,7 +187,7 @@ export default function BattleArena({ battle, onMove, onAIDecide }: BattleArenaP
               } ${myActiveCard?.ability?.currentCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span className="text-lg sm:text-2xl mb-1 sm:mb-2 block">✨</span>
-              <span className="text-xs sm:text-sm font-medium truncate block">{myActiveCard.ability.name}</span>
+              <span className="text-xs sm:text-sm font-medium truncate block">{myActiveCard?.ability?.name || "Attack"}</span>
               <span className="text-[10px] sm:text-xs text-gray-400 block">
                 {myActiveCard?.ability?.currentCooldown
                   ? `Cooldown: ${myActiveCard?.ability?.currentCooldown}`
