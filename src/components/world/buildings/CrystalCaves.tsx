@@ -1,85 +1,11 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-/**
- * Creates a rocky, irregular sphere by displacing vertices with noise-like variation.
- * This gives an organic, natural rock look instead of geometric primitives.
- */
-function createRockGeometry(
-  radius: number,
-  detail: number,
-  seed: number,
-  roughness = 0.3
-): THREE.BufferGeometry {
-  const geo = new THREE.IcosahedronGeometry(radius, detail);
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    // Simple pseudo-noise displacement
-    const noise =
-      Math.sin(x * 3.7 + seed) * 0.5 +
-      Math.sin(y * 4.2 + seed * 1.3) * 0.3 +
-      Math.sin(z * 3.1 + seed * 0.7) * 0.4 +
-      Math.sin((x + z) * 2.8 + seed * 2.1) * 0.3;
-    const displacement = 1 + noise * roughness;
-    pos.setXYZ(i, x * displacement, y * displacement, z * displacement);
-  }
-  geo.computeVertexNormals();
-  return geo;
-}
-
-/**
- * Flatten the bottom of a geometry (push all vertices below cutY up to cutY).
- */
-function flattenBottom(geo: THREE.BufferGeometry, cutY: number) {
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    if (pos.getY(i) < cutY) {
-      pos.setY(i, cutY);
-    }
-  }
-  geo.computeVertexNormals();
-}
-
 export default function CrystalCaves() {
   const crystalRefs = useRef<(THREE.Mesh | null)[]>([]);
-
-  // Create rocky formations
-  const mainRock = useMemo(() => {
-    const g = createRockGeometry(4.5, 2, 42, 0.25);
-    // Squash vertically and flatten bottom
-    const pos = g.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      pos.setY(i, pos.getY(i) * 0.7); // squash
-    }
-    flattenBottom(g, -0.5);
-    return g;
-  }, []);
-
-  const sideRock1 = useMemo(() => {
-    const g = createRockGeometry(3, 2, 17, 0.3);
-    const pos = g.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      pos.setY(i, pos.getY(i) * 0.65);
-    }
-    flattenBottom(g, -0.5);
-    return g;
-  }, []);
-
-  const sideRock2 = useMemo(() => {
-    const g = createRockGeometry(2.5, 2, 93, 0.28);
-    const pos = g.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      pos.setY(i, pos.getY(i) * 0.6);
-    }
-    flattenBottom(g, -0.5);
-    return g;
-  }, []);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -92,48 +18,52 @@ export default function CrystalCaves() {
 
   return (
     <group>
-      {/* Main rocky formation — organic displaced icosahedron */}
-      <mesh position={[0, -0.5, -0.5]} geometry={mainRock} castShadow receiveShadow>
+      {/* Big dome — main rock */}
+      <mesh position={[0, 0, 0]} castShadow>
+        <sphereGeometry args={[4, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial color="#3a3a42" roughness={0.95} flatShading />
       </mesh>
 
-      {/* Side rock mass — left */}
-      <mesh position={[-3, -0.5, 1]} geometry={sideRock1} castShadow>
+      {/* Medium dome — left */}
+      <mesh position={[-3.5, 0, 2]} castShadow>
+        <sphereGeometry args={[2.5, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial color="#33333b" roughness={0.95} flatShading />
       </mesh>
 
-      {/* Side rock mass — right back */}
-      <mesh position={[2.5, -0.5, -2]} geometry={sideRock2} castShadow>
+      {/* Small dome — right back */}
+      <mesh position={[3, 0, -1.5]} castShadow>
+        <sphereGeometry args={[2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial color="#2e2e36" roughness={0.95} flatShading />
       </mesh>
 
-      {/* Cave entrance — dark opening */}
-      <mesh position={[0, 0.5, 3]}>
-        <sphereGeometry args={[1.5, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#050508" roughness={1} side={THREE.BackSide} />
-      </mesh>
-      {/* Entrance depth illusion */}
-      <mesh position={[0, 0, 3.5]}>
-        <boxGeometry args={[2.5, 1.5, 1]} />
-        <meshStandardMaterial color="#050508" roughness={1} />
+      {/* Tiny dome — front right */}
+      <mesh position={[2, 0, 3]} castShadow>
+        <sphereGeometry args={[1.2, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#35353d" roughness={0.95} flatShading />
       </mesh>
 
-      {/* 5 large crystals */}
+      {/* Cave entrance — dark hole in the big dome */}
+      <mesh position={[0, 0.8, 3.2]} rotation={[-0.3, 0, 0]}>
+        <circleGeometry args={[1.2, 8]} />
+        <meshStandardMaterial color="#050508" side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* 5 crystals poking out of the domes */}
       {[
-        { pos: [-2.5, 1.5, -0.5], size: [0.45, 2.2, 5] as [number, number, number], color: '#67e8f9', emissive: '#0891b2', rot: [0.05, 0, 0.2] },
-        { pos: [2.2, 1.8, -1.5], size: [0.4, 2.8, 5] as [number, number, number], color: '#a78bfa', emissive: '#6d28d9', rot: [0, 0.5, -0.15] },
-        { pos: [0.3, 2.5, -1], size: [0.5, 2.5, 5] as [number, number, number], color: '#22d3ee', emissive: '#0e7490', rot: [0.1, 0.3, 0.08] },
-        { pos: [-1, 1.5, -2.5], size: [0.35, 1.8, 5] as [number, number, number], color: '#c084fc', emissive: '#7c3aed', rot: [0, 0.8, -0.25] },
-        { pos: [1.5, 0.8, 1.5], size: [0.3, 1.5, 5] as [number, number, number], color: '#67e8f9', emissive: '#0891b2', rot: [-0.1, 1.2, 0.12] },
+        { pos: [-1.5, 3, -0.5] as [number,number,number], h: 2, color: '#67e8f9', emissive: '#0891b2', rot: [0.1, 0, 0.2] },
+        { pos: [1.5, 2.5, -1] as [number,number,number], h: 2.5, color: '#a78bfa', emissive: '#6d28d9', rot: [0, 0.5, -0.15] },
+        { pos: [0, 3.5, -0.5] as [number,number,number], h: 2, color: '#22d3ee', emissive: '#0e7490', rot: [0.05, 0.3, 0.08] },
+        { pos: [-3, 1.5, 1.5] as [number,number,number], h: 1.5, color: '#c084fc', emissive: '#7c3aed', rot: [0, 0.8, -0.2] },
+        { pos: [3, 1.2, -0.5] as [number,number,number], h: 1.5, color: '#67e8f9', emissive: '#0891b2', rot: [-0.1, 1.2, 0.1] },
       ].map((cr, i) => (
         <mesh
           key={`crystal-${i}`}
           ref={(el) => { crystalRefs.current[i] = el; }}
-          position={cr.pos as [number, number, number]}
+          position={cr.pos}
           rotation={cr.rot as [number, number, number]}
           castShadow
         >
-          <coneGeometry args={cr.size} />
+          <coneGeometry args={[0.35, cr.h, 5]} />
           <meshStandardMaterial
             color={cr.color}
             emissive={cr.emissive}
@@ -146,9 +76,9 @@ export default function CrystalCaves() {
         </mesh>
       ))}
 
-      {/* Glow from cave + crystals */}
-      <pointLight position={[0, 1, 2.5]} color="#c084fc" intensity={2} distance={6} />
-      <pointLight position={[0, 2, -1]} color="#22d3ee" intensity={2.5} distance={8} />
+      {/* Glow lights */}
+      <pointLight position={[0, 2, 2]} color="#c084fc" intensity={2} distance={6} />
+      <pointLight position={[0, 3, -1]} color="#22d3ee" intensity={2} distance={7} />
     </group>
   );
 }
