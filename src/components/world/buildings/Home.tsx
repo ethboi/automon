@@ -14,25 +14,6 @@ export function Home({ position, onClick }: HomeProps) {
   const smokeRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
-  // Use ExtrudeGeometry for a proper gable roof
-  const roofGeo = useMemo(() => {
-    const w = 2.7; // half-width
-    const h = 1.8; // peak height
-    const shape = new THREE.Shape();
-    shape.moveTo(-w, 0);
-    shape.lineTo(0, h);
-    shape.lineTo(w, 0);
-    shape.closePath();
-
-    const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: 5.2,
-      bevelEnabled: false,
-    });
-    // Center the extrusion
-    geo.translate(0, 0, -2.6);
-    return geo;
-  }, []);
-
   const smokeParticles = useMemo(() => {
     return Array.from({ length: 5 }, (_, i) => ({
       id: i,
@@ -56,6 +37,16 @@ export function Home({ position, onClick }: HomeProps) {
   const wallColor = hovered ? '#d4a574' : '#c9956b';
   const roofColor = hovered ? '#8b4513' : '#7a3b10';
 
+  // Roof dimensions
+  const wallW = 5;
+  const wallD = 5;
+  const wallTop = 3.6; // top of walls
+  const roofH = 2;     // height of roof peak above walls
+  const roofAngle = Math.atan2(roofH, wallW / 2); // slope angle
+
+  // Each roof panel: length along slope
+  const slopeLen = Math.sqrt((wallW / 2) ** 2 + roofH ** 2);
+
   return (
     <group position={position}>
       {/* Foundation */}
@@ -73,27 +64,77 @@ export function Home({ position, onClick }: HomeProps) {
         onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
         onPointerLeave={() => { setHovered(false); document.body.style.cursor = 'default'; }}
       >
-        <boxGeometry args={[5, 3.5, 5]} />
+        <boxGeometry args={[wallW, 3.5, wallD]} />
         <meshStandardMaterial color={wallColor} roughness={0.8} />
       </mesh>
 
-      {/* Roof — extruded triangle, sits on wall top */}
-      <mesh position={[0, 3.6, 0]} castShadow geometry={roofGeo}>
+      {/* Roof — two tilted planes meeting at the ridge */}
+      {/* Left slope */}
+      <mesh
+        position={[-wallW / 4, wallTop + roofH / 2, 0]}
+        rotation={[0, 0, roofAngle]}
+        castShadow
+      >
+        <boxGeometry args={[slopeLen, 0.15, wallD + 0.3]} />
         <meshStandardMaterial color={roofColor} roughness={0.75} />
       </mesh>
 
+      {/* Right slope */}
+      <mesh
+        position={[wallW / 4, wallTop + roofH / 2, 0]}
+        rotation={[0, 0, -roofAngle]}
+        castShadow
+      >
+        <boxGeometry args={[slopeLen, 0.15, wallD + 0.3]} />
+        <meshStandardMaterial color={roofColor} roughness={0.75} />
+      </mesh>
+
+      {/* Front gable wall (triangle fill) */}
+      <mesh position={[0, wallTop + roofH / 2, wallD / 2]} castShadow>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={3}
+            array={new Float32Array([
+              -wallW / 2, -roofH / 2, 0,
+               wallW / 2, -roofH / 2, 0,
+               0,          roofH / 2, 0,
+            ])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} roughness={0.8} />
+      </mesh>
+
+      {/* Back gable wall */}
+      <mesh position={[0, wallTop + roofH / 2, -wallD / 2]} castShadow>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={3}
+            array={new Float32Array([
+               wallW / 2, -roofH / 2, 0,
+              -wallW / 2, -roofH / 2, 0,
+               0,          roofH / 2, 0,
+            ])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} roughness={0.8} />
+      </mesh>
+
       {/* Chimney */}
-      <mesh position={[1.5, 5, 1.5]} castShadow>
-        <boxGeometry args={[0.7, 1.8, 0.7]} />
+      <mesh position={[1.3, wallTop + roofH - 0.2, 1.2]} castShadow>
+        <boxGeometry args={[0.7, 1.4, 0.7]} />
         <meshStandardMaterial color="#7f1d1d" roughness={0.85} />
       </mesh>
-      <mesh position={[1.5, 6, 1.5]}>
+      <mesh position={[1.3, wallTop + roofH + 0.5, 1.2]}>
         <boxGeometry args={[0.9, 0.15, 0.9]} />
         <meshStandardMaterial color="#991b1b" />
       </mesh>
 
       {/* Smoke */}
-      <group ref={smokeRef} position={[1.5, 6.2, 1.5]}>
+      <group ref={smokeRef} position={[1.3, wallTop + roofH + 0.7, 1.2]}>
         {smokeParticles.map((particle) => (
           <mesh key={particle.id}>
             <sphereGeometry args={[0.15, 8, 8]} />
@@ -155,7 +196,7 @@ export function Home({ position, onClick }: HomeProps) {
       {/* Hover glow */}
       {hovered && (
         <mesh position={[0, 1.85, 0]} scale={1.02}>
-          <boxGeometry args={[5, 3.5, 5]} />
+          <boxGeometry args={[wallW, 3.5, wallD]} />
           <meshBasicMaterial color="#fbbf24" transparent opacity={0.15} />
         </mesh>
       )}
