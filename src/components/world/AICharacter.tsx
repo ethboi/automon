@@ -15,7 +15,6 @@ interface AICharacterProps {
 
 const SPEED = 6;
 type AccessoryType = 'halo' | 'cape' | 'packs' | 'antenna' | 'orbs' | 'none';
-type Archetype = 'vanguard' | 'duelist' | 'warden' | 'ranger' | 'rogue' | 'sage' | 'spark' | 'default';
 
 function getActivityIndicator(activity?: string | null): { label: string; color: string } {
   const raw = (activity || '').toLowerCase();
@@ -61,7 +60,22 @@ const ROBOT_THEMES = [
 function getTheme(address: string) {
   const a = address.toLowerCase();
   const v = parseInt(a[2], 16) * 256 + parseInt(a[5], 16) * 16 + parseInt(a[10], 16);
-  return ROBOT_THEMES[v % ROBOT_THEMES.length];
+  const base = ROBOT_THEMES[v % ROBOT_THEMES.length];
+  const hueShift = ((parseInt(a[12], 16) - 8) / 8) * 0.08;
+  const satShift = ((parseInt(a[16], 16) - 8) / 8) * 0.1;
+  const lightShift = ((parseInt(a[20], 16) - 8) / 8) * 0.08;
+  const tweak = (hex: string) => {
+    const color = new THREE.Color(hex);
+    color.offsetHSL(hueShift, satShift, lightShift);
+    return `#${color.getHexString()}`;
+  };
+  return {
+    ...base,
+    body: tweak(base.body),
+    accent: tweak(base.accent),
+    glow: tweak(base.glow),
+    eye: tweak(base.eye),
+  };
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -96,22 +110,13 @@ function getVisualProfile(address: string) {
     theme: getTheme(address),
     accessory: accessories[hash % accessories.length],
     scale: scales[hash % scales.length],
+    silhouette: hash % 7,
+    tilt: ((hash % 9) - 4) * 0.006,
+    yScale: 0.92 + ((hash % 7) * 0.03),
     bob: 0.08 + (hash % 4) * 0.015,
     ringInner: 0.45 + (hash % 3) * 0.08,
     ringOuter: 0.72 + (hash % 3) * 0.1,
   };
-}
-
-function getArchetype(name: string): { type: Archetype; icon: string; tilt: number; yScale: number } {
-  const n = (name || '').toLowerCase();
-  if (n.includes('nexus')) return { type: 'vanguard', icon: '🛡️', tilt: 0, yScale: 1.03 };
-  if (n.includes('atlas')) return { type: 'duelist', icon: '⚔️', tilt: 0.02, yScale: 0.98 };
-  if (n.includes('pyre')) return { type: 'warden', icon: '🔥', tilt: -0.01, yScale: 1.05 };
-  if (n.includes('rune')) return { type: 'ranger', icon: '🌾', tilt: 0.01, yScale: 0.96 };
-  if (n.includes('shade')) return { type: 'rogue', icon: '🌑', tilt: -0.03, yScale: 1.02 };
-  if (n.includes('coral')) return { type: 'sage', icon: '🧠', tilt: 0.01, yScale: 1.06 };
-  if (n.includes('spark')) return { type: 'spark', icon: '⚡', tilt: -0.02, yScale: 0.94 };
-  return { type: 'default', icon: '🤖', tilt: 0, yScale: 1 };
 }
 
 export function AICharacter({ address, name, targetPosition, activity, onClick }: AICharacterProps) {
@@ -120,7 +125,6 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
   const [position, setPosition] = useState(new THREE.Vector3(targetPosition.x, 0, targetPosition.z));
   const [isMoving, setIsMoving] = useState(false);
   const profile = useMemo(() => getVisualProfile(address), [address]);
-  const archetype = useMemo(() => getArchetype(name), [name]);
   const { theme } = profile;
 
   useFrame((state, delta) => {
@@ -181,12 +185,12 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
             boxShadow: `0 0 18px ${hexToRgba(theme.glow, 0.25)}`,
           }}
         >
-          {archetype.icon} {name} • {indicator.label}
+          {name} • {indicator.label}
         </div>
       </Html>
 
       {/* === BODY — varies by headShape === */}
-      <group scale={[profile.scale[0], profile.scale[1] * archetype.yScale, profile.scale[2]]} rotation={[0, 0, archetype.tilt]}>
+      <group scale={[profile.scale[0], profile.scale[1] * profile.yScale, profile.scale[2]]} rotation={[0, 0, profile.tilt]}>
         {theme.headShape === 'angular' && (
           <group>
           {/* Bulky armored torso */}
@@ -346,7 +350,7 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
       )}
 
       {/* Hard silhouette differences by archetype */}
-      {archetype.type === 'vanguard' && (
+      {profile.silhouette === 0 && (
         <>
           <mesh position={[0.86, 1.95, 0]} castShadow>
             <boxGeometry args={[0.52, 0.28, 0.55]} />
@@ -358,7 +362,7 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
           </mesh>
         </>
       )}
-      {archetype.type === 'duelist' && (
+      {profile.silhouette === 1 && (
         <>
           <mesh position={[1.02, 1.15, 0.16]} rotation={[0.1, 0.1, -0.45]} castShadow>
             <boxGeometry args={[0.08, 0.9, 0.08]} />
@@ -370,13 +374,13 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
           </mesh>
         </>
       )}
-      {archetype.type === 'warden' && (
+      {profile.silhouette === 2 && (
         <mesh position={[0, 2.95, -0.2]} rotation={[0.3, 0, 0]}>
           <coneGeometry args={[0.62, 1.2, 5]} />
           <meshStandardMaterial color={theme.body} roughness={0.7} metalness={0.2} />
         </mesh>
       )}
-      {archetype.type === 'ranger' && (
+      {profile.silhouette === 3 && (
         <>
           <mesh position={[0.55, 2.25, -0.25]} rotation={[0.1, 0.4, 0.35]} castShadow>
             <boxGeometry args={[0.08, 0.62, 0.26]} />
@@ -388,19 +392,19 @@ export function AICharacter({ address, name, targetPosition, activity, onClick }
           </mesh>
         </>
       )}
-      {archetype.type === 'rogue' && (
+      {profile.silhouette === 4 && (
         <mesh position={[0, 2.45, -0.16]} rotation={[0.32, 0, 0]}>
           <coneGeometry args={[0.76, 1.35, 6]} />
           <meshStandardMaterial color="#1a1025" roughness={0.92} metalness={0.05} />
         </mesh>
       )}
-      {archetype.type === 'sage' && (
+      {profile.silhouette === 5 && (
         <mesh position={[0, 3.18, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.5, 0.04, 10, 28]} />
           <meshStandardMaterial color={theme.glow} emissive={theme.glow} emissiveIntensity={0.65} metalness={0.7} roughness={0.2} />
         </mesh>
       )}
-      {archetype.type === 'spark' && (
+      {profile.silhouette === 6 && (
         <group ref={orbitRef} position={[0, 1.95, 0]}>
           {[0, 1, 2, 3].map((i) => {
             const angle = (Math.PI * 2 * i) / 4;
