@@ -484,10 +484,12 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
     // Sort by total stats desc, pick top 3 (handle both flat and nested stats)
         // AI card selection
     let cardIds: string[];
+    let selectionReasoning: string | undefined;
     try {
       const aiPick = await selectBattleCards(cards);
       if (aiPick?.indices?.length === 3) {
         cardIds = aiPick.indices.map((i: number) => cards[i]?._id).filter(Boolean);
+        selectionReasoning = aiPick.reasoning;
         console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
         if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
       } else throw new Error('fallback');
@@ -498,13 +500,14 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
         return ((sb.attack || 30) + (sb.defense || 30)) - ((sa.attack || 30) + (sa.defense || 30));
       });
       cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
+      selectionReasoning = `Picked strongest cards by combined stats: ${sorted.slice(0, 3).map((c: { name: string }) => c.name).join(', ')}`;
       console.log(`[${ts()}]   🎴 Fallback: top 3 by stats`);
     }
 
     console.log(`[${ts()}]   🎴 Selecting ${cardIds.length} cards: ${cardIds.join(', ')}`);
     const selectRes = await apiLong('/api/battle/select-cards', {
       method: 'POST',
-      body: JSON.stringify({ battleId: openBattle.battleId, cardIds, address: ADDRESS }),
+      body: JSON.stringify({ battleId: openBattle.battleId, cardIds, address: ADDRESS, cardSelectionReasoning: selectionReasoning }),
     });
     if (!selectRes.ok) {
       const errData = await selectRes.json().catch(() => ({}));
@@ -582,10 +585,12 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
     if (!cards || cards.length < 3) return;
     // AI card selection
     let cardIds: string[];
+    let selectionReasoning2: string | undefined;
     try {
       const aiPick = await selectBattleCards(cards);
       if (aiPick?.indices?.length === 3) {
         cardIds = aiPick.indices.map((i: number) => cards[i]?._id).filter(Boolean);
+        selectionReasoning2 = aiPick.reasoning;
         console.log(`[${ts()}]   🧠 AI picked: ${aiPick.indices.map((i: number) => cards[i]?.name).join(', ')}`);
         if (aiPick.reasoning) console.log(`[${ts()}]   💭 ${aiPick.reasoning.slice(0, 100)}`);
       } else throw new Error('fallback');
@@ -595,12 +600,13 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
         return ((sb.attack || 30) + (sb.defense || 30)) - ((sa.attack || 30) + (sa.defense || 30));
       });
       cardIds = sorted.slice(0, 3).map((c: { _id: string }) => c._id);
+      selectionReasoning2 = `Picked strongest cards by combined stats: ${sorted.slice(0, 3).map((c: { name: string }) => c.name).join(', ')}`;
       console.log(`[${ts()}]   🎴 Fallback: top 3 by stats`);
     }
     console.log(`[${ts()}]   🎴 Selecting cards: ${cardIds.join(', ')}`);
     const selectRes = await apiLong('/api/battle/select-cards', {
       method: 'POST',
-      body: JSON.stringify({ battleId, cardIds, address: ADDRESS }),
+      body: JSON.stringify({ battleId, cardIds, address: ADDRESS, cardSelectionReasoning: selectionReasoning2 }),
     });
     if (!selectRes.ok) {
       const errData = await selectRes.json().catch(() => ({}));

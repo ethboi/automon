@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { battleId, cardIds, address } = await request.json();
+    const { battleId, cardIds, address, cardSelectionReasoning } = await request.json();
 
     if (!address) {
       return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
     const updateQuery: Record<string, unknown> = {
       [`${playerField}.cards`]: battleCards,
       [`${playerField}.ready`]: true,
+      ...(cardSelectionReasoning ? { [`${playerField}.cardSelectionReasoning`]: cardSelectionReasoning } : {}),
       updatedAt: new Date(),
     };
 
