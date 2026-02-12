@@ -81,6 +81,16 @@ function getNftContract(): ethers.Contract {
 let authToken: string | null = null;
 let authCookie: string | null = null;
 
+function resolveChainId(): number {
+  const network = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase() === 'mainnet'
+    ? 'mainnet'
+    : 'testnet';
+  const suffix = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
+  const raw = process.env[`NEXT_PUBLIC_CHAIN_ID_${suffix}`] || process.env.NEXT_PUBLIC_CHAIN_ID;
+  if (raw) return parseInt(raw, 10);
+  return network === 'mainnet' ? 143 : 10143;
+}
+
 /**
  * Authenticate the agent via SIWE (Sign-In with Ethereum)
  * Gets a nonce, signs it, verifies, and stores the auth cookie.
@@ -113,7 +123,7 @@ export async function authenticate(): Promise<boolean> {
       statement: 'Sign in to AutoMon',
       uri: origin,
       version: '1',
-      chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '10143'),
+      chainId: resolveChainId(),
       nonce,
       issuedAt: new Date().toISOString(),
     });

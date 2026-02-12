@@ -23,11 +23,16 @@ import { runBattleSimulation } from './simulate';
 
 const API_URL = (process.env.AUTOMON_API_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
 const PRIVATE_KEY = process.env.AGENT_PRIVATE_KEY || '';
-const NFT_ADDRESS = process.env.AUTOMON_NFT_ADDRESS || '';
-const RPC_URL = process.env.MONAD_RPC_URL || process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz';
+const AUTOMON_NETWORK = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase() === 'mainnet'
+  ? 'mainnet'
+  : 'testnet';
+const NETWORK_SUFFIX = AUTOMON_NETWORK === 'mainnet' ? 'MAINNET' : 'TESTNET';
+const envForNetwork = (baseKey: string) => (process.env[`${baseKey}_${NETWORK_SUFFIX}`] || process.env[baseKey] || '').trim();
+const NFT_ADDRESS = envForNetwork('AUTOMON_NFT_ADDRESS');
+const RPC_URL = envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || 'https://testnet-rpc.monad.xyz';
 let AGENT_NAME = process.env.AGENT_NAME || '';
 const JWT_SECRET = process.env.JWT_SECRET || '';
-const PACK_PRICE = process.env.NEXT_PUBLIC_PACK_PRICE || '0.1';
+const PACK_PRICE = envForNetwork('NEXT_PUBLIC_PACK_PRICE') || process.env.NEXT_PUBLIC_PACK_PRICE || '0.1';
 const TICK_MS = 4000;
 const CHAT_CONTEXT_LIMIT = Math.max(
   2,
@@ -41,20 +46,24 @@ const GLOBAL_CHAT_CHANCE = Math.max(
   0,
   Math.min(1, parseFloat(process.env.AI_CHAT_CHANCE || '0.12') || 0.12)
 );
+const ESCROW_ADDRESS = envForNetwork('ESCROW_CONTRACT_ADDRESS') ||
+  (AUTOMON_NETWORK === 'testnet' ? '0x2aD1D15658A86290123CdEAe300E9977E2c49364' : '');
+const MAX_FEE_GWEI = envForNetwork('MAX_FEE_GWEI') || (AUTOMON_NETWORK === 'testnet' ? '105' : '');
+const MAX_PRIORITY_FEE_GWEI = envForNetwork('MAX_PRIORITY_FEE_GWEI') || (AUTOMON_NETWORK === 'testnet' ? '1' : '');
 
 if (!PRIVATE_KEY) { console.error('❌ AGENT_PRIVATE_KEY required'); process.exit(1); }
+if (!ESCROW_ADDRESS) { console.error(`❌ ESCROW_CONTRACT_ADDRESS_${NETWORK_SUFFIX} required`); process.exit(1); }
 
 const provider = new ethers.JsonRpcProvider(RPC_URL);
-// Override fee data: use tight EIP-1559 params instead of ethers defaults
-// Base fee is 100 gwei. ethers defaults to maxFeePerGas=202 gwei (2x), wasting gas budget
-// Setting maxFee=105 gwei saves ~48% vs default 202 gwei
-provider.getFeeData = async () => {
-  return new ethers.FeeData(
-    null,  // gasPrice
-    ethers.parseUnits('105', 'gwei'), // maxFeePerGas — just above 100 base fee
-    ethers.parseUnits('1', 'gwei'),   // maxPriorityFeePerGas — minimal tip
-  );
-};
+if (MAX_FEE_GWEI) {
+  provider.getFeeData = async () => {
+    return new ethers.FeeData(
+      null,
+      ethers.parseUnits(MAX_FEE_GWEI, 'gwei'),
+      ethers.parseUnits(MAX_PRIORITY_FEE_GWEI || '1', 'gwei'),
+    );
+  };
+}
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const ADDRESS = wallet.address.toLowerCase();
 
@@ -65,7 +74,6 @@ const NFT_ABI = [
   'event CardMinted(uint256 indexed tokenId, uint8 automonId, uint8 rarity)',
 ];
 
-const ESCROW_ADDRESS = process.env.ESCROW_CONTRACT_ADDRESS || '0x2aD1D15658A86290123CdEAe300E9977E2c49364';
 const ESCROW_ABI = [
   'function createBattle(bytes32 battleId) external payable',
   'function joinBattle(bytes32 battleId) external payable',

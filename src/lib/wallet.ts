@@ -132,7 +132,8 @@ async function resolveNFTContractAddress(): Promise<string> {
 }
 
 function getMonadProvider() {
-  const network = new ethers.Network('monad-testnet', 10143);
+  const networkName = CHAIN_CONFIG.chainName.toLowerCase().replace(/\s+/g, '-');
+  const network = new ethers.Network(networkName, CHAIN_CONFIG.chainId);
   // Disable ENS on this network
   network.getPlugin = () => null;
   return new ethers.BrowserProvider(window.ethereum, network);

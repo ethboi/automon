@@ -6,7 +6,16 @@ import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-const RPC = process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz';
+const NETWORK = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase() === 'mainnet'
+  ? 'mainnet'
+  : 'testnet';
+const SUFFIX = NETWORK === 'mainnet' ? 'MAINNET' : 'TESTNET';
+const RPC =
+  process.env[`MONAD_RPC_URL_${SUFFIX}`] ||
+  process.env[`NEXT_PUBLIC_MONAD_RPC_${SUFFIX}`] ||
+  process.env.MONAD_RPC_URL ||
+  process.env.NEXT_PUBLIC_MONAD_RPC ||
+  'https://testnet-rpc.monad.xyz';
 const MAIN_AGENT_KEY = process.env.AGENT_PRIVATE_KEY!;
 
 const NEW_AGENTS = [

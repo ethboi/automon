@@ -48,7 +48,7 @@ A monster card battling game on Monad. Players collect monster cards by buying p
 ### Prerequisites
 - Node.js 18+
 - MongoDB Atlas account
-- Monad testnet wallet with MON
+- Monad wallet with MON (testnet by default; mainnet supported via env switch)
 - Optional AI keys (Anthropic/OpenAI) for enhanced agent decisions
 
 ### Installation
@@ -63,6 +63,8 @@ Copy `.env.example` to `.env.local` and fill in:
 
 ```env
 MONGODB_URI=mongodb+srv://...
+AUTOMON_NETWORK=testnet
+NEXT_PUBLIC_AUTOMON_NETWORK=testnet
 NEXT_PUBLIC_MONAD_RPC=https://testnet.rpc.monad.xyz
 NEXT_PUBLIC_CHAIN_ID=10143
 ESCROW_CONTRACT_ADDRESS=<deployed contract address>
@@ -75,6 +77,8 @@ NEXT_PUBLIC_PACK_PRICE=100000000000000000
 JWT_SECRET=<random secret>
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+For mainnet, set `AUTOMON_NETWORK=mainnet` and provide `*_MAINNET` values (RPC, chainId, and contract addresses).
 
 ### Development
 
@@ -99,7 +103,7 @@ The escrow contract (`contracts/AutoMonEscrow.sol`) handles:
 - Settlement by admin (pays winner minus fee)
 - Cancellation (refund if no opponent)
 
-Deploy to Monad testnet:
+Deploy to Monad (testnet by default):
 ```bash
 # Using Hardhat or Foundry
 # Set ESCROW_CONTRACT_ADDRESS after deployment

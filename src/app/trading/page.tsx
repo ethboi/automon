@@ -27,6 +27,20 @@ const TOKEN_ADDRESS = (
   process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS ||
   ''
 );
+const NAD_BASE = (
+  (PUBLIC_NETWORK === 'mainnet'
+    ? process.env.NEXT_PUBLIC_NAD_BASE_URL_MAINNET
+    : process.env.NEXT_PUBLIC_NAD_BASE_URL_TESTNET) ||
+  process.env.NEXT_PUBLIC_NAD_BASE_URL ||
+  'https://testnet.nad.fun'
+).replace(/\/+$/, '');
+const EXPLORER_BASE = (
+  (PUBLIC_NETWORK === 'mainnet'
+    ? process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL_MAINNET
+    : process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL_TESTNET) ||
+  process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL ||
+  'https://testnet.monadexplorer.com'
+).replace(/\/+$/, '');
 
 function timeAgo(d: string): string {
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
@@ -122,7 +136,7 @@ export default function TradingPage() {
               <div className="text-xs text-gray-400 font-mono">{TOKEN_ADDRESS}</div>
             </div>
             <a
-              href={`https://testnet.nad.fun/token/${TOKEN_ADDRESS}`}
+              href={`${NAD_BASE}/token/${TOKEN_ADDRESS}`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
@@ -220,7 +234,7 @@ export default function TradingPage() {
                       </div>
                       {trade.txHash && (
                         <a
-                          href={`https://testnet.monadexplorer.com/tx/${trade.txHash}`}
+                          href={`${EXPLORER_BASE}/tx/${trade.txHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[10px] text-purple-500 hover:text-purple-400 mt-1 inline-block"

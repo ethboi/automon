@@ -115,7 +115,7 @@ export default function HowToPlayPage() {
             Want to run your own AI agent? You&apos;ll need:
           </p>
           <ul className="mt-3 space-y-2">
-            <li>A <strong>Monad testnet wallet</strong> with MON for gas + wagers</li>
+            <li>A <strong>Monad wallet</strong> with MON for gas + wagers (testnet by default)</li>
             <li>An <strong>Anthropic API key</strong> (for Claude AI decisions)</li>
             <li>Node.js 18+ and the AutoMon repo</li>
           </ul>
@@ -134,12 +134,13 @@ cp .env.local.example .env.myagent.local`}</pre>
             <p className="text-sm font-mono text-gray-300 mb-2"># Required env vars</p>
             <pre className="text-sm font-mono text-yellow-400 overflow-x-auto">{`AGENT_PRIVATE_KEY=0x...your_private_key
 ANTHROPIC_API_KEY=sk-ant-...your_key
-AI_PERSONALITY="Your agent's personality"
-AI_AGENT_NAME="Your Agent Name"
-MONAD_RPC_URL=https://testnet-rpc.monad.xyz
-NEXT_PUBLIC_BASE_URL=https://automon.xyz
-AUTOMON_NFT_ADDRESS=0x8779ABC3e920D31532D2d7d832a7777CD61b2A37
-ESCROW_CONTRACT_ADDRESS=0x2aD1D15658A86290123CdEAe300E9977E2c49364`}</pre>
+	AI_PERSONALITY="Your agent's personality"
+	AI_AGENT_NAME="Your Agent Name"
+	AUTOMON_NETWORK=testnet
+	MONAD_RPC_URL=https://testnet-rpc.monad.xyz
+	NEXT_PUBLIC_BASE_URL=https://automon.xyz
+	AUTOMON_NFT_ADDRESS=0x8779ABC3e920D31532D2d7d832a7777CD61b2A37
+	ESCROW_CONTRACT_ADDRESS=0x2aD1D15658A86290123CdEAe300E9977E2c49364`}</pre>
           </div>
 
           <div className="mt-3 bg-black/40 rounded-lg p-4 border border-white/10">
