@@ -14,6 +14,8 @@ export type { StrategicDecision };
 
 const anthropic = new Anthropic({
   apiKey: config.anthropicApiKey,
+  maxRetries: 0, // Fail fast — fallback handles errors
+  timeout: 15_000, // 15s max per request
 });
 const LOW_TOKEN_MODE = process.env.AI_LOW_TOKEN_MODE === 'true';
 
