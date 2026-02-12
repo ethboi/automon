@@ -3,23 +3,42 @@
  * Trading service for nad.fun — pure viem, no SDK dependency.
  * Handles buy/sell of $AUTOMON token on bonding curve.
  */
-import { createPublicClient, createWalletClient, http, parseEther, formatEther, erc20Abi, defineChain, type Address } from 'viem';
+import { createPublicClient, createWalletClient, http, parseEther, formatEther, erc20Abi, defineChain, parseGwei, type Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
-// --- Network Config (testnet) ---
+const NETWORK = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase() === 'mainnet'
+  ? 'mainnet'
+  : 'testnet';
+const NETWORK_SUFFIX = NETWORK === 'mainnet' ? 'MAINNET' : 'TESTNET';
+const envForNetwork = (baseKey: string) => (process.env[`${baseKey}_${NETWORK_SUFFIX}`] || process.env[baseKey] || '').trim();
+
+const TESTNET_DEFAULTS: Record<string, Address> = {
+  NAD_BONDING_CURVE_ROUTER: '0x865054F0F6A288adaAc30261731361EA7E908003',
+  NAD_LENS: '0xB056d79CA5257589692699a46623F901a3BB76f1',
+  NAD_CURVE: '0x1228b0dc9481C11D3071E7A924B794CfB038994e',
+  NAD_WMON: '0x5a4E0bFDeF88C9032CB4d24338C5EB3d3870BfDd',
+};
+
+function requireAddress(name: string): Address {
+  const value = envForNetwork(name);
+  if (value) return value as Address;
+  if (NETWORK === 'testnet' && TESTNET_DEFAULTS[name]) return TESTNET_DEFAULTS[name];
+  throw new Error(`${name}_${NETWORK_SUFFIX} is required`);
+}
+
 const CONFIG = {
-  chainId: 10143,
-  rpcUrl: 'https://monad-testnet.drpc.org',
-  apiUrl: 'https://dev-api.nad.fun',
-  BONDING_CURVE_ROUTER: '0x865054F0F6A288adaAc30261731361EA7E908003' as Address,
-  LENS: '0xB056d79CA5257589692699a46623F901a3BB76f1' as Address,
-  CURVE: '0x1228b0dc9481C11D3071E7A924B794CfB038994e' as Address,
-  WMON: '0x5a4E0bFDeF88C9032CB4d24338C5EB3d3870BfDd' as Address,
+  chainId: Number(envForNetwork('NEXT_PUBLIC_CHAIN_ID') || (NETWORK === 'mainnet' ? '143' : '10143')),
+  rpcUrl: envForNetwork('MONAD_RPC_URL') || 'https://monad-testnet.drpc.org',
+  apiUrl: envForNetwork('NAD_FUN_API_URL') || 'https://dev-api.nad.fun',
+  BONDING_CURVE_ROUTER: requireAddress('NAD_BONDING_CURVE_ROUTER'),
+  LENS: requireAddress('NAD_LENS'),
+  CURVE: requireAddress('NAD_CURVE'),
+  WMON: requireAddress('NAD_WMON'),
 };
 
 const chain = defineChain({
   id: CONFIG.chainId,
-  name: 'Monad Testnet',
+  name: NETWORK === 'mainnet' ? 'Monad Mainnet' : 'Monad Testnet',
   nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
   rpcUrls: { default: { http: [CONFIG.rpcUrl] } },
 });
@@ -142,7 +161,8 @@ function getClients(privateKey: string) {
   return entry;
 }
 
-const GAS_OVERRIDE = BigInt(105000000000); // 105 gwei
+const GAS_OVERRIDE_GWEI = envForNetwork('MAX_FEE_GWEI') || (NETWORK === 'testnet' ? '105' : '');
+const GAS_OVERRIDE = GAS_OVERRIDE_GWEI ? parseGwei(GAS_OVERRIDE_GWEI) : undefined;
 
 // --- Public API ---
 
@@ -213,7 +233,7 @@ export async function buyToken(privateKey: string, tokenAddress: string, monAmou
     // @ts-ignore viem strict typing
       address: router as Address, abi: routerAbi, functionName: 'buy',
       args: [{ amountOutMin, token, to: account.address, deadline }],
-      value, maxFeePerGas: GAS_OVERRIDE,
+      value, ...(GAS_OVERRIDE ? { maxFeePerGas: GAS_OVERRIDE } : {}),
     });
     console.log(`[trading] BUY tx: ${hash}`);
     await publicClient.waitForTransactionReceipt({ hash });
@@ -243,7 +263,7 @@ export async function sellToken(privateKey: string, tokenAddress: string, tokenA
     // Approve router
     const approveTx = await walletClient.writeContract({
       address: token, abi: erc20Abi, functionName: 'approve',
-      args: [router as Address, amountIn], maxFeePerGas: GAS_OVERRIDE,
+      args: [router as Address, amountIn], ...(GAS_OVERRIDE ? { maxFeePerGas: GAS_OVERRIDE } : {}),
     });
     await publicClient.waitForTransactionReceipt({ hash: approveTx });
 
@@ -254,7 +274,7 @@ export async function sellToken(privateKey: string, tokenAddress: string, tokenA
     // @ts-ignore viem strict typing
       address: router as Address, abi: routerAbi, functionName: 'sell',
       args: [{ amountIn, amountOutMin, token, to: account.address, deadline }],
-      maxFeePerGas: GAS_OVERRIDE,
+      ...(GAS_OVERRIDE ? { maxFeePerGas: GAS_OVERRIDE } : {}),
     });
     console.log(`[trading] SELL tx: ${hash}`);
     await publicClient.waitForTransactionReceipt({ hash });
@@ -322,7 +342,7 @@ export async function createToken(
       address: CONFIG.BONDING_CURVE_ROUTER, abi: bondingCurveRouterAbi, functionName: 'create',
       args: [createArgs], value: deployFeeAmount,
       gas: estimatedGas + estimatedGas / BigInt(10),
-      maxFeePerGas: GAS_OVERRIDE,
+      ...(GAS_OVERRIDE ? { maxFeePerGas: GAS_OVERRIDE } : {}),
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({ hash });

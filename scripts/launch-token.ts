@@ -8,6 +8,9 @@ import * as path from 'path';
 import { createToken } from '../agent/trading';
 
 dotenv.config({ path: '.env.local' });
+const NETWORK = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase() === 'mainnet'
+  ? 'mainnet'
+  : 'testnet';
 
 async function main() {
   const privateKey = process.env.AGENT_PRIVATE_KEY;
@@ -23,7 +26,7 @@ async function main() {
     console.log('No token image found at public/automon-token.png — launching without image');
   }
 
-  console.log('Launching $AUTOMON on nad.fun testnet...');
+  console.log(`Launching $AUTOMON on nad.fun ${NETWORK}...`);
   const result = await createToken(
     privateKey,
     'AutoMon',

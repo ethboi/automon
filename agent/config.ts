@@ -32,6 +32,14 @@ function normalizeUrl(url: string): string {
 
 const privateKey = process.env.AGENT_PRIVATE_KEY || '';
 const explicitAddress = process.env.AGENT_ADDRESS || '';
+const network = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase() === 'mainnet'
+  ? 'mainnet'
+  : 'testnet';
+const networkSuffix = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
+
+function envForNetwork(baseKey: string): string {
+  return (process.env[`${baseKey}_${networkSuffix}`] || process.env[baseKey] || '').trim();
+}
 
 export const config = {
   // API Configuration
@@ -46,8 +54,8 @@ export const config = {
   agentName: process.env.AGENT_NAME || 'Wanderer',
 
   // Contract Configuration
-  nftContractAddress: process.env.AUTOMON_NFT_ADDRESS || '',
-  rpcUrl: process.env.MONAD_RPC_URL || process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz',
+  nftContractAddress: envForNetwork('AUTOMON_NFT_ADDRESS') || envForNetwork('NEXT_PUBLIC_AUTOMON_NFT_ADDRESS'),
+  rpcUrl: envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || 'https://testnet-rpc.monad.xyz',
 
   // Polling / timing
   pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '3000', 10),

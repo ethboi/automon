@@ -1,6 +1,20 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config({ path: ".env.local" });
 
+const network = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_NETWORK || "testnet").toLowerCase() === "mainnet"
+  ? "mainnet"
+  : "testnet";
+
+function envForNetwork(baseKey, selectedNetwork) {
+  const suffix = selectedNetwork === "mainnet" ? "MAINNET" : "TESTNET";
+  return process.env[`${baseKey}_${suffix}`] || process.env[baseKey];
+}
+
+function deployerAccounts(selectedNetwork) {
+  const key = (envForNetwork("DEPLOYER_PRIVATE_KEY", selectedNetwork) || "").trim().replace(/^0x/, "");
+  return key ? [key] : [];
+}
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -14,11 +28,19 @@ module.exports = {
   },
   networks: {
     monad: {
-      url: process.env.MONAD_RPC_URL || "https://testnet-rpc.monad.xyz",
-      chainId: 10143,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY
-        ? [process.env.DEPLOYER_PRIVATE_KEY.trim().replace(/^0x/, "")]
-        : [],
+      url: envForNetwork("MONAD_RPC_URL", network) || (network === "mainnet" ? "https://rpc.monad.xyz" : "https://testnet-rpc.monad.xyz"),
+      chainId: Number(envForNetwork("NEXT_PUBLIC_CHAIN_ID", network) || (network === "mainnet" ? "143" : "10143")),
+      accounts: deployerAccounts(network),
+    },
+    monadTestnet: {
+      url: envForNetwork("MONAD_RPC_URL", "testnet") || "https://testnet-rpc.monad.xyz",
+      chainId: Number(envForNetwork("NEXT_PUBLIC_CHAIN_ID", "testnet") || "10143"),
+      accounts: deployerAccounts("testnet"),
+    },
+    monadMainnet: {
+      url: envForNetwork("MONAD_RPC_URL", "mainnet") || "https://rpc.monad.xyz",
+      chainId: Number(envForNetwork("NEXT_PUBLIC_CHAIN_ID", "mainnet") || "143"),
+      accounts: deployerAccounts("mainnet"),
     },
     localhost: {
       url: "http://127.0.0.1:8545",

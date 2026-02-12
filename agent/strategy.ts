@@ -130,9 +130,9 @@ export async function chat(
     pushConversationMessage({ role: 'assistant', content: assistantMessage });
     return assistantMessage;
   } catch (error) {
-    console.error('Chat error:', error);
+    console.error('Chat error:', (error as Error).message?.slice(0, 80));
     conversationHistory.pop(); // Remove the failed user message
-    return 'Sorry, I encountered an error. Please try again.';
+    return null; // Skip chat when AI is unavailable
   }
 }
 
@@ -413,9 +413,28 @@ Respond with JSON only:
         return bTotal - aTotal;
       });
 
+    // Smart fallback: pick best cards with element diversity
+    const picked: number[] = [];
+    const usedElements = new Set<string>();
+
+    // First pass: pick top card per unique element
+    for (const { card, index } of sorted) {
+      if (picked.length >= 3) break;
+      if (!usedElements.has(card.element)) {
+        picked.push(index);
+        usedElements.add(card.element);
+      }
+    }
+    // Fill remaining slots with strongest remaining
+    for (const { index } of sorted) {
+      if (picked.length >= 3) break;
+      if (!picked.includes(index)) picked.push(index);
+    }
+
+    const names = picked.map(i => `${cards[i]?.name} (${cards[i]?.element})`).join(', ');
     return {
-      indices: sorted.slice(0, 3).map(x => x.index),
-      reasoning: 'Fallback: Selected highest rarity cards with best stats',
+      indices: picked.slice(0, 3),
+      reasoning: `Strategic fallback: ${names} — diverse elements with highest combined stats`,
     };
   }
 }
@@ -620,19 +639,37 @@ Respond with JSON only:
   } catch (error) {
     console.error('Next action decision error:', error);
 
-    // Fallback: heal if low, otherwise explore
-    if (health < 30) {
-      return {
-        location: 'Old Pond',
-        action: 'fishing',
-        reasoning: 'Health is critical, need to recover by fishing.',
-      };
+    // Smart fallback: cycle through activities based on state
+    const hpPct = health / maxHealth;
+    const balNum = parseFloat(balance);
+    const cardCount = cards.length;
+
+    if (hpPct < 0.3) {
+      const healSpots = [
+        { location: 'Old Pond', action: 'fishing', reasoning: `Health critical at ${health} HP — fishing for recovery (+20 HP)` },
+        { location: 'Community Farm', action: 'farming', reasoning: `Running low at ${health} HP — farming to restore (+17 HP)` },
+      ];
+      return healSpots[Math.floor(Math.random() * healSpots.length)];
     }
-    return {
-      location: 'Old Pond',
-      action: 'exploring',
-      reasoning: 'Exploring the meadows to see what we find.',
-    };
+    if (cardCount < 3 && balNum >= 0.15) {
+      return { location: 'Shop', action: 'shopping', reasoning: `Only ${cardCount} cards — need at least 3 to battle. Shopping time!` };
+    }
+    if (hpPct > 0.5 && cardCount >= 3 && balNum >= 0.05 && pendingBattles > 0) {
+      const wager = Math.min(0.02, balNum * 0.1).toFixed(3);
+      return { location: 'Town Arena', action: 'battling', wager, reasoning: `${health} HP and ${cardCount} cards ready — joining a pending battle!` };
+    }
+    if (hpPct > 0.6 && cardCount >= 3 && balNum >= 0.05 && Math.random() < 0.4) {
+      const wager = Math.min(0.015, balNum * 0.08).toFixed(3);
+      return { location: 'Town Arena', action: 'battling', wager, reasoning: `Feeling strong at ${health} HP — time to battle!` };
+    }
+    // Cycle exploration locations
+    const exploreOptions = [
+      { location: 'Crystal Caves', action: 'exploring', reasoning: 'Checking Crystal Caves for rare finds (+8 HP)' },
+      { location: 'Dark Forest', action: 'exploring', reasoning: 'Venturing into the Dark Forest for adventure' },
+      { location: 'Community Farm', action: 'farming', reasoning: 'Tending the farm — good for health and the soul' },
+      { location: 'Old Pond', action: 'fishing', reasoning: 'Peaceful fishing at the pond — recharging' },
+    ];
+    return exploreOptions[Math.floor(Math.random() * exploreOptions.length)];
   }
 }
 

@@ -15,14 +15,23 @@ function loadEnv(file) {
 }
 
 const base = loadEnv('.env.local');
+const network = (base.AUTOMON_NETWORK || base.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase() === 'mainnet'
+  ? 'mainnet'
+  : 'testnet';
+const suffix = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
+const networkVal = (key) => base[`${key}_${suffix}`] || base[key];
 const shared = {
+  AUTOMON_NETWORK: network,
+  NEXT_PUBLIC_AUTOMON_NETWORK: network,
   MONGODB_URI: base.MONGODB_URI,
-  ESCROW_CONTRACT_ADDRESS: base.ESCROW_CONTRACT_ADDRESS,
-  AUTOMON_NFT_ADDRESS: base.AUTOMON_NFT_ADDRESS,
+  ESCROW_CONTRACT_ADDRESS: networkVal('ESCROW_CONTRACT_ADDRESS'),
+  AUTOMON_NFT_ADDRESS: networkVal('AUTOMON_NFT_ADDRESS'),
   ANTHROPIC_API_KEY: base.ANTHROPIC_API_KEY,
   OPENAI_API_KEY: base.OPENAI_API_KEY,
   JWT_SECRET: base.JWT_SECRET,
-  NEXT_PUBLIC_MONAD_RPC: base.NEXT_PUBLIC_MONAD_RPC,
+  MONAD_RPC_URL: networkVal('MONAD_RPC_URL') || networkVal('NEXT_PUBLIC_MONAD_RPC'),
+  NEXT_PUBLIC_MONAD_RPC: networkVal('NEXT_PUBLIC_MONAD_RPC') || networkVal('MONAD_RPC_URL'),
+  NEXT_PUBLIC_CHAIN_ID: networkVal('NEXT_PUBLIC_CHAIN_ID'),
   NEXT_PUBLIC_APP_URL: base.NEXT_PUBLIC_APP_URL,
 };
 
