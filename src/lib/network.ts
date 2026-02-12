@@ -85,5 +85,5 @@ export function getExplorerBaseUrl(): string {
   const value = envForNetwork('NEXT_PUBLIC_BLOCK_EXPLORER_URL', network) || envForNetwork('BLOCK_EXPLORER_URL', network);
   if (value) return value;
   if (network === 'testnet') return DEFAULT_TESTNET_EXPLORER;
-  throw new Error('NEXT_PUBLIC_BLOCK_EXPLORER_URL_MAINNET (or BLOCK_EXPLORER_URL_MAINNET) is required when AUTOMON_NETWORK=mainnet');
+  return 'https://monadexplorer.com';
 }
