@@ -48,7 +48,7 @@ module.exports = {
       script: 'npx',
       args: 'tsx agent/live.ts',
       cwd: __dirname,
-      env: { ...shared, AGENT_PRIVATE_KEY: base.AGENT_PRIVATE_KEY },
+      env: { ...shared, AGENT_PRIVATE_KEY: base.AGENT_PRIVATE_KEY, AGENT_NAME: 'Nexus' },
       max_memory_restart: '256M',
       restart_delay: 5000,
       exp_backoff_restart_delay: 1000,

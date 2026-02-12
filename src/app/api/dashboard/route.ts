@@ -5,6 +5,35 @@ import { clampMood, DEFAULT_MOOD, getActionMoodDelta, getMoodTier } from '@/lib/
 
 export const dynamic = 'force-dynamic';
 
+function formatWeiToMon(weiRaw: unknown): string | null {
+  if (weiRaw == null) return null;
+  const s = String(weiRaw).trim();
+  if (!/^\d+$/.test(s)) return null;
+  try {
+    const wei = BigInt(s);
+    const base = BigInt('1000000000000000000');
+    const whole = wei / base;
+    const frac = wei % base;
+    if (frac === BigInt(0)) return whole.toString();
+    const fracStr = frac.toString().padStart(18, '0').replace(/0+$/, '');
+    return `${whole.toString()}.${fracStr}`;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeMonAmount(raw: unknown): string | null {
+  if (raw == null) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const fromWei = formatWeiToMon(s);
+  return fromWei || s;
+}
+
+function shortAddr(addr: string): string {
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
 export async function GET() {
   try {
     const db = await getDb();
@@ -12,9 +41,15 @@ export async function GET() {
     const oneDayAgo = new Date(Date.now() - 86400000);
     const fiveMinAgo = new Date(Date.now() - 300000);
 
-    const [agents, recentActions, recentBattles, totalCards, recentTxs] = await Promise.all([
+    const [agents, users, recentActions, recentBattles, totalCards, recentTxs] = await Promise.all([
       db.collection('agents')
         .find({ lastSeen: { $gte: oneDayAgo } })
+        .toArray(),
+
+      db.collection('users')
+        .find({ lastSeen: { $gte: fiveMinAgo } })
+        .sort({ lastSeen: -1 })
+        .limit(50)
         .toArray(),
 
       db.collection('agent_actions')
@@ -125,8 +160,27 @@ export async function GET() {
       };
     });
 
+    const agentAddresses = new Set(
+      enrichedAgents
+        .map((a) => a.address?.toLowerCase?.())
+        .filter(Boolean)
+    );
+
+    const onlinePlayers = users
+      .filter((u) => {
+        const addr = u.address?.toLowerCase?.();
+        return !!addr && !agentAddresses.has(addr);
+      })
+      .map((u) => ({
+        address: u.address,
+        name: (u.name && String(u.name).trim()) || shortAddr(u.address),
+        lastSeen: u.lastSeen,
+      }));
+
     return NextResponse.json({
+      onlineAgents: enrichedAgents,
       agents: enrichedAgents,
+      onlinePlayers,
       events: recentActions.map(a => ({
         agent: a.address,
         action: a.action,
@@ -178,7 +232,7 @@ export async function GET() {
         description: tx.description,
         explorerUrl: explorerUrl(tx.txHash),
         timestamp: tx.timestamp,
-        amount: tx.metadata?.wager || tx.metadata?.price || tx.amount || null,
+        amount: normalizeMonAmount(tx.amount) || normalizeMonAmount(tx.metadata?.wager) || normalizeMonAmount(tx.metadata?.price),
       })),
       chat: (recentChat || []).reverse().map(m => ({
         from: m.from,

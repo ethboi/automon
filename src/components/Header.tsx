@@ -51,13 +51,62 @@ function useLatestTx() {
 }
 
 export default function Header() {
-  const { address, balance, isConnecting, connect, disconnect } = useWallet();
+  const { address, balance, tokenBalance, playerName, updatePlayerName, isConnecting, connect, disconnect } = useWallet();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [nameSaving, setNameSaving] = useState(false);
   const { tx: latestTx, isNew } = useLatestTx();
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  useEffect(() => {
+    if (!isEditingName) {
+      setNameDraft(playerName || '');
+    }
+  }, [playerName, isEditingName]);
+
+  const startInlineEdit = () => {
+    setNameDraft(playerName || '');
+    setNameError(null);
+    setIsEditingName(true);
+  };
+
+  const cancelInlineEdit = () => {
+    setNameDraft(playerName || '');
+    setNameError(null);
+    setIsEditingName(false);
+  };
+
+  const saveInlineName = async () => {
+    if (!address) {
+      setNameError('Connect wallet first.');
+      return;
+    }
+    const trimmed = nameDraft.trim();
+    if (trimmed.length < 2) {
+      setNameError('Name must be 2-24 characters.');
+      return;
+    }
+    if (trimmed.length > 24) {
+      setNameError('Name must be 2-24 characters.');
+      return;
+    }
+    try {
+      setNameSaving(true);
+      setNameError(null);
+      await updatePlayerName(trimmed);
+      setIsEditingName(false);
+    } catch (error) {
+      console.error('Failed to set name:', error);
+      setNameError(error instanceof Error ? error.message : 'Failed to set name');
+    } finally {
+      setNameSaving(false);
+    }
   };
 
   const navLinks = [
@@ -168,15 +217,56 @@ export default function Header() {
                   <span className="text-yellow-400 text-lg">💰</span>
                   <span className="text-white font-semibold">{parseFloat(balance || '0').toFixed(2)}</span>
                   <span className="text-purple-300 text-sm">MON</span>
+                  <span className="text-gray-600">|</span>
+                  <span className="text-emerald-300 font-semibold">{parseFloat(tokenBalance || '0').toFixed(2)}</span>
+                  <span className="text-emerald-500 text-sm">$AUTOMON</span>
                 </div>
 
                 {/* Address pill — desktop only */}
                 <div className="hidden sm:flex glass rounded-full px-4 py-2 items-center gap-2">
                   <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-400 flex-shrink-0" />
+                  {isEditingName ? (
+                    <>
+                      <input
+                        value={nameDraft}
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void saveInlineName();
+                          if (e.key === 'Escape') cancelInlineEdit();
+                        }}
+                        maxLength={24}
+                        autoFocus
+                        className="w-32 bg-transparent border border-cyan-500/40 rounded px-2 py-1 text-sm text-cyan-200 placeholder:text-cyan-200/40 focus:outline-none focus:border-cyan-400"
+                        placeholder="Player name"
+                      />
+                      <button onClick={() => void saveInlineName()} disabled={nameSaving} className="text-xs text-emerald-300 hover:text-emerald-200 disabled:opacity-60">
+                        {nameSaving ? '...' : 'Save'}
+                      </button>
+                      <button onClick={cancelInlineEdit} disabled={nameSaving} className="text-xs text-gray-400 hover:text-white disabled:opacity-60">
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {playerName && (
+                        <span className="text-cyan-300 text-sm font-semibold">
+                          {playerName}
+                        </span>
+                      )}
+                    </>
+                  )}
                   <span className="text-purple-300 font-mono text-sm">
                     {formatAddress(address)}
                   </span>
+                  {!isEditingName && (
+                    <button onClick={startInlineEdit} className="text-xs text-gray-400 hover:text-white">✏️</button>
+                  )}
                 </div>
+                {nameError && (
+                  <span className="hidden sm:block text-[11px] text-rose-300 max-w-52 truncate" title={nameError}>
+                    {nameError}
+                  </span>
+                )}
 
                 {/* Disconnect button — desktop only */}
                 <button
@@ -235,18 +325,52 @@ export default function Header() {
 
             {/* Wallet section */}
             <div className="px-4 pb-3 mb-3 border-b border-white/5">
-              {address ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-400" />
-                    <span className="text-purple-300 font-mono text-sm">{formatAddress(address)}</span>
-                    <span className="text-yellow-400 text-sm font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
-                  </div>
-                  <button onClick={() => { disconnect(); setMobileMenuOpen(false); }} className="text-xs text-gray-500 hover:text-white px-2 py-1 rounded-lg hover:bg-white/5">
-                    Disconnect
-                  </button>
-                </div>
-              ) : (
+	              {address ? (
+	                <>
+	                  <div className="flex items-start justify-between gap-2">
+	                    <div className="flex items-center gap-2 min-w-0">
+	                      <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-400" />
+	                      {playerName && <span className="text-cyan-300 text-sm font-semibold">{playerName}</span>}
+	                      <span className="text-purple-300 font-mono text-sm">{formatAddress(address)}</span>
+	                      <span className="text-yellow-400 text-sm font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
+	                      <span className="text-emerald-400 text-sm font-semibold">{parseFloat(tokenBalance || '0').toFixed(2)} $AUTOMON</span>
+	                    </div>
+	                    <div className="flex items-center gap-1 shrink-0">
+	                      {!isEditingName && (
+	                        <button onClick={startInlineEdit} className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded-lg hover:bg-white/5">Edit</button>
+	                      )}
+	                      <button onClick={() => { disconnect(); setMobileMenuOpen(false); }} className="text-xs text-gray-500 hover:text-white px-2 py-1 rounded-lg hover:bg-white/5">
+	                        Disconnect
+	                      </button>
+	                    </div>
+	                  </div>
+	                  {isEditingName && (
+	                    <div className="mt-2 flex items-center gap-2">
+	                      <input
+	                        value={nameDraft}
+	                        onChange={(e) => setNameDraft(e.target.value)}
+	                        onKeyDown={(e) => {
+	                          if (e.key === 'Enter') void saveInlineName();
+	                          if (e.key === 'Escape') cancelInlineEdit();
+	                        }}
+	                        maxLength={24}
+	                        autoFocus
+	                        className="flex-1 min-w-0 bg-black/20 border border-cyan-500/40 rounded px-2 py-1 text-sm text-cyan-200 placeholder:text-cyan-200/40 focus:outline-none focus:border-cyan-400"
+	                        placeholder="Player name"
+	                      />
+	                      <button onClick={() => void saveInlineName()} disabled={nameSaving} className="text-xs text-emerald-300 hover:text-emerald-200 disabled:opacity-60 px-2 py-1">
+	                        {nameSaving ? '...' : 'Save'}
+	                      </button>
+	                      <button onClick={cancelInlineEdit} disabled={nameSaving} className="text-xs text-gray-400 hover:text-white disabled:opacity-60 px-2 py-1">
+	                        Cancel
+	                      </button>
+	                    </div>
+	                  )}
+	                  {nameError && (
+	                    <div className="mt-1 text-[11px] text-rose-300">{nameError}</div>
+	                  )}
+	                </>
+	              ) : (
                 <div className="text-xs text-gray-500">Wallet not connected</div>
               )}
             </div>
@@ -275,7 +399,9 @@ export default function Header() {
                   {/* Mobile balance display */}
                   <div className="flex items-center justify-between px-4 py-3 mt-2 glass rounded-xl">
                     <span className="text-gray-400 text-sm">Balance</span>
-                    <span className="text-white font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
+                    <span className="text-white font-semibold">
+                      {parseFloat(balance || '0').toFixed(2)} MON • {parseFloat(tokenBalance || '0').toFixed(2)} $AUTOMON
+                    </span>
                   </div>
 
                   {/* Mobile disconnect */}

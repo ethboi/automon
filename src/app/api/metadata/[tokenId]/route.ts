@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { AUTOMONS, RARITY_MULTIPLIERS } from '@/lib/automons';
 import { getNftContractAddress, getRpcUrl } from '@/lib/network';
+import { getCardArtDataUri } from '@/lib/cardArt';
 export const dynamic = 'force-dynamic';
 
 const RARITY_NAMES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'] as const;
@@ -55,10 +56,8 @@ export async function GET(
     const scaledSpeed = Math.floor(automon.baseSpeed * multiplier);
     const scaledHp = Math.floor(automon.baseHp * multiplier);
 
-    // Get the base URL for images
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://automon.xyz';
-    // Use SVG for now, will be replaced with PNG later
-    const imageUrl = `${baseUrl}/images/automons/${automonIdNum}.svg`;
+    const imageUrl = getCardArtDataUri(automonIdNum, automon.element, rarityKey);
 
     // Build NFT metadata following OpenSea standard
     const metadata = {
