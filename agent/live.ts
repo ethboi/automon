@@ -220,6 +220,8 @@ let posZ = 8;
 let target = makeTargetPoint(pick(LOCATIONS));
 let cardCount = 0;
 let totalMinted = 0;
+let battleWins = 0;
+let battleLosses = 0;
 let isRunning = true;
 let agentHealth = 100;
 let agentMood = 60;
@@ -761,7 +763,7 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
     if (selectRes.ok) {
       const data = await selectRes.json();
       if (data.simulationComplete) {
-        const result = data.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+        const result = data.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST'; if (result === '🏆 WON') battleWins++; else battleLosses++;
         console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
         lastBattleTime = Date.now();
         await trySettleBattle(openBattle.battleId, data.winner);
@@ -775,7 +777,7 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
             console.log(`[${ts()}]   ✅ Both players ready, running simulation locally...`);
             const simResult = await runBattleSimulation(fullBattle, API_URL, api);
             if (simResult) {
-              const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+              const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST'; if (result === '🏆 WON') battleWins++; else battleLosses++;
               console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
               lastBattleTime = Date.now();
               await trySettleBattle(openBattle.battleId, simResult.winner);
@@ -896,7 +898,7 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
         if (checkRes.ok) {
           const data = await checkRes.json();
           if (data.battle?.status === 'complete') {
-            const result = data.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+            const result = data.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST'; if (result === '🏆 WON') battleWins++; else battleLosses++;
             console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
         lastBattleTime = Date.now();
             await trySettleBattle(battleId, data.battle.winner);
@@ -911,7 +913,7 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
             if (checkFirst.ok) {
               const checkData = await checkFirst.json();
               if (checkData.battle?.status === 'complete') {
-                const result = checkData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+                const result = checkData.battle.winner?.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST'; if (result === '🏆 WON') battleWins++; else battleLosses++;
                 console.log(`[${ts()}]   ⚔️ Battle already complete — ${result}!`);
                 lastBattleTime = Date.now();
                 await trySettleBattle(battleId, checkData.battle.winner);
@@ -923,7 +925,7 @@ async function createAndWaitForBattle(aiWager?: string, aiReason?: string): Prom
               if (fullBattle?.player1?.cards?.length && fullBattle?.player2?.cards?.length) {
                 const simResult = await runBattleSimulation(fullBattle, API_URL, api);
                 if (simResult) {
-                  const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+                  const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST'; if (result === '🏆 WON') battleWins++; else battleLosses++;
                   console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
                   lastBattleTime = Date.now();
                   await trySettleBattle(battleId, simResult.winner);
@@ -994,7 +996,7 @@ async function tick(): Promise<void> {
             if (fullBattle?.player1?.cards?.length >= 3 && fullBattle?.player2?.cards?.length >= 3) {
               const simResult = await runBattleSimulation(fullBattle, API_URL, api);
               if (simResult) {
-                const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST';
+                const result = simResult.winner.toLowerCase() === ADDRESS.toLowerCase() ? '🏆 WON' : '💀 LOST'; if (result === '🏆 WON') battleWins++; else battleLosses++;
                 console.log(`[${ts()}]   ⚔️ Battle complete — ${result}!`);
                 lastBattleTime = Date.now();
                 await trySettleBattle(b.battleId, simResult.winner);
@@ -1179,6 +1181,8 @@ async function tick(): Promise<void> {
         pendingBattles,
         AI_PERSONALITY,
         agentTokenBalance,
+        battleWins,
+        battleLosses,
       );
 
       nextAction = normalizeAction(decision.action);

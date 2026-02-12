@@ -552,6 +552,8 @@ export async function decideNextAction(
   pendingBattles: number,
   personality?: string,
   tokenBalance?: string,
+  battleWins: number = 0,
+  battleLosses: number = 0,
 ): Promise<LocationDecision> {
   const locationList = Object.entries(LOCATION_INFO)
     .map(([name, desc]) => `- ${name}: ${desc}`)
@@ -575,6 +577,7 @@ ${personalityLine}
 - Mood: ${mood}/100 (${moodLabel})
 - Balance: ${balance} MON
 ${tokenBalance && parseFloat(tokenBalance) > 0 ? `- $AUTOMON tokens: ${tokenBalance}\n` : ''}- Cards: ${cardSummary}
+- Battle record: ${battleWins}W / ${battleLosses}L${battleLosses > battleWins && battleLosses >= 2 ? ' ⚠️ LOSING STREAK — consider buying more packs for stronger cards!' : ''}
 - Pending battles available: ${pendingBattles}
 - Recent actions: ${recentActions.slice(-(LOW_TOKEN_MODE ? 3 : 5)).join(' → ') || 'just started'}
 
@@ -655,6 +658,9 @@ Respond with JSON only:
     }
     if (cardCount < 3 && balNum >= 0.15) {
       return { location: 'Shop', action: 'shopping', reasoning: `Only ${cardCount} cards — need at least 3 to battle. Shopping time!` };
+    }
+    if (battleLosses > battleWins && battleLosses >= 2 && balNum >= 0.15 && Math.random() < 0.6) {
+      return { location: 'Shop', action: 'shopping', reasoning: `${battleWins}W/${battleLosses}L — losing too much. Buying stronger cards to turn this around!` };
     }
     if (hpPct > 0.35 && cardCount >= 3 && balNum >= 0.05 && pendingBattles > 0) {
       const wager = Math.min(0.02, balNum * 0.1).toFixed(3);
