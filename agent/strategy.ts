@@ -656,11 +656,11 @@ Respond with JSON only:
     if (cardCount < 3 && balNum >= 0.15) {
       return { location: 'Shop', action: 'shopping', reasoning: `Only ${cardCount} cards — need at least 3 to battle. Shopping time!` };
     }
-    if (hpPct > 0.5 && cardCount >= 3 && balNum >= 0.05 && pendingBattles > 0) {
+    if (hpPct > 0.35 && cardCount >= 3 && balNum >= 0.05 && pendingBattles > 0) {
       const wager = Math.min(0.02, balNum * 0.1).toFixed(3);
       return { location: 'Town Arena', action: 'battling', wager, reasoning: `${health} HP and ${cardCount} cards ready — joining a pending battle!` };
     }
-    if (hpPct > 0.6 && cardCount >= 3 && balNum >= 0.05 && Math.random() < 0.4) {
+    if (hpPct > 0.4 && cardCount >= 3 && balNum >= 0.05 && Math.random() < 0.5) {
       const wager = Math.min(0.015, balNum * 0.08).toFixed(3);
       return { location: 'Town Arena', action: 'battling', wager, reasoning: `Feeling strong at ${health} HP — time to battle!` };
     }
