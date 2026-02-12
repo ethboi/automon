@@ -8,7 +8,10 @@ interface WorldUIProps {
   onSelectAgent?: (address: string) => void;
   onFlyToAgent?: (address: string) => void;
   walletAddress?: string | null;
+  playerName?: string | null;
+  ensureWalletSession?: (() => Promise<boolean>) | null;
   onlineAgents?: OnlineAgent[];
+  onlinePlayers?: OnlinePlayer[];
   events?: EventData[];
   transactions?: TxData[];
   totalBattles?: number;
@@ -33,7 +36,14 @@ interface OnlineAgent {
   maxHealth?: number;
   stats?: { wins: number; losses: number; cards: number };
   balance?: string | null;
+  tokenBalance?: string | null;
   model?: string;
+}
+
+interface OnlinePlayer {
+  address: string;
+  name: string;
+  lastSeen?: string;
 }
 
 interface EventData {
@@ -148,16 +158,21 @@ const TX_ICONS: Record<string, string> = {
 export function WorldUI({
   nearbyBuilding, onEnterBuilding, onSelectAgent, onFlyToAgent,
   walletAddress = null,
-  onlineAgents = [], events = [], transactions = [], battles = [], chat = [],
+  playerName = null,
+  ensureWalletSession = null,
+  onlineAgents = [], onlinePlayers = [], events = [], transactions = [], battles = [], chat = [],
   totalBattles: _totalBattles = 0, totalCards: _totalCards = 0,
 }: WorldUIProps) {
   const [tab, setTab] = useState<Tab>('agents');
   const [panelOpen, setPanelOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [sendingChat, setSendingChat] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   // aiLogOpen removed — feed is now a tab in the right panel
 
-  const onlineCount = onlineAgents.filter(a => a.online).length;
+  const onlineAgentCount = onlineAgents.filter(a => a.online).length;
+  const onlinePlayerCount = onlinePlayers.length;
+  const onlineCount = onlineAgentCount + onlinePlayerCount;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -171,21 +186,34 @@ export function WorldUI({
 
   const sendChat = async () => {
     if (!walletAddress || !chatInput.trim() || sendingChat) return;
+    setChatError(null);
     setSendingChat(true);
     try {
-      await fetch('/api/chat', {
+      if (ensureWalletSession) {
+        const ok = await ensureWalletSession();
+        if (!ok) {
+          throw new Error('Please sign in with wallet to use chat');
+        }
+      }
+
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           address: walletAddress,
           from: walletAddress,
-          fromName: shortAddr(walletAddress),
+          fromName: playerName || shortAddr(walletAddress),
           message: chatInput.trim(),
         }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || (res.status === 401 ? 'Please sign in with wallet to use chat' : 'Failed to send chat'));
+      }
       setChatInput('');
     } catch (error) {
       console.error('Send chat failed:', error);
+      setChatError(error instanceof Error ? error.message : 'Failed to send chat');
     } finally {
       setSendingChat(false);
     }
@@ -236,7 +264,7 @@ export function WorldUI({
             <span className="text-base text-gray-400">📡 💬 ⛓️</span>
           </button>
         ) : (
-          <div className="w-[calc(100vw-24px)] sm:w-[420px] max-h-[70vh] sm:max-h-[75vh] bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in flex flex-col">
+          <div className="w-[calc(100vw-24px)] sm:w-[500px] max-h-[70vh] sm:max-h-[75vh] bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in flex flex-col">
             {/* Tabs */}
             <div className="flex items-center border-b border-white/5 flex-shrink-0">
               {([
@@ -272,73 +300,113 @@ export function WorldUI({
               {/* Agents Tab */}
               {tab === 'agents' && (() => {
                 const online = onlineAgents.filter(a => a.online);
-                return online.length === 0 ? (
-                  <Empty text="No agents online" />
-                ) : (
-                  <div className="space-y-0.5">
-                    {online.map(agent => {
-                      const activity = activityBadge(agent.currentAction);
-                      return (
-                      <button
-                        key={agent.address}
-                        onClick={() => { onFlyToAgent?.(agent.address); onSelectAgent?.(agent.address); }}
-                        className="w-full hover:bg-white/5 rounded-lg px-2 py-1.5 sm:py-2 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-green-500 shadow-sm shadow-green-500/50" />
-                            <span className="text-xs sm:text-sm text-cyan-400 font-semibold truncate">{agent.name}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${activity.cls}`}>
-                              {activity.icon} {activity.label}
-                            </span>
-                            {typeof agent.currentMoodDelta === 'number' && (
-                              <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${
-                                  agent.currentMoodDelta > 0
-                                    ? 'text-emerald-300 bg-emerald-500/10'
-                                    : agent.currentMoodDelta < 0
-                                      ? 'text-red-300 bg-red-500/10'
-                                      : 'text-gray-400 bg-white/5'
-                                }`}
-                              >
-                                Mood {agent.currentMoodDelta > 0 ? '+' : ''}{agent.currentMoodDelta}
+                if (online.length === 0 && onlinePlayers.length === 0) {
+                  return (
+                    <Empty text="No agents or players online" />
+                  );
+                }
+                return (
+                  <div className="space-y-2">
+                    {online.length > 0 && (
+                      <div className="text-[10px] uppercase tracking-wider text-gray-500 px-1">
+                        Agents Online ({onlineAgentCount})
+                      </div>
+                    )}
+                    {online.length === 0 ? null : (
+                      <div className="space-y-0.5">
+                        {online.map(agent => {
+                          const activity = activityBadge(agent.currentAction);
+                          return (
+                          <button
+                            key={agent.address}
+                            onClick={() => { onFlyToAgent?.(agent.address); onSelectAgent?.(agent.address); }}
+                            className="w-full hover:bg-white/5 rounded-lg px-2 py-1.5 sm:py-2 transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-green-500 shadow-sm shadow-green-500/50" />
+                                <span className="text-xs sm:text-sm text-cyan-400 font-semibold truncate pr-2">{agent.name}</span>
+                                {agent.model && <span className="text-[9px] text-violet-400/60">🧠</span>}
+                              </div>
+                              <span className="text-[10px] text-gray-600 font-mono shrink-0">{shortAddr(agent.address)}</span>
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activity.cls}`}>
+                                {activity.icon} {activity.label}
                               </span>
-                            )}
-                            {agent.model && <span className="text-[9px] text-violet-400/60 hidden sm:inline">🧠</span>}
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0 ml-1">
-                            {agent.balance && (
-                              <span className="text-[10px] sm:text-xs font-mono text-yellow-400">{parseFloat(agent.balance).toFixed(2)} <span className="text-yellow-600">MON</span></span>
-                            )}
-                            {agent.stats && (
-                              <span className="text-[10px] sm:text-xs text-gray-600">{agent.stats.wins}W/{agent.stats.losses}L</span>
-                            )}
-                          </div>
+                              {typeof agent.currentMoodDelta === 'number' && (
+                                <span
+                                  className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                    agent.currentMoodDelta > 0
+                                      ? 'text-emerald-300 bg-emerald-500/10'
+                                      : agent.currentMoodDelta < 0
+                                        ? 'text-red-300 bg-red-500/10'
+                                        : 'text-gray-400 bg-white/5'
+                                  }`}
+                                >
+                                  mood {agent.currentMoodDelta > 0 ? '+' : ''}{agent.currentMoodDelta}
+                                </span>
+                              )}
+                              {agent.balance && (
+                                <span className="text-[10px] sm:text-xs font-mono text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-1.5 py-0.5">
+                                  {parseFloat(agent.balance).toFixed(2)} MON
+                                </span>
+                              )}
+                              <span className="text-[10px] sm:text-xs font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-1.5 py-0.5">
+                                {parseFloat(agent.tokenBalance || '0').toFixed(0)} $AUTOMON
+                              </span>
+                              {agent.stats && (
+                                <span className="text-[10px] text-gray-400 bg-white/5 rounded-full px-1.5 py-0.5">
+                                  {agent.stats.wins}W/{agent.stats.losses}L
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-pink-400"
+                                  style={{ width: `${Math.max(0, Math.min(100, agent.mood ?? 60))}%` }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-pink-300 capitalize">{agent.moodLabel || 'steady'}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-emerald-400"
+                                  style={{
+                                    width: `${Math.max(0, Math.min(100, ((agent.health ?? 100) / Math.max(1, agent.maxHealth ?? 100)) * 100))}%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-emerald-300 tabular-nums">
+                                HP {Math.max(0, Math.round(agent.health ?? 100))}/{Math.max(1, Math.round(agent.maxHealth ?? 100))}
+                              </span>
+                            </div>
+                          </button>
+                        )})}
+                      </div>
+                    )}
+                    {onlinePlayers.length > 0 && (
+                      <>
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500 px-1 pt-1">
+                          Players Online ({onlinePlayerCount})
                         </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-pink-400"
-                              style={{ width: `${Math.max(0, Math.min(100, agent.mood ?? 60))}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-pink-300 capitalize">{agent.moodLabel || 'steady'}</span>
+                        <div className="space-y-0.5">
+                          {onlinePlayers.map((p) => (
+                            <div key={p.address} className="w-full rounded-lg px-2 py-2 bg-white/[0.03] border border-white/[0.05]">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/50" />
+                                  <span className="text-xs sm:text-sm text-cyan-300 font-semibold truncate">{p.name || shortAddr(p.address)}</span>
+                                </div>
+                                <span className="text-[10px] text-gray-600 font-mono shrink-0">{shortAddr(p.address)}</span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-emerald-400"
-                              style={{
-                                width: `${Math.max(0, Math.min(100, ((agent.health ?? 100) / Math.max(1, agent.maxHealth ?? 100)) * 100))}%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-emerald-300 tabular-nums">
-                            HP {Math.max(0, Math.round(agent.health ?? 100))}/{Math.max(1, Math.round(agent.maxHealth ?? 100))}
-                          </span>
-                        </div>
-                      </button>
-                    )})}
+                      </>
+                    )}
                   </div>
                 );
               })()}
@@ -494,27 +562,30 @@ export function WorldUI({
                     {!walletAddress ? (
                       <div className="text-xs text-gray-500 px-1">Connect wallet to chat</div>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <input
-                          value={chatInput}
-                          onChange={(e) => setChatInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              void sendChat();
-                            }
-                          }}
-                          placeholder="Message global chat..."
-                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/40"
-                          maxLength={240}
-                        />
-                        <button
-                          onClick={() => void sendChat()}
-                          disabled={sendingChat || !chatInput.trim()}
-                          className="px-3 py-2 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Send
-                        </button>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                void sendChat();
+                              }
+                            }}
+                            placeholder="Message global chat..."
+                            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/40"
+                            maxLength={240}
+                          />
+                          <button
+                            onClick={() => void sendChat()}
+                            disabled={sendingChat || !chatInput.trim()}
+                            className="px-3 py-2 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Send
+                          </button>
+                        </div>
+                        {chatError && <div className="text-[10px] text-red-400 mt-1 px-1">{chatError}</div>}
                       </div>
                     )}
                   </div>

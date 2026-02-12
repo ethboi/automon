@@ -5,6 +5,31 @@ import { getRpcUrl } from '@/lib/network';
 import { clampMood, DEFAULT_MOOD, getActionMoodDelta, getMoodTier } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
 
+function formatWeiToMon(weiRaw: unknown): string | null {
+  if (weiRaw == null) return null;
+  const s = String(weiRaw).trim();
+  if (!/^\d+$/.test(s)) return null;
+  try {
+    const wei = BigInt(s);
+    const base = BigInt('1000000000000000000');
+    const whole = wei / base;
+    const frac = wei % base;
+    if (frac === BigInt(0)) return whole.toString();
+    const fracStr = frac.toString().padStart(18, '0').replace(/0+$/, '');
+    return `${whole.toString()}.${fracStr}`;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeMonAmount(raw: unknown): string | null {
+  if (raw == null) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const fromWei = formatWeiToMon(s);
+  return fromWei || s;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ address: string }> }
@@ -142,7 +167,7 @@ export async function GET(
         txHash: tx.txHash,
         type: tx.type,
         description: tx.description,
-        amount: tx.metadata?.wager || tx.metadata?.price || null,
+        amount: normalizeMonAmount(tx.amount) || normalizeMonAmount(tx.metadata?.wager) || normalizeMonAmount(tx.metadata?.price),
         timestamp: tx.timestamp,
       })),
     });

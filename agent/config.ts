@@ -54,7 +54,7 @@ export const config = {
   agentWalletAddress: deriveAddress(privateKey, explicitAddress),
 
   // Agent identity
-  agentName: process.env.AGENT_NAME || 'Wanderer',
+  agentName: process.env.AGENT_NAME || 'Nexus',
 
   // Contract Configuration
   nftContractAddress: envForNetwork('AUTOMON_NFT_ADDRESS') || envForNetwork('NEXT_PUBLIC_AUTOMON_NFT_ADDRESS'),

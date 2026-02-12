@@ -55,4 +55,20 @@ module.exports = {
     cache: "./cache",
     artifacts: "./artifacts",
   },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY || "no-api-key-needed",
+    customChains: [
+      {
+        network: "monadMainnet",
+        chainId: 143,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=143",
+          browserURL: "https://monadvision.com",
+        },
+      },
+    ],
+  },
+  sourcify: {
+    enabled: false,
+  },
 };

@@ -15,7 +15,7 @@ interface AgentDetails {
     lastActionAt?: string | null; lastSeen: string; createdAt?: string;
   };
   stats: {
-    balance: string; cards: number; battles: number;
+    balance: string; tokenBalance: string; cards: number; battles: number;
     wins: number; losses: number; winRate: number; healthPercent: number;
     moodPercent?: number;
   };
@@ -58,6 +58,7 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
   const [d, setD] = useState<AgentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'log' | 'cards' | 'txs'>('log');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetch(`/api/agents/${address}`).then(r => r.ok ? r.json() : null).then(data => {
@@ -65,6 +66,19 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [address]);
+
+  const shortAddress = `${address.slice(0, 6)}…${address.slice(-4)}`;
+  const explorerAddressUrl = `${PUBLIC_EXPLORER_BASE}/address/${address}`;
+
+  const copyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   const hp = d ? d.stats.healthPercent : 0;
   const mood = d?.agent.mood ?? d?.stats.moodPercent ?? 60;
@@ -148,11 +162,31 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
               <span className="text-xs text-violet-400 bg-violet-500/15 px-2.5 py-0.5 rounded-full">🧠 {d.agent.model}</span>
             )}
           </div>
-          <span className="text-sm text-gray-500 font-mono">{address.slice(0, 6)}…{address.slice(-4)}</span>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={copyAddress}
+              className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06]"
+              title={`Copy ${address}`}
+            >
+              <span className="font-mono">{shortAddress}</span>
+              <span>{copied ? 'Copied' : 'Copy'}</span>
+            </button>
+            <a
+              href={explorerAddressUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-md border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/15"
+            >
+              View on Monad Scan ↗
+            </a>
+          </div>
         </div>
         <div className="text-right shrink-0">
           <div className="text-xl font-bold text-yellow-400">{parseFloat(d.stats.balance).toFixed(3)}</div>
           <div className="text-xs text-gray-500">MON</div>
+          <div className="text-sm font-semibold text-emerald-400 mt-0.5">{parseFloat(d.stats.tokenBalance || '0').toFixed(0)}</div>
+          <div className="text-[10px] text-gray-600">$AUTOMON</div>
         </div>
       </div>
 
@@ -290,7 +324,25 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">{d.agent.name}</h2>
-                    <span className="text-xs text-gray-500 font-mono">{address.slice(0, 6)}…{address.slice(-4)}</span>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={copyAddress}
+                        className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06]"
+                        title={`Copy ${address}`}
+                      >
+                        <span className="font-mono">{shortAddress}</span>
+                        <span>{copied ? 'Copied' : 'Copy'}</span>
+                      </button>
+                      <a
+                        href={explorerAddressUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/15"
+                      >
+                        View on Monad Scan ↗
+                      </a>
+                    </div>
                   </div>
                 </div>
 
@@ -302,13 +354,9 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
                 <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 mb-3">
                   <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Balance</div>
                   <div className="text-2xl font-bold text-yellow-400">{parseFloat(d.stats.balance).toFixed(3)} <span className="text-sm text-gray-500">MON</span></div>
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {parseFloat((d.stats as any).tokenBalance || '0') > 0 && (
-                    <div className="text-sm font-semibold text-emerald-400 mt-1">
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      📈 {parseFloat((d.stats as any).tokenBalance).toFixed(0)} <span className="text-xs text-gray-500">$AUTOMON</span>
-                    </div>
-                  )}
+                  <div className="text-sm font-semibold text-emerald-400 mt-1">
+                    📈 {parseFloat(d.stats.tokenBalance || '0').toFixed(0)} <span className="text-xs text-gray-500">$AUTOMON</span>
+                  </div>
                 </div>
 
                 {/* HP */}

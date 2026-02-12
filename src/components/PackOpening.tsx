@@ -72,7 +72,7 @@ export default function PackOpening({ cards, onComplete }: PackOpeningProps) {
       )}
 
       {/* Content */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+      <div className="relative z-10 max-w-4xl lg:max-w-[1120px] mx-auto px-4 text-center">
         {/* Title */}
         <div className="mb-8 animate-fade-in-up">
           {revealedCount === cards.length ? (
@@ -92,11 +92,11 @@ export default function PackOpening({ cards, onComplete }: PackOpeningProps) {
         </div>
 
         {/* Cards */}
-        <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-8">
+        <div className="flex flex-wrap lg:flex-nowrap justify-center gap-3 sm:gap-4 mb-8">
           {cards.map((card, index) => (
             <div
               key={card.id || index}
-              className={`transition-all duration-700 ease-out ${
+              className={`shrink-0 transition-all duration-700 ease-out ${
                 index < revealedCount
                   ? 'opacity-100 scale-100 translate-y-0'
                   : 'opacity-0 scale-75 translate-y-8'

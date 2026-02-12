@@ -40,6 +40,12 @@ interface EventData {
   timestamp: string;
 }
 
+interface OnlinePlayer {
+  address: string;
+  name: string;
+  lastSeen?: string;
+}
+
 export const WORLD_LOCATIONS = {
   starter_town:   { position: [0, 0, 0] as [number, number, number],      label: 'Home',    icon: '🏠', color: '#f59e0b', variant: 'none' as const, route: '/collection' },
   town_arena:     { position: [0, 0, -30] as [number, number, number],     label: 'Town Arena',      icon: '⚔️', color: '#ef4444', variant: 'building' as const, route: '/battle' },
@@ -930,7 +936,7 @@ function Sky() {
 
 export function GameWorld() {
   const router = useRouter();
-  const { address } = useWallet();
+  const { address, playerName, ensureAuthenticated } = useWallet();
   const playerPositionRef = useRef<THREE.Vector3 | null>(null);
   const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
   const [cameraFlyTarget, setCameraFlyTarget] = useState<THREE.Vector3 | null>(null);
@@ -938,6 +944,7 @@ export function GameWorld() {
   const [nearbyRoute, setNearbyRoute] = useState<string | null>(null);
   const [onlineAgents, setOnlineAgents] = useState<OnlineAgent[]>([]);
   const [events, setEvents] = useState<EventData[]>([]);
+  const [onlinePlayers, setOnlinePlayers] = useState<OnlinePlayer[]>([]);
   const [tameState, setTameState] = useState<TameState>(null);
   const [wildCreatures, setWildCreatures] = useState(() =>
     SPAWN_ZONES.map((spawn, i) => ({ id: i, species: WILD_SPECIES[i % WILD_SPECIES.length], spawn, alive: true }))
@@ -973,6 +980,7 @@ export function GameWorld() {
         if (res.ok) {
           const data = await res.json();
           setOnlineAgents(data.agents || []);
+          setOnlinePlayers(data.onlinePlayers || []);
           setEvents(data.events || []);
           setTotalBattles(data.totalBattles || 0);
           setBattles(data.battles || []);
@@ -1104,7 +1112,10 @@ export function GameWorld() {
         nearbyBuilding={nearbyBuilding}
         onEnterBuilding={handleEnterBuilding}
         walletAddress={address}
+        playerName={playerName}
+        ensureWalletSession={ensureAuthenticated}
         onlineAgents={onlineAgents}
+        onlinePlayers={onlinePlayers}
         events={events}
         totalBattles={totalBattles}
         battles={battles}
