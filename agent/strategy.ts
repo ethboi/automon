@@ -562,9 +562,13 @@ export async function decideNextAction(
     const rarityCount = cards.reduce((acc, c) => { acc[c.rarity || 'common'] = (acc[c.rarity || 'common'] || 0) + 1; return acc; }, {} as Record<string, number>);
   const rarityStr = Object.entries(rarityCount).map(([r, n]) => `${n} ${r}`).join(', ');
   const avgStats = cards.length > 0 ? Math.round(cards.reduce((sum, c) => sum + ((c as unknown as { stats?: { attack?: number; defense?: number } }).stats?.attack || 30) + ((c as unknown as { stats?: { attack?: number; defense?: number } }).stats?.defense || 30), 0) / cards.length) : 0;
+  const hasLegendary = rarityCount['legendary'] > 0;
+  const hasEpic = rarityCount['epic'] > 0;
+  const hasRare = rarityCount['rare'] > 0;
+  const bestRarity = hasLegendary ? 'legendary' : hasEpic ? 'epic' : hasRare ? 'rare' : rarityCount['uncommon'] ? 'uncommon' : 'common';
   const cardSummary = cards.length > 0
-    ? `${cards.length} cards (${rarityStr}), avg power: ${avgStats}, elements: ${[...new Set(cards.map(c => c.element))].join(', ')}, best: ${cards.slice(0, 3).map(c => `${c.name}(${c.rarity})`).join(', ')}`
-    : 'No cards yet — should buy a pack!';
+    ? `${cards.length} cards (${rarityStr}), best rarity: ${bestRarity}, avg power: ${avgStats}, elements: ${[...new Set(cards.map(c => c.element))].join(', ')}, top 3: ${cards.slice(0, 3).map(c => `${c.name}(${c.rarity})`).join(', ')}${!hasLegendary && !hasEpic ? ' — no epic or legendary cards yet, could use better pulls!' : ''}`
+    : 'No cards yet — MUST buy a pack!';
 
   const personalityLine = personality ? `\n## YOUR PERSONALITY\n${personality}\nStay in character. Your personality should heavily influence your decisions.\n` : '';
 
@@ -600,16 +604,33 @@ ${locationList}
 - Crystal Caves: exploring, catching, foraging
 - Trading Post: trading_token (buy/sell $AUTOMON tokens for MON)
 
+## CARD RARITIES (lowest → highest)
+- Common (gray) — weak stats, filler cards
+- Uncommon (green) — decent, good for early game
+- Rare (blue) — strong, competitive edge
+- Epic (purple) — very powerful, worth building around
+- Legendary (gold) — game-changing, extremely rare and coveted
+
 ## DECISION GUIDELINES
 - Battles are the main activity but pace yourself — battle every 3-4 actions, not every turn.
 - Between battles: explore, fish, farm, forage — enjoy the world!
 - When you DO battle, make it count — pick your best cards and a smart wager.
 - Below 30 HP: heal first (farm or fish), then get back to battling
-- If no cards or only common cards with low stats: go to Shop to buy a pack (0.1 MON) to get stronger cards, then battle
-- If you keep losing battles, consider buying packs for better cards before battling again
-- When battling, choose a wager between 0.005-0.05 MON. Consider your balance, confidence in your cards, and risk tolerance
-- Higher wagers when you have strong/rare cards, high HP, and are feeling confident
-- Lower wagers when low HP, only common cards, or being cautious
+
+### PACK BUYING STRATEGY
+- Each pack costs 0.1 MON and gives 5 random cards — the thrill of discovery!
+- You WANT to collect rare, epic, and legendary cards — they're much stronger in battles
+- If you're LOSING (more losses than wins): buy packs to upgrade your deck
+- If you only have common/uncommon cards: buy packs chasing rares and epics
+- If you're WINNING consistently: no need for more packs — save MON for wagers
+- Even when winning, occasionally buy a pack (every 8-10 actions) for the chance at a legendary
+- Getting a rare+ card is exciting — react to it! Legendaries are life-changing
+- Don't go broke buying packs — keep at least 1 MON in reserve
+
+### BATTLE STRATEGY
+- When battling, choose a wager between 0.005-0.05 MON based on card strength and confidence
+- Higher wagers when you have rare/epic/legendary cards, high HP, and are on a win streak
+- Lower wagers when low HP, only common cards, or on a losing streak
 - Vary non-battle actions — explore, fish, farm between fights
 - Attempt taming regularly in wild zones (Old Pond, Dark Forest, Crystal Caves, Community Farm), especially when HP > 35
 - Visit the Trading Post occasionally (every 5-8 actions) to trade $AUTOMON tokens
@@ -659,8 +680,18 @@ Respond with JSON only:
     if (cardCount < 3 && balNum >= 0.15) {
       return { location: 'Shop', action: 'shopping', reasoning: `Only ${cardCount} cards — need at least 3 to battle. Shopping time!` };
     }
+    // Buy packs when losing streak
     if (battleLosses > battleWins && battleLosses >= 2 && balNum >= 0.15 && Math.random() < 0.6) {
       return { location: 'Shop', action: 'shopping', reasoning: `${battleWins}W/${battleLosses}L — losing too much. Buying stronger cards to turn this around!` };
+    }
+    // Buy packs when no rare+ cards and have money
+    const hasGoodCards = cards.some(c => ['rare', 'epic', 'legendary'].includes(c.rarity || 'common'));
+    if (!hasGoodCards && cardCount >= 3 && balNum >= 0.15 && Math.random() < 0.4) {
+      return { location: 'Shop', action: 'shopping', reasoning: `All common/uncommon cards — chasing rares and epics! Need better pulls to compete.` };
+    }
+    // Occasional discovery pack even when winning
+    if (balNum >= 1.0 && Math.random() < 0.08) {
+      return { location: 'Shop', action: 'shopping', reasoning: `Feeling lucky — time to crack open a pack and hunt for that legendary!` };
     }
     if (hpPct > 0.35 && cardCount >= 3 && balNum >= 0.05 && pendingBattles > 0) {
       const wager = Math.min(0.02, balNum * 0.1).toFixed(3);
