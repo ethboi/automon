@@ -52,7 +52,10 @@ let nftContract: ethers.Contract | null = null;
 
 function getProvider(): ethers.JsonRpcProvider {
   if (!provider) {
-    provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    const network = config.network === 'mainnet'
+      ? new ethers.Network('monad', 143)
+      : new ethers.Network('monad-testnet', 10143);
+    provider = new ethers.JsonRpcProvider(config.rpcUrl, network, { staticNetwork: network });
   }
   return provider;
 }

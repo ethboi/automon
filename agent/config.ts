@@ -45,6 +45,8 @@ function envForNetwork(baseKey: string): string {
 }
 
 export const config = {
+  // Network
+  network: network ? 'mainnet' : 'testnet',
   // API Configuration
   apiUrl: normalizeUrl(process.env.AUTOMON_API_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
