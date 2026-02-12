@@ -33,8 +33,8 @@ const envForNetwork = (baseKey: string) => {
   if (AUTOMON_NETWORK === 'mainnet') return '';
   return (process.env[baseKey] || '').trim();
 };
-const NFT_ADDRESS = envForNetwork('AUTOMON_NFT_ADDRESS');
-const RPC_URL = envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || (AUTOMON_NETWORK === 'testnet' ? 'https://testnet-rpc.monad.xyz' : '');
+const NFT_ADDRESS = envForNetwork('AUTOMON_NFT_ADDRESS') || (AUTOMON_NETWORK === 'mainnet' ? '0x46A77fF689773B637A4af9D131e7E9f99eDc9B58' : '0x8779ABC3e920D31532D2d7d832a7777CD61b2A37');
+const RPC_URL = envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || (AUTOMON_NETWORK === 'mainnet' ? 'https://rpc.monad.xyz' : 'https://testnet-rpc.monad.xyz');
 let AGENT_NAME = process.env.AGENT_NAME || '';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 const PACK_PRICE = envForNetwork('NEXT_PUBLIC_PACK_PRICE') || process.env.NEXT_PUBLIC_PACK_PRICE || '0.1';
