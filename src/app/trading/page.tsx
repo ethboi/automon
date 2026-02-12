@@ -32,7 +32,7 @@ const NAD_BASE = (
     ? process.env.NEXT_PUBLIC_NAD_BASE_URL_MAINNET
     : process.env.NEXT_PUBLIC_NAD_BASE_URL_TESTNET) ||
   process.env.NEXT_PUBLIC_NAD_BASE_URL ||
-  'https://testnet.nad.fun'
+  (PUBLIC_NETWORK === 'mainnet' ? 'https://nad.fun' : 'https://testnet.nad.fun')
 ).replace(/\/+$/, '');
 const EXPLORER_BASE = (
   (PUBLIC_NETWORK === 'mainnet'
