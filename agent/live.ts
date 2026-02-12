@@ -351,9 +351,9 @@ async function logAction(action: string, reason: string, location: string, aiRea
   } catch { /* silent */ }
 }
 
-async function logTransaction(txHash: string, type: string, description: string): Promise<void> {
+async function logTransaction(txHash: string, type: string, description: string, amount?: string): Promise<void> {
   try {
-    // Write directly to dashboard — transactions are public
+    // Log to events feed
     await api('/api/agents/action', {
       method: 'POST',
       body: JSON.stringify({
@@ -361,6 +361,17 @@ async function logTransaction(txHash: string, type: string, description: string)
         action: `⛓️ ${type}`,
         reason: `${description} | tx: ${txHash.slice(0, 14)}…`,
         location: 'On-chain',
+      }),
+    });
+    // Log to transactions collection (shows in header ticker + transactions panel)
+    await api('/api/transactions/log', {
+      method: 'POST',
+      body: JSON.stringify({
+        txHash,
+        type,
+        from: ADDRESS,
+        amount: amount || '0',
+        description,
       }),
     });
   } catch { /* silent */ }
@@ -462,8 +473,8 @@ async function buyPack(aiReason?: string): Promise<void> {
     const contract = new ethers.Contract(NFT_ADDRESS, NFT_ABI, wallet);
     const price = ethers.parseEther(PACK_PRICE);
 
-    console.log(`[${ts()}]    💰 Buying pack for ${PACK_PRICE} MON...`);
-    const tx = await contract.buyPack({ value: price });
+    console.log(`[${ts()}]    💰 Buying pack for ${PACK_PRICE} MON... (NFT=${NFT_ADDRESS}, RPC=${RPC_URL})`);
+    const tx = await contract.buyPack({ value: price, maxFeePerGas: ethers.parseUnits('105', 'gwei'), maxPriorityFeePerGas: ethers.parseUnits('2', 'gwei') });
     console.log(`[${ts()}]    📤 TX: ${tx.hash}`);
 
     const receipt = await tx.wait();
@@ -492,7 +503,7 @@ async function buyPack(aiReason?: string): Promise<void> {
     // Sync on-chain cards to MongoDB (reads contract data for proper stats)
     await syncCards();
 
-    await logTransaction(tx.hash, 'mint_pack', `Minted ${minted.length} cards for ${PACK_PRICE} MON`);
+    await logTransaction(tx.hash, 'mint_pack', `Minted ${minted.length} cards for ${PACK_PRICE} MON`, PACK_PRICE);
     await logAction('minting', `Bought pack — got ${minted.join(', ')}`, target.name, aiReason);
   } catch (err) {
     console.error(`[${ts()}]    ❌ Pack buy failed:`, (err as Error).message?.slice(0, 80));
