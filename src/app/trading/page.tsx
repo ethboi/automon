@@ -136,7 +136,7 @@ export default function TradingPage() {
               <div className="text-xs text-gray-400 font-mono">{TOKEN_ADDRESS}</div>
             </div>
             <a
-              href={`${NAD_BASE}/token/${TOKEN_ADDRESS}`}
+              href={`${NAD_BASE}/tokens/${TOKEN_ADDRESS}`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
