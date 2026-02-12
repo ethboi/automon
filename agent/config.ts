@@ -60,7 +60,7 @@ export const config = {
 
   // Contract Configuration
   nftContractAddress: envForNetwork('AUTOMON_NFT_ADDRESS') || envForNetwork('NEXT_PUBLIC_AUTOMON_NFT_ADDRESS'),
-  rpcUrl: envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || (network === 'testnet' ? 'https://testnet-rpc.monad.xyz' : ''),
+  rpcUrl: envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || (network === 'mainnet' ? 'https://rpc.monad.xyz' : 'https://testnet-rpc.monad.xyz'),
 
   // Polling / timing
   pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '3000', 10),

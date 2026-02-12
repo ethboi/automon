@@ -52,14 +52,17 @@ const GLOBAL_CHAT_CHANCE = Math.max(
   Math.min(1, parseFloat(process.env.AI_CHAT_CHANCE || '0.12') || 0.12)
 );
 const ESCROW_ADDRESS = envForNetwork('ESCROW_CONTRACT_ADDRESS') ||
-  (AUTOMON_NETWORK === 'testnet' ? '0x2aD1D15658A86290123CdEAe300E9977E2c49364' : '');
-const MAX_FEE_GWEI = envForNetwork('MAX_FEE_GWEI') || (AUTOMON_NETWORK === 'testnet' ? '105' : '');
-const MAX_PRIORITY_FEE_GWEI = envForNetwork('MAX_PRIORITY_FEE_GWEI') || (AUTOMON_NETWORK === 'testnet' ? '1' : '');
+  (AUTOMON_NETWORK === 'mainnet' ? '0x5191e3fac06225A61beE01d1BA5E779904b7C4bD' : '0x2aD1D15658A86290123CdEAe300E9977E2c49364');
+const MAX_FEE_GWEI = envForNetwork('MAX_FEE_GWEI') || '105';
+const MAX_PRIORITY_FEE_GWEI = envForNetwork('MAX_PRIORITY_FEE_GWEI') || '1';
 
 if (!PRIVATE_KEY) { console.error('❌ AGENT_PRIVATE_KEY required'); process.exit(1); }
 if (!ESCROW_ADDRESS) { console.error(`❌ ESCROW_CONTRACT_ADDRESS_${NETWORK_SUFFIX} required`); process.exit(1); }
 
-const provider = new ethers.JsonRpcProvider(RPC_URL);
+const monadNetwork = AUTOMON_NETWORK === 'mainnet'
+  ? new ethers.Network('monad', 143)
+  : new ethers.Network('monad-testnet', 10143);
+const provider = new ethers.JsonRpcProvider(RPC_URL, monadNetwork, { staticNetwork: monadNetwork });
 if (MAX_FEE_GWEI) {
   provider.getFeeData = async () => {
     return new ethers.FeeData(
