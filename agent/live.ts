@@ -635,7 +635,8 @@ async function syncCards(): Promise<void> {
 
 // ─── Battle Logic ──────────────────────────────────────────────────────────────
 
-const ADMIN_KEY = '***REDACTED***';
+const ADMIN_KEY = process.env.ADMIN_PRIVATE_KEY || '';
+if (!ADMIN_KEY) console.warn('⚠️ ADMIN_PRIVATE_KEY not set — settlement will fail');
 const adminWallet = new ethers.Wallet(ADMIN_KEY, provider);
 
 async function trySettleBattle(battleId: string, winner: string): Promise<void> {
