@@ -10,7 +10,12 @@ const NETWORK = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_
   ? 'mainnet'
   : 'testnet';
 const NETWORK_SUFFIX = NETWORK === 'mainnet' ? 'MAINNET' : 'TESTNET';
-const envForNetwork = (baseKey: string) => (process.env[`${baseKey}_${NETWORK_SUFFIX}`] || process.env[baseKey] || '').trim();
+const envForNetwork = (baseKey: string) => {
+  const suffixed = (process.env[`${baseKey}_${NETWORK_SUFFIX}`] || '').trim();
+  if (suffixed) return suffixed;
+  if (NETWORK === 'mainnet') return '';
+  return (process.env[baseKey] || '').trim();
+};
 
 const TESTNET_DEFAULTS: Record<string, Address> = {
   NAD_BONDING_CURVE_ROUTER: '0x865054F0F6A288adaAc30261731361EA7E908003',
@@ -28,13 +33,15 @@ function requireAddress(name: string): Address {
 
 const CONFIG = {
   chainId: Number(envForNetwork('NEXT_PUBLIC_CHAIN_ID') || (NETWORK === 'mainnet' ? '143' : '10143')),
-  rpcUrl: envForNetwork('MONAD_RPC_URL') || 'https://monad-testnet.drpc.org',
-  apiUrl: envForNetwork('NAD_FUN_API_URL') || 'https://dev-api.nad.fun',
+  rpcUrl: envForNetwork('MONAD_RPC_URL') || (NETWORK === 'testnet' ? 'https://monad-testnet.drpc.org' : ''),
+  apiUrl: envForNetwork('NAD_FUN_API_URL') || (NETWORK === 'testnet' ? 'https://dev-api.nad.fun' : ''),
   BONDING_CURVE_ROUTER: requireAddress('NAD_BONDING_CURVE_ROUTER'),
   LENS: requireAddress('NAD_LENS'),
   CURVE: requireAddress('NAD_CURVE'),
   WMON: requireAddress('NAD_WMON'),
 };
+
+if (!CONFIG.rpcUrl) throw new Error('MONAD_RPC_URL_MAINNET is required when AUTOMON_NETWORK=mainnet');
 
 const chain = defineChain({
   id: CONFIG.chainId,
@@ -293,6 +300,9 @@ export async function createToken(
   description: string,
   imageBuffer?: Buffer,
 ): Promise<{ tokenAddress: string; txHash: string } | null> {
+  if (!CONFIG.apiUrl) {
+    throw new Error('NAD_FUN_API_URL_MAINNET is required for token launch in mainnet mode');
+  }
   const { publicClient, walletClient, account } = getClients(privateKey);
   const headers: Record<string, string> = {};
 

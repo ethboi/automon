@@ -7,7 +7,10 @@ const network = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_
 
 function envForNetwork(baseKey, selectedNetwork) {
   const suffix = selectedNetwork === "mainnet" ? "MAINNET" : "TESTNET";
-  return process.env[`${baseKey}_${suffix}`] || process.env[baseKey];
+  const suffixed = process.env[`${baseKey}_${suffix}`];
+  if (suffixed) return suffixed;
+  if (selectedNetwork === "mainnet") return "";
+  return process.env[baseKey];
 }
 
 function deployerAccounts(selectedNetwork) {

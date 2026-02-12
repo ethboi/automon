@@ -2,6 +2,7 @@ export type AutomonNetwork = 'testnet' | 'mainnet';
 
 const DEFAULT_TESTNET_RPC = 'https://testnet-rpc.monad.xyz';
 const DEFAULT_TESTNET_CHAIN_ID = 10143;
+const DEFAULT_MAINNET_CHAIN_ID = 143;
 const DEFAULT_TESTNET_EXPLORER = 'https://testnet.monadexplorer.com';
 
 export function getAutomonNetwork(): AutomonNetwork {
@@ -15,8 +16,11 @@ function getNetworkSuffix(network: AutomonNetwork): string {
 
 function envForNetwork(baseKey: string, network: AutomonNetwork): string | undefined {
   const suffix = getNetworkSuffix(network);
-  const val = process.env[`${baseKey}_${suffix}`] || process.env[baseKey];
-  return val?.trim();
+  const suffixed = process.env[`${baseKey}_${suffix}`]?.trim();
+  if (suffixed) return suffixed;
+  // In mainnet mode we fail closed: no fallback to unsuffixed values.
+  if (network === 'mainnet') return undefined;
+  return process.env[baseKey]?.trim();
 }
 
 export function getRpcUrl(): string {
@@ -24,15 +28,20 @@ export function getRpcUrl(): string {
   const value = envForNetwork('MONAD_RPC_URL', network) || envForNetwork('NEXT_PUBLIC_MONAD_RPC', network);
   if (value) return value;
   if (network === 'testnet') return DEFAULT_TESTNET_RPC;
-  throw new Error('MONAD_RPC_URL_MAINNET (or NEXT_PUBLIC_MONAD_RPC_MAINNET) is required when AUTOMON_NETWORK=mainnet');
+  return 'https://rpc.monad.xyz'; // Default mainnet RPC
 }
 
 export function getChainId(): number {
   const network = getAutomonNetwork();
   const raw = envForNetwork('NEXT_PUBLIC_CHAIN_ID', network);
-  if (raw) return Number(raw);
-  if (network === 'testnet') return DEFAULT_TESTNET_CHAIN_ID;
-  throw new Error('NEXT_PUBLIC_CHAIN_ID_MAINNET is required when AUTOMON_NETWORK=mainnet');
+  if (raw) {
+    const chainId = Number(raw);
+    if (!Number.isInteger(chainId) || chainId <= 0) {
+      throw new Error(`Invalid NEXT_PUBLIC_CHAIN_ID value: ${raw}`);
+    }
+    return chainId;
+  }
+  return network === 'mainnet' ? DEFAULT_MAINNET_CHAIN_ID : DEFAULT_TESTNET_CHAIN_ID;
 }
 
 export function getEscrowContractAddress(): string {

@@ -27,9 +27,14 @@ const AUTOMON_NETWORK = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_
   ? 'mainnet'
   : 'testnet';
 const NETWORK_SUFFIX = AUTOMON_NETWORK === 'mainnet' ? 'MAINNET' : 'TESTNET';
-const envForNetwork = (baseKey: string) => (process.env[`${baseKey}_${NETWORK_SUFFIX}`] || process.env[baseKey] || '').trim();
+const envForNetwork = (baseKey: string) => {
+  const suffixed = (process.env[`${baseKey}_${NETWORK_SUFFIX}`] || '').trim();
+  if (suffixed) return suffixed;
+  if (AUTOMON_NETWORK === 'mainnet') return '';
+  return (process.env[baseKey] || '').trim();
+};
 const NFT_ADDRESS = envForNetwork('AUTOMON_NFT_ADDRESS');
-const RPC_URL = envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || 'https://testnet-rpc.monad.xyz';
+const RPC_URL = envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || (AUTOMON_NETWORK === 'testnet' ? 'https://testnet-rpc.monad.xyz' : '');
 let AGENT_NAME = process.env.AGENT_NAME || '';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 const PACK_PRICE = envForNetwork('NEXT_PUBLIC_PACK_PRICE') || process.env.NEXT_PUBLIC_PACK_PRICE || '0.1';
@@ -635,8 +640,8 @@ async function syncCards(): Promise<void> {
 
 // ─── Battle Logic ──────────────────────────────────────────────────────────────
 
-const ADMIN_KEY = process.env.ADMIN_PRIVATE_KEY || '';
-if (!ADMIN_KEY) console.warn('⚠️ ADMIN_PRIVATE_KEY not set — settlement will fail');
+const ADMIN_KEY = envForNetwork('ADMIN_PRIVATE_KEY');
+if (!ADMIN_KEY) console.warn(`⚠️ ADMIN_PRIVATE_KEY_${NETWORK_SUFFIX} not set — settlement will fail`);
 const adminWallet = new ethers.Wallet(ADMIN_KEY, provider);
 
 async function trySettleBattle(battleId: string, winner: string): Promise<void> {

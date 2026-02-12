@@ -134,7 +134,7 @@ export async function chat(
   } catch (error) {
     console.error('Chat error:', (error as Error).message?.slice(0, 80));
     conversationHistory.pop(); // Remove the failed user message
-    return null; // Skip chat when AI is unavailable
+    return '...'; // Skip chat when AI is unavailable
   }
 }
 
