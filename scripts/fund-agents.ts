@@ -13,10 +13,12 @@ const SUFFIX = NETWORK === 'mainnet' ? 'MAINNET' : 'TESTNET';
 const RPC =
   process.env[`MONAD_RPC_URL_${SUFFIX}`] ||
   process.env[`NEXT_PUBLIC_MONAD_RPC_${SUFFIX}`] ||
-  process.env.MONAD_RPC_URL ||
-  process.env.NEXT_PUBLIC_MONAD_RPC ||
-  'https://testnet-rpc.monad.xyz';
+  (NETWORK === 'testnet' ? (process.env.MONAD_RPC_URL || process.env.NEXT_PUBLIC_MONAD_RPC || 'https://testnet-rpc.monad.xyz') : '');
 const MAIN_AGENT_KEY = process.env.AGENT_PRIVATE_KEY!;
+
+if (!RPC) {
+  throw new Error('MONAD_RPC_URL_MAINNET (or NEXT_PUBLIC_MONAD_RPC_MAINNET) is required when AUTOMON_NETWORK=mainnet');
+}
 
 const NEW_AGENTS = [
   { name: 'Kira 🌙 (Collector)', address: '0xEf86E433E13C3D898b2e730F87667f81e0619AeC' },

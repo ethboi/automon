@@ -4,8 +4,17 @@ import { Battle, BattleLog, Card, BattleMove } from '@/lib/types';
 import { initializeBattleCard, simulateAIBattle } from '@/lib/battle';
 import { getAgentDecision } from '@/lib/agent';
 import { settleBattleOnChain } from '@/lib/blockchain';
+import { getEscrowContractAddress } from '@/lib/network';
 import { applyBattleMoodResult } from '@/lib/agentMood';
 export const dynamic = 'force-dynamic';
+
+function hasEscrowConfig(): boolean {
+  try {
+    return Boolean(getEscrowContractAddress());
+  } catch {
+    return false;
+  }
+}
 
 /**
  * AI vs AI Battle Simulation
@@ -138,8 +147,7 @@ export async function POST(request: NextRequest) {
       if (battleLog.winner && battleLog.winner !== 'draw') {
         try {
           console.log('Settling battle on-chain...');
-          console.log('ADMIN_PRIVATE_KEY set:', !!process.env.ADMIN_PRIVATE_KEY);
-          console.log('ESCROW_CONTRACT_ADDRESS:', process.env.ESCROW_CONTRACT_ADDRESS);
+          console.log('Escrow configured:', hasEscrowConfig());
           console.log('Winner:', battleLog.winner, 'BattleId:', battleId);
           settleTxHash = await settleBattleOnChain(battleId, battleLog.winner);
           console.log(`Settlement tx: ${settleTxHash}`);

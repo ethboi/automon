@@ -86,7 +86,7 @@ function resolveChainId(): number {
     ? 'mainnet'
     : 'testnet';
   const suffix = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
-  const raw = process.env[`NEXT_PUBLIC_CHAIN_ID_${suffix}`] || process.env.NEXT_PUBLIC_CHAIN_ID;
+  const raw = process.env[`NEXT_PUBLIC_CHAIN_ID_${suffix}`] || (network === 'testnet' ? process.env.NEXT_PUBLIC_CHAIN_ID : '');
   if (raw) return parseInt(raw, 10);
   return network === 'mainnet' ? 143 : 10143;
 }

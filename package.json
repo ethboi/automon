@@ -12,7 +12,10 @@
     "agent:verbose": "VERBOSE_LOGGING=true tsx agent/index.ts --mode auto",
     "agent:live": "tsx agent/live.ts",
     "compile": "hardhat compile",
+    "preflight:mainnet": "node --import tsx scripts/preflight-mainnet.ts",
     "deploy:monad": "hardhat run scripts/deploy.js --network monad",
+    "deploy:monad:mainnet": "hardhat run scripts/deploy.js --network monadMainnet",
+    "deploy:escrow:mainnet": "hardhat run scripts/deployEscrow.js --network monadMainnet",
     "sim": "tsx src/server/index.ts",
     "sim:dev": "node --watch --import tsx src/server/index.ts"
   },

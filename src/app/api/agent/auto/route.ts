@@ -5,7 +5,16 @@ export const dynamic = 'force-dynamic';
 import { getAgentDecision } from '@/lib/agent';
 import { resolveTurn, validateMove } from '@/lib/battle';
 import { settleBattleOnChain } from '@/lib/blockchain';
+import { getEscrowContractAddress } from '@/lib/network';
 import { Battle, BattleEvent } from '@/lib/types';
+
+function hasEscrowConfig(): boolean {
+  try {
+    return Boolean(getEscrowContractAddress());
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -104,7 +113,7 @@ export async function POST(request: NextRequest) {
           battle.status = 'complete';
           battle.winner = winner;
 
-          if (battle.escrowTxHash && process.env.ESCROW_CONTRACT_ADDRESS) {
+          if (battle.escrowTxHash && hasEscrowConfig()) {
             try {
               const settleTxHash = await settleBattleOnChain(battleId, winner);
               battle.settleTxHash = settleTxHash;

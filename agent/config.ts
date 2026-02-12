@@ -38,7 +38,10 @@ const network = (process.env.AUTOMON_NETWORK || process.env.NEXT_PUBLIC_AUTOMON_
 const networkSuffix = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
 
 function envForNetwork(baseKey: string): string {
-  return (process.env[`${baseKey}_${networkSuffix}`] || process.env[baseKey] || '').trim();
+  const suffixed = (process.env[`${baseKey}_${networkSuffix}`] || '').trim();
+  if (suffixed) return suffixed;
+  if (network === 'mainnet') return '';
+  return (process.env[baseKey] || '').trim();
 }
 
 export const config = {
@@ -55,7 +58,7 @@ export const config = {
 
   // Contract Configuration
   nftContractAddress: envForNetwork('AUTOMON_NFT_ADDRESS') || envForNetwork('NEXT_PUBLIC_AUTOMON_NFT_ADDRESS'),
-  rpcUrl: envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || 'https://testnet-rpc.monad.xyz',
+  rpcUrl: envForNetwork('MONAD_RPC_URL') || envForNetwork('NEXT_PUBLIC_MONAD_RPC') || (network === 'testnet' ? 'https://testnet-rpc.monad.xyz' : ''),
 
   // Polling / timing
   pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '3000', 10),

@@ -78,7 +78,13 @@ JWT_SECRET=<random secret>
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-For mainnet, set `AUTOMON_NETWORK=mainnet` and provide `*_MAINNET` values (RPC, chainId, and contract addresses).
+For mainnet, set `AUTOMON_NETWORK=mainnet` and provide all required `*_MAINNET` values (RPC, chainId, contract addresses, admin/deployer keys, and nad.fun endpoints/addresses).
+
+Validate mainnet readiness before deploy:
+
+```bash
+npm run preflight:mainnet
+```
 
 ### Development
 
@@ -107,6 +113,13 @@ Deploy to Monad (testnet by default):
 ```bash
 # Using Hardhat or Foundry
 # Set ESCROW_CONTRACT_ADDRESS after deployment
+```
+
+Mainnet deploy commands:
+
+```bash
+npm run deploy:monad:mainnet
+npm run deploy:escrow:mainnet
 ```
 
 ## API Routes
