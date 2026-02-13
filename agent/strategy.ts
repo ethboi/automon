@@ -932,6 +932,53 @@ Respond JSON only:
       }
     }
 
+    // Rule 2.5: random trades to keep activity on the bonding curve.
+    {
+      const chance = aggressive ? 0.35 : conservative ? 0.15 : 0.25;
+      const roll = Math.random();
+
+      if (roll < chance && mon > 0.3) {
+        const minBuy = aggressive ? 0.02 : conservative ? 0.005 : 0.01;
+        const maxBuy = aggressive ? 0.08 : conservative ? 0.03 : 0.05;
+        const randomSpend = minBuy + Math.random() * (maxBuy - minBuy);
+        const spendCap = mon * 0.15;
+        const spendMon = Math.min(randomSpend, spendCap);
+        if (spendMon >= 0.005) {
+          const buyReasons = [
+            'Feeling bullish, aping in!',
+            'The chart looks good, buying more.',
+            'Momentum feels hot, adding to the bag.',
+            'Catching this move early with a quick buy.',
+          ];
+          return {
+            action: 'BUY',
+            amount: fmt(spendMon, 4),
+            reasoning: buyReasons[Math.floor(Math.random() * buyReasons.length)],
+          };
+        }
+      }
+
+      if (roll >= chance && roll < chance * 2 && tokens > 300) {
+        const minSell = aggressive ? 80 : conservative ? 30 : 50;
+        const maxSell = aggressive ? 300 : conservative ? 120 : 200;
+        const randomTokens = minSell + Math.random() * (maxSell - minSell);
+        const tokensToSell = Math.min(tokens - 100, randomTokens);
+        if (tokensToSell >= 1) {
+          const sellReasons = [
+            'Taking some profits off the table.',
+            'Time to rotate some tokens back to MON.',
+            'Locking in gains before the next swing.',
+            'Trimming the bag a bit while the market is moving.',
+          ];
+          return {
+            action: 'SELL',
+            amount: fmt(tokensToSell, 0),
+            reasoning: sellReasons[Math.floor(Math.random() * sellReasons.length)],
+          };
+        }
+      }
+    }
+
     // Rule 5: hard rebalance for huge bags when MON reserve is already healthy.
     if (tokens > 5000 && mon > 1.0) {
       const targetTokens = conservative ? 1500 : aggressive ? 4000 : 2500;
