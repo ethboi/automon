@@ -413,17 +413,7 @@ async function executeTrade(aiReason?: string): Promise<void> {
       if (txHash) {
         console.log(`[${ts()}]   💰 Bought $AUTOMON for ${decision.amount} MON | tx: ${txHash}`);
         await logAction('trading_token', `Bought $AUTOMON for ${decision.amount} MON`, 'Trading Post', decision.reasoning);
-
-        await api('/api/transactions', {
-          method: 'POST',
-          body: JSON.stringify({
-            address: ADDRESS,
-            type: 'token_buy',
-            amount: decision.amount,
-            txHash,
-            details: { token: 'AUTOMON' },
-          }),
-        }).catch(() => {});
+        await logTransaction(txHash, 'token_buy', `Bought $AUTOMON for ${decision.amount} MON`, decision.amount);
       }
 
     } else if (decision.action === 'SELL' && decision.amount) {
@@ -431,17 +421,7 @@ async function executeTrade(aiReason?: string): Promise<void> {
       if (txHash) {
         console.log(`[${ts()}]   💸 Sold $AUTOMON | tx: ${txHash}`);
         await logAction('trading_token', `Sold $AUTOMON`, 'Trading Post', decision.reasoning);
-
-        await api('/api/transactions', {
-          method: 'POST',
-          body: JSON.stringify({
-            address: ADDRESS,
-            type: 'token_sell',
-            amount: '0',
-            txHash,
-            details: { token: 'AUTOMON' },
-          }),
-        }).catch(() => {});
+        await logTransaction(txHash, 'token_sell', `Sold $AUTOMON tokens`, '0');
       }
 
     } else {
