@@ -13,13 +13,29 @@ const ELEMENT_COLORS: Record<string, string> = {
   fire: '#ef4444', water: '#3b82f6', earth: '#84cc16', air: '#a78bfa', crystal: '#06b6d4',
   dark: '#8b5cf6', light: '#fbbf24',
 };
+const RARITY_BADGE_CLASSES: Record<string, string> = {
+  legendary: 'bg-amber-500/20 text-amber-300 border border-amber-400/40',
+  epic: 'bg-purple-500/20 text-purple-300 border border-purple-400/40',
+  rare: 'bg-blue-500/20 text-blue-300 border border-blue-400/40',
+  uncommon: 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40',
+  common: 'bg-gray-500/20 text-gray-300 border border-gray-400/40',
+};
+const ELEMENT_ICONS: Record<string, string> = {
+  fire: '🔥',
+  water: '💧',
+  earth: '🪨',
+  air: '🌪️',
+  dark: '🌙',
+  light: '✨',
+  crystal: '💎',
+};
 const _ACTION_ICONS: Record<string, string> = {
   strike: '⚔️', skill: '✨', guard: '🛡️', switch: '🔄',
 };
 
-function cardImage(name: string): string {
+function cardImage(name: string, rarity = 'common'): string {
   const mon = AUTOMONS.find(a => a.name === name);
-  return getCardArtDataUri(mon?.id ?? 1, mon?.element || 'fire', 'common');
+  return getCardArtDataUri(mon?.id ?? 1, mon?.element || 'fire', rarity);
 }
 
 function shortAddr(addr: string) { return `${addr.slice(0, 6)}…${addr.slice(-4)}`; }
@@ -46,6 +62,46 @@ function formatDuration(start: string | Date, end?: string | Date | null): strin
   const s = total % 60;
   if (m <= 0) return `${s}s`;
   return `${m}m ${s}s`;
+}
+
+function labelRarity(rarity?: string): string {
+  const safe = (rarity || 'common').toLowerCase();
+  return safe.charAt(0).toUpperCase() + safe.slice(1);
+}
+
+function rarityBadgeClass(rarity?: string): string {
+  return RARITY_BADGE_CLASSES[(rarity || 'common').toLowerCase()] || RARITY_BADGE_CLASSES.common;
+}
+
+function elementLabel(element?: string): string {
+  const safe = (element || 'unknown').toLowerCase();
+  return safe.charAt(0).toUpperCase() + safe.slice(1, 3);
+}
+
+function TeamCardChip({ card }: { card: { name?: string; element?: string; rarity?: string } }) {
+  const name = card?.name || 'Unknown';
+  const element = (card?.element || '').toLowerCase();
+  const rarity = (card?.rarity || 'common').toLowerCase();
+
+  return (
+    <div className="w-16 sm:w-20 shrink-0">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-lg overflow-hidden border-2 shadow-md"
+        style={{ borderColor: ELEMENT_COLORS[element] || '#4b5563' }}>
+        <img src={cardImage(name, rarity)} alt={name} title={`${name} • ${labelRarity(rarity)} • ${element || 'unknown'}`}
+          className="w-full h-full object-cover" />
+      </div>
+      <div className="mt-1 text-[10px] sm:text-xs text-gray-200 text-center truncate" title={name}>{name}</div>
+      <div className="mt-1 flex items-center justify-center gap-1">
+        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-black/30 border border-white/10 text-gray-200">
+          <span aria-hidden>{ELEMENT_ICONS[element] || '◉'}</span>
+          <span>{elementLabel(element)}</span>
+        </span>
+        <span className={`px-1 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold ${rarityBadgeClass(rarity)}`}>
+          {labelRarity(rarity)}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 type View = 'list' | 'create' | 'select-cards' | 'battle' | 'replay' | 'simulating';
@@ -552,11 +608,9 @@ function BattleCard({ battle, index, onReplay, onOpen, onResume }: { battle: any
         {/* Player 1 side */}
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           <span className={`text-sm font-bold truncate max-w-full ${winner?.toLowerCase() === p1?.address?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
-          <div className="flex gap-1">
-            {p1Cards.slice(0, 3).filter(Boolean).map((c: { name?: string; element?: string }, i: number) => (
-              <img key={i} src={cardImage(c?.name || '?')} alt={c?.name || '?'} title={c?.name || '?'}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover border-2 shadow-md"
-                style={{ borderColor: ELEMENT_COLORS[c?.element || ''] || '#444' }} />
+          <div className="flex gap-1.5 sm:gap-2">
+            {p1Cards.slice(0, 3).filter(Boolean).map((c: { name?: string; element?: string; rarity?: string }, i: number) => (
+              <TeamCardChip key={i} card={c} />
             ))}
           </div>
         </div>
@@ -569,11 +623,9 @@ function BattleCard({ battle, index, onReplay, onOpen, onResume }: { battle: any
         {/* Player 2 side */}
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           <span className={`text-sm font-bold truncate max-w-full ${winner?.toLowerCase() === p2?.address?.toLowerCase() ? 'text-yellow-300' : 'text-purple-400'}`}>{p2Name || '…'}</span>
-          <div className="flex gap-1">
-            {p2Cards.slice(0, 3).filter(Boolean).map((c: { name?: string; element?: string }, i: number) => (
-              <img key={i} src={cardImage(c?.name || '?')} alt={c?.name || '?'} title={c?.name || '?'}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover border-2 shadow-md"
-                style={{ borderColor: ELEMENT_COLORS[c?.element || ''] || '#444' }} />
+          <div className="flex gap-1.5 sm:gap-2">
+            {p2Cards.slice(0, 3).filter(Boolean).map((c: { name?: string; element?: string; rarity?: string }, i: number) => (
+              <TeamCardChip key={i} card={c} />
             ))}
           </div>
         </div>
