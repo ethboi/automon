@@ -436,7 +436,8 @@ async function executeTrade(aiReason?: string): Promise<void> {
     }
     // Refresh balances after trade
     try {
-      agentTokenBalance = String(await getTokenBalance(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!));
+      const rawTokenBal = await getTokenBalance(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!);
+      agentTokenBalance = ethers.formatEther(rawTokenBal);
       const bal = ethers.formatEther(await provider.getBalance(wallet.address));
       agentBalance = parseFloat(bal).toFixed(4);
     } catch {}
@@ -1253,7 +1254,8 @@ async function main() {
   // Token balance
   if (process.env.AUTOMON_TOKEN_ADDRESS) {
     try {
-      agentTokenBalance = String(await getTokenBalance(process.env.AGENT_PRIVATE_KEY!, process.env.AUTOMON_TOKEN_ADDRESS!));
+      const rawBal = await getTokenBalance(process.env.AGENT_PRIVATE_KEY!, process.env.AUTOMON_TOKEN_ADDRESS!);
+      agentTokenBalance = ethers.formatEther(rawBal);
       console.log(`  Balance:  ${agentBalance} MON | ${agentTokenBalance} $AUTOMON`);
     } catch { console.log(`  Balance:  ${agentBalance} MON | $AUTOMON: N/A`); }
   } else {
