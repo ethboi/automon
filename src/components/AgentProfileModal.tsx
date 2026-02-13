@@ -20,7 +20,7 @@ interface AgentDetails {
     moodPercent?: number;
   };
   cards: CardType[];
-  actions: Array<{ action: string; reason: string; reasoning?: string; timestamp: string; location?: string; healthDelta?: number }>;
+  actions: Array<{ action: string; reason: string; reasoning?: string; timestamp: string; location?: string; healthDelta?: number; moodDelta?: number }>;
   transactions?: Array<{ txHash: string; type: string; description: string; amount?: string | null; timestamp: string }>;
 }
 const PUBLIC_NETWORK = (process.env.NEXT_PUBLIC_AUTOMON_NETWORK || 'testnet').toLowerCase();
@@ -99,6 +99,11 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
               {a.healthDelta != null && a.healthDelta !== 0 && (
                 <span className={`text-xs font-mono ${a.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {a.healthDelta > 0 ? '+' : ''}{a.healthDelta} HP
+                </span>
+              )}
+              {a.moodDelta != null && a.moodDelta !== 0 && (
+                <span className={`text-xs font-mono ${a.moodDelta > 0 ? 'text-blue-400' : 'text-orange-400'}`}>
+                  {a.moodDelta > 0 ? '+' : ''}{a.moodDelta} 😊
                 </span>
               )}
             </div>
