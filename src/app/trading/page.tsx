@@ -7,7 +7,8 @@ interface Trade {
   type: string;
   amount: string;
   txHash: string | null;
-  details: { token?: string; tokensReceived?: string; monReceived?: string };
+  details: { token?: string; tokensReceived?: string; monReceived?: string; tokensSold?: string; monSpent?: string };
+  description?: string;
   createdAt: string;
   agentName?: string;
 }
