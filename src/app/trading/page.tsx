@@ -60,7 +60,7 @@ export default function TradingPage() {
   const fetchData = useCallback(async () => {
     try {
       const [txRes, agentsRes] = await Promise.all([
-        fetch('/api/transactions?type=token_buy,token_sell&limit=50'),
+        fetch('/api/transactions?type=token_buy,token_sell,token_hold&limit=50'),
         fetch('/api/dashboard'),
       ]);
 
@@ -208,31 +208,34 @@ export default function TradingPage() {
               <div className="divide-y divide-white/5">
                 {trades.map((trade, i) => {
                   const isBuy = trade.type === 'token_buy';
+                  const isHold = trade.type === 'token_hold';
                   const agentName = trade.agentName || shortAddr(trade.address);
                   return (
                     <div key={i} className="px-3 sm:px-4 py-3 hover:bg-white/[0.02] transition">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className={`text-sm ${isBuy ? 'text-green-400' : 'text-red-400'}`}>
-                            {isBuy ? '📈' : '📉'}
+                          <span className={`text-sm ${isHold ? 'text-gray-400' : isBuy ? 'text-green-400' : 'text-red-400'}`}>
+                            {isHold ? '📊' : isBuy ? '📈' : '📉'}
                           </span>
                           <span className="text-sm font-semibold text-white truncate">{agentName}</span>
                           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                            isBuy ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                            isHold ? 'bg-gray-500/20 text-gray-400' : isBuy ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                           }`}>
-                            {isBuy ? 'BUY' : 'SELL'}
+                            {isHold ? 'HOLD' : isBuy ? 'BUY' : 'SELL'}
                           </span>
                         </div>
                         <span className="text-[10px] text-gray-600 shrink-0">{timeAgo(trade.createdAt)}</span>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-400">
-                        {isBuy ? (
-                          <span>Spent <span className="text-yellow-400 font-semibold">{trade.amount} MON</span> → <span className="text-emerald-400 font-semibold">{trade.details.tokensReceived || '?'} $AUTOMON</span></span>
+                        {isHold ? (
+                          <span className="italic">{trade.description || 'Analyzed the market, holding position'}</span>
+                        ) : isBuy ? (
+                          <span>Spent <span className="text-yellow-400 font-semibold">{trade.amount} MON</span> → <span className="text-emerald-400 font-semibold">{trade.details?.tokensReceived || '?'} $AUTOMON</span></span>
                         ) : (
-                          <span>Sold <span className="text-emerald-400 font-semibold">{trade.amount} $AUTOMON</span> → <span className="text-yellow-400 font-semibold">{trade.details.monReceived || '?'} MON</span></span>
+                          <span>Sold <span className="text-emerald-400 font-semibold">{trade.amount} $AUTOMON</span> → <span className="text-yellow-400 font-semibold">{trade.details?.monReceived || '?'} MON</span></span>
                         )}
                       </div>
-                      {trade.txHash && (
+                      {trade.txHash && !isHold && (
                         <a
                           href={`${EXPLORER_BASE}/tx/${trade.txHash}`}
                           target="_blank"

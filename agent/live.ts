@@ -434,6 +434,17 @@ async function executeTrade(aiReason?: string): Promise<void> {
     } else {
       console.log(`[${ts()}]   📊 Holding — no trade this time`);
       await logAction('trading_token', 'Analyzed the charts but decided to HOLD', 'Trading Post', decision.reasoning);
+      // Log hold to transactions so it shows on the trading page
+      await api('/api/transactions/log', {
+        method: 'POST',
+        body: JSON.stringify({
+          txHash: `hold-${Date.now()}-${ADDRESS.slice(2, 8)}`,
+          type: 'token_hold',
+          from: ADDRESS,
+          amount: '0',
+          description: decision.reasoning || 'Analyzed charts, holding position',
+        }),
+      }).catch(() => {});
     }
     // Refresh balances after trade
     try {
