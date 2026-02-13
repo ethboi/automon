@@ -73,7 +73,7 @@ function rarityBadgeClass(rarity?: string): string {
   return RARITY_BADGE_CLASSES[(rarity || 'common').toLowerCase()] || RARITY_BADGE_CLASSES.common;
 }
 
-function elementLabel(element?: string): string {
+function _elementLabel(element?: string): string {
   const safe = (element || 'unknown').toLowerCase();
   return safe.charAt(0).toUpperCase() + safe.slice(1, 3);
 }
