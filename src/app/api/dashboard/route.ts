@@ -228,11 +228,13 @@ export async function GET() {
       transactions: (recentTxs || []).map(tx => ({
         txHash: tx.txHash,
         type: tx.type,
-        from: tx.from,
-        description: tx.description,
+        from: tx.from || tx.address,
+        agentName: tx.agentName,
+        description: tx.description || '',
         explorerUrl: explorerUrl(tx.txHash),
-        timestamp: tx.timestamp,
+        timestamp: tx.timestamp || tx.createdAt,
         amount: normalizeMonAmount(tx.amount) || normalizeMonAmount(tx.metadata?.wager) || normalizeMonAmount(tx.metadata?.price),
+        details: tx.details,
       })),
       chat: (recentChat || []).reverse().map(m => ({
         from: m.from,
