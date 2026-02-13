@@ -287,6 +287,7 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
                       reasoning={turn.player1.reasoning}
                       prediction={turn.player1.prediction}
                       element={getCardElement(turn.player1.activeCard, battleLog.player1.cards)}
+                      rarity={(battleLog.player1.cards.find((c: any) => c.name === turn.player1.activeCard) as any)?.rarity}
                       side="left"
                     />
                   </div>
@@ -315,6 +316,7 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
                       reasoning={turn.player2.reasoning}
                       prediction={turn.player2.prediction}
                       element={getCardElement(turn.player2.activeCard, battleLog.player2.cards)}
+                      rarity={(battleLog.player2.cards.find((c: any) => c.name === turn.player2.activeCard) as any)?.rarity}
                       side="right"
                     />
                   </div>
@@ -399,10 +401,19 @@ function Btn({ onClick, title, children }: { onClick: () => void; title?: string
   );
 }
 
+const RARITY_COLORS: Record<string, { bg: string; fg: string }> = {
+  legendary: { bg: 'rgba(251,191,36,0.25)', fg: '#fbbf24' },
+  epic:      { bg: 'rgba(168,85,247,0.25)', fg: '#a855f7' },
+  rare:      { bg: 'rgba(59,130,246,0.25)', fg: '#3b82f6' },
+  uncommon:  { bg: 'rgba(34,197,94,0.25)',  fg: '#22c55e' },
+  common:    { bg: 'rgba(107,114,128,0.2)', fg: '#9ca3af' },
+};
+
 /* ---- Team panel (intro) ---- */
 function TeamPanel({ label, color, cards, reasoning }: {
   label: string; color: string;
-  cards: { id: string; name: string; element: Element }[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cards: any[];
   reasoning?: string;
 }) {
   return (
@@ -416,19 +427,29 @@ function TeamPanel({ label, color, cards, reasoning }: {
         {cards.map((c, i) => {
           const ec = elColor(c.element);
           const mon = AUTOMONS.find(a => a.name === c.name);
+          const rarity = c.rarity || 'common';
+          const rc = RARITY_COLORS[rarity] || RARITY_COLORS.common;
+          // Use actual card stats if available, fall back to AUTOMONS base stats
+          const atk = c.stats?.attack ?? mon?.baseAttack ?? '?';
+          const def = c.stats?.defense ?? mon?.baseDefense ?? '?';
+          const spd = c.stats?.speed ?? mon?.baseSpeed ?? '?';
+          const hp = c.stats?.hp ?? mon?.baseHp ?? '?';
           return (
             <div key={i} className="text-center" style={{ animation: `br-float-up .4s ease-out ${i * .1}s both` }}>
               <div className="relative mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden mb-1"
                 style={{ border: `2px solid ${ec}`, boxShadow: `0 0 14px ${ec}35` }}>
                 <img src={getCardImage(c.name, c.element)} alt={c.name} className="w-full h-full object-cover" />
+                {/* Rarity badge */}
+                <span className="absolute top-0.5 right-0.5 px-1 py-px rounded text-[7px] sm:text-[8px] font-black uppercase"
+                  style={{ background: rc.bg, color: rc.fg, backdropFilter: 'blur(4px)' }}>
+                  {rarity}
+                </span>
               </div>
               <p className="text-[10px] sm:text-xs font-bold truncate">{c.name}</p>
               <p className="text-[9px] sm:text-[10px] font-semibold uppercase" style={{ color: ec }}>{c.element}</p>
-              {mon && (
-                <p className="text-[8px] sm:text-[9px] text-gray-500 mt-0.5">
-                  ⚔{mon.baseAttack} 🛡{mon.baseDefense} ⚡{mon.baseSpeed} ❤️{mon.baseHp}
-                </p>
-              )}
+              <p className="text-[8px] sm:text-[9px] text-gray-500 mt-0.5">
+                ⚔{atk} 🛡{def} ⚡{spd} ❤️{hp}
+              </p>
             </div>
           );
         })}
@@ -445,12 +466,12 @@ function TeamPanel({ label, color, cards, reasoning }: {
 }
 
 /* ---- Active card panel (battle) ---- */
-function CardPanel({ name, color, card, hp, max, action, result, reasoning, prediction, element, side }: {
+function CardPanel({ name, color, card, hp, max, action, result, reasoning, prediction, element, rarity, side }: {
   name: string; color: string; card: string;
   hp: number; max: number; action: string;
   result?: 'win' | 'lose' | 'neutral';
   reasoning?: string; prediction?: string;
-  element: string; side: 'left' | 'right';
+  element: string; rarity?: string; side: 'left' | 'right';
 }) {
   const pct   = Math.max(0, Math.min(100, (hp / max) * 100));
   const hpC   = hpColor(pct);
@@ -502,9 +523,18 @@ function CardPanel({ name, color, card, hp, max, action, result, reasoning, pred
         )}
       </div>
 
-      {/* card name + element */}
+      {/* card name + element + rarity */}
       <p className="text-xs sm:text-base font-bold mt-1.5 sm:mt-2 truncate max-w-full">{card}</p>
-      <p className="text-[9px] sm:text-[10px] font-semibold uppercase mb-1" style={{ color: ec }}>{element}</p>
+      <div className="flex items-center justify-center gap-1.5 mb-1">
+        <p className="text-[9px] sm:text-[10px] font-semibold uppercase" style={{ color: ec }}>{element}</p>
+        {rarity && rarity !== 'common' && (() => {
+          const rc = RARITY_COLORS[rarity] || RARITY_COLORS.common;
+          return (
+            <span className="px-1 py-px rounded text-[7px] sm:text-[8px] font-black uppercase"
+              style={{ background: rc.bg, color: rc.fg }}>{rarity}</span>
+          );
+        })()}
+      </div>
 
       {/* HP bar */}
       <div className="w-full" style={{ maxWidth: 180 }}>
@@ -594,7 +624,8 @@ function EventRow({ event }: { event: BattleEvent }) {
 /* ---- Final team display (victory) ---- */
 function FinalTeam({ name, color, cards, dmg, fainted, isWinner }: {
   name: string; color: string;
-  cards: { id: string; name: string; element: Element }[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cards: any[];
   dmg: number; fainted: number; isWinner: boolean;
 }) {
   return (
@@ -610,14 +641,23 @@ function FinalTeam({ name, color, cards, dmg, fainted, isWinner }: {
       </p>
 
       <div className="flex gap-1 sm:gap-2 justify-center">
-        {cards.map((c, i) => (
-          <img key={i} src={getCardImage(c.name, c.element)} alt={c.name}
-            className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg object-cover"
-            style={{
-              border: `2px solid ${elColor(c.element)}`,
-              filter: !isWinner ? 'grayscale(.7) brightness(.5)' : undefined,
-            }} />
-        ))}
+        {cards.map((c, i) => {
+          const rc = RARITY_COLORS[c.rarity] || RARITY_COLORS.common;
+          return (
+            <div key={i} className="relative">
+              <img src={getCardImage(c.name, c.element)} alt={c.name}
+                className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg object-cover"
+                style={{
+                  border: `2px solid ${elColor(c.element)}`,
+                  filter: !isWinner ? 'grayscale(.7) brightness(.5)' : undefined,
+                }} />
+              {c.rarity && c.rarity !== 'common' && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1 rounded text-[6px] font-black uppercase whitespace-nowrap"
+                  style={{ background: rc.bg, color: rc.fg }}>{c.rarity}</span>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="flex justify-center gap-3 mt-2 text-[9px] sm:text-xs text-gray-400">

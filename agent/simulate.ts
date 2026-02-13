@@ -147,7 +147,7 @@ function triangleResult(m1: string, m2: string): { winner: 'p1' | 'p2' | 'tie'; 
 
 // ─── Resolve a turn ───
 
-function resolveTurn(battle: Battle, move1: BattleMove, move2: BattleMove): { events: BattleEvent[]; winner: string | null; turnLog: TurnLog } {
+function resolveTurn(battle: Battle, move1: BattleMove, move2: BattleMove): { events: BattleEvent[]; winner: string | null; turnLog: TurnLog; triLabel: string } {
   const events: BattleEvent[] = [];
   const p1Card = getActiveCard(battle.player1);
   const p2Card = getActiveCard(battle.player2);
@@ -274,7 +274,7 @@ function resolveTurn(battle: Battle, move1: BattleMove, move2: BattleMove): { ev
     },
   };
 
-  return { events, winner, turnLog };
+  return { events, winner, turnLog, triLabel: tri.label };
 }
 
 // ─── Element advantage map ───
@@ -419,7 +419,7 @@ export async function runBattleSimulation(
       getAIMove(battle, battle.player2.address),
     ]);
 
-    const { events, winner: turnWinner, turnLog } = resolveTurn(battle, move1, move2);
+    const { events, winner: turnWinner, turnLog, triLabel } = resolveTurn(battle, move1, move2);
 
     for (const e of events) {
       if (e.type === 'damage' && e.value) {
@@ -433,10 +433,10 @@ export async function runBattleSimulation(
     }
 
     turns.push(turnLog);
-    battle.rounds.push({ turn: battle.currentTurn, player1Move: move1, player2Move: move2, triangleResult: turnLog.triangleResult, events, timestamp: new Date() });
+    battle.rounds.push({ turn: battle.currentTurn, player1Move: move1, player2Move: move2, triangleResult: triLabel, events, timestamp: new Date() });
     winner = turnWinner;
 
-    console.log(`[simulate] Turn ${battle.currentTurn}: ${move1.action} vs ${move2.action} → ${turnLog.triangleResult} ${winner ? `WINNER: ${winner.slice(0,8)}` : ''}`);
+    console.log(`[simulate] Turn ${battle.currentTurn}: ${move1.action} vs ${move2.action} → ${triLabel} ${winner ? `WINNER: ${winner.slice(0,8)}` : ''}`);
   }
 
   const finalWinner = winner || 'draw';
@@ -446,12 +446,12 @@ export async function runBattleSimulation(
     battleId: battle.battleId,
     player1: {
       address: battle.player1.address, name: battle.player1.name,
-      cards: battleData.player1.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element })),
+      cards: battleData.player1.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element, rarity: c.rarity || 'common', stats: { attack: c.attack, defense: c.defense, speed: c.speed, hp: c.maxHp || c.hp } })),
       isAI: true, cardSelectionReasoning: battleData.player1.cardSelectionReasoning,
     },
     player2: {
       address: battle.player2.address, name: battle.player2.name,
-      cards: battleData.player2.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element })),
+      cards: battleData.player2.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element, rarity: c.rarity || 'common', stats: { attack: c.attack, defense: c.defense, speed: c.speed, hp: c.maxHp || c.hp } })),
       isAI: true, cardSelectionReasoning: battleData.player2.cardSelectionReasoning,
     },
     wager: battle.wager,
