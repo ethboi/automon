@@ -417,7 +417,13 @@ async function executeTrade(aiReason?: string): Promise<void> {
       }
 
     } else if (decision.action === 'SELL' && decision.amount) {
-      const txHash = await sellToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!);
+      // Never sell below 100 token balance
+      const tokenBalNum = parseFloat(tokenBal);
+      if (tokenBalNum <= 100) {
+        console.log(`[${ts()}]   ⚠ Skipping sell — must hold at least 100 $AUTOMON (have ${tokenBalNum.toFixed(0)})`);
+        decision.action = 'HOLD';
+      }
+      const txHash = decision.action === 'SELL' ? await sellToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!) : null;
       if (txHash) {
         console.log(`[${ts()}]   💸 Sold $AUTOMON | tx: ${txHash}`);
         await logAction('trading_token', `Sold $AUTOMON`, 'Trading Post', decision.reasoning);
