@@ -706,8 +706,12 @@ Respond with JSON only:
     if (tokenBalance !== undefined && parseFloat(tokenBalance) < 100 && balNum >= 0.5) {
       return { location: 'Trading Post', action: 'trading_token', reasoning: `Only ${parseFloat(tokenBalance).toFixed(0)} $AUTOMON tokens — need to buy more to maintain 100+ balance!` };
     }
+    // Force visit Trading Post when holding huge token bags
+    if (tokenBalance !== undefined && parseFloat(tokenBalance) > 5000 && balNum >= 1.0) {
+      return { location: 'Trading Post', action: 'trading_token', reasoning: `Sitting on ${parseFloat(tokenBalance).toFixed(0)} $AUTOMON — need to rebalance this massive bag!` };
+    }
     // Periodic token trading — agents should regularly visit Trading Post
-    if (tokenBalance !== undefined && balNum >= 0.3 && Math.random() < 0.12) {
+    if (tokenBalance !== undefined && balNum >= 0.3 && Math.random() < 0.35) {
       const tokenBal = parseFloat(tokenBalance);
       const reason = tokenBal > 10000
         ? `Sitting on ${tokenBal.toFixed(0)} $AUTOMON — time to check the charts and maybe take some profits!`
