@@ -1201,15 +1201,29 @@ async function tick(): Promise<void> {
 
       // Mood-driven behavior tuning: low mood = recover/low risk, high mood = bolder.
       if (agentMood <= 25 && (nextAction === 'battling' || nextAction === 'training' || nextAction === 'trading_token')) {
-        nextAction = Math.random() < 0.5 ? 'fishing' : 'resting';
-        nextLocationName = nextAction === 'fishing' ? 'Old Pond' : 'Home';
+        const recoveryOptions = [
+          { action: 'fishing', location: 'Old Pond' },
+          { action: 'farming', location: 'Community Farm' },
+          { action: 'exploring', location: 'Crystal Caves' },
+          { action: 'exploring', location: 'Dark Forest' },
+          { action: 'resting', location: 'Home' },
+        ];
+        const pick = recoveryOptions[Math.floor(Math.random() * recoveryOptions.length)];
+        nextAction = pick.action;
+        nextLocationName = pick.location;
         nextWager = undefined;
-        nextReason = `${nextReason} Mood crashed (${agentMoodLabel}); taking a reset action first.`;
+        nextReason = `${nextReason} Mood crashed (${agentMoodLabel}); recovering at ${pick.location}.`;
       } else if (agentMood <= 38 && nextAction === 'battling') {
-        nextAction = 'fishing';
-        nextLocationName = 'Old Pond';
+        const opts = [
+          { action: 'fishing', location: 'Old Pond' },
+          { action: 'farming', location: 'Community Farm' },
+          { action: 'exploring', location: 'Dark Forest' },
+        ];
+        const pick = opts[Math.floor(Math.random() * opts.length)];
+        nextAction = pick.action;
+        nextLocationName = pick.location;
         nextWager = undefined;
-        nextReason = `${nextReason} Mood is low (${agentMoodLabel}), recovering before taking more fights.`;
+        nextReason = `${nextReason} Mood is low (${agentMoodLabel}), recovering at ${pick.location}.`;
       }
       if (nextAction === 'battling' && nextWager) {
         const wagerNum = parseFloat(nextWager);

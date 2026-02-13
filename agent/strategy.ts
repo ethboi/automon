@@ -639,14 +639,18 @@ ${locationList}
 - When battling, choose a wager between 0.005-0.05 MON based on card strength and confidence
 - Higher wagers when you have rare/epic/legendary cards, high HP, and are on a win streak
 - Lower wagers when low HP, only common cards, or on a losing streak
-- Vary non-battle actions — explore, fish, farm between fights
+- **VARY your locations!** Don't just fish/rest — explore Dark Forest, mine Crystal Caves, farm at Community Farm
+- Dark Forest has wild encounters and rare finds — visit often!
+- Crystal Caves give +8 HP and have crystal resources — explore them
+- Community Farm gives +17 HP — great for recovery with a change of scenery
 - Attempt taming regularly in wild zones (Old Pond, Dark Forest, Crystal Caves, Community Farm), especially when HP > 35
 - Visit the Trading Post occasionally (every 5-8 actions) to trade $AUTOMON tokens
 - **If your $AUTOMON balance is below 100 tokens, prioritize visiting the Trading Post to buy more!**
 - Trading is speculative — small amounts, don't go broke. Keep at least 0.15 MON for gameplay
 - Mood effects:
-  - Mood <= 30 (tilted/doom): avoid high-risk battles, prioritize recovery/fishing/farming/resting
+  - Mood <= 30 (tilted/doom): avoid high-risk battles, recover at varied locations (farm, fish, explore caves, wander forest)
   - Mood >= 75 (hyped/ecstatic): you can take bolder battles and slightly higher wagers
+  - Even when recovering, **rotate locations** — don't fish 5 times in a row
 - Show personality — be curious, strategic, sometimes bold
 
 Respond with JSON only:
