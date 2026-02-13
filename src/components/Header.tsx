@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 
 const TX_ICONS: Record<string, string> = {
   mint_pack: '📦', battle_settle: '🏆', battle_join: '🤝',
-  escrow_deposit: '🔒', nft_mint: '💎',
+  escrow_deposit: '🔒', nft_mint: '💎', token_buy: '📈', token_sell: '📉',
 };
 
 function formatTokenBalance(raw: string): string {
@@ -23,7 +23,7 @@ function shortAddr(addr?: string) {
 }
 
 function useLatestTx() {
-  const [tx, setTx] = useState<{ type: string; description: string; from: string; amount?: string | null; txHash: string; explorerUrl: string; agentName?: string } | null>(null);
+  const [tx, setTx] = useState<{ type: string; description: string; from: string; amount?: string | null; txHash: string; explorerUrl: string; agentName?: string; details?: { tokensReceived?: string; monReceived?: string; tokensSold?: string; monSpent?: string } } | null>(null);
   const [isNew, setIsNew] = useState(false);
   const prevHash = useRef<string | null>(null);
 
@@ -36,10 +36,17 @@ function useLatestTx() {
         const data = await res.json();
         const txs = data.transactions || [];
         const agents = data.onlineAgents || [];
-        const notable = txs.find((t: { type: string }) => ['battle_settle', 'escrow_deposit', 'battle_join', 'mint_pack'].includes(t.type));
+        const notable = txs.find((t: { type: string }) => ['battle_settle', 'escrow_deposit', 'battle_join', 'mint_pack', 'token_buy', 'token_sell'].includes(t.type));
         if (notable && mounted) {
-          const name = agents.find((a: { address?: string }) => a.address?.toLowerCase() === notable.from?.toLowerCase())?.name || shortAddr(notable.from);
-          const newTx = { ...notable, agentName: name };
+          const addr = notable.from || '';
+          const name = notable.agentName || agents.find((a: { address?: string }) => a.address?.toLowerCase() === addr.toLowerCase())?.name || (addr ? shortAddr(addr) : 'Agent');
+          let desc = notable.description || '';
+          if (!desc && notable.details) {
+            const d = notable.details;
+            if (notable.type === 'token_buy') desc = `Bought ${parseFloat(d.tokensReceived || '0').toFixed(0)} $AUTOMON for ${parseFloat(d.monSpent || '0').toFixed(4)} MON`;
+            else if (notable.type === 'token_sell') desc = `Sold ${parseFloat(d.tokensSold || '0').toFixed(0)} $AUTOMON for ${parseFloat(d.monReceived || '0').toFixed(4)} MON`;
+          }
+          const newTx = { ...notable, agentName: name, description: desc };
           if (notable.txHash !== prevHash.current) {
             prevHash.current = notable.txHash;
             setIsNew(true);
@@ -207,7 +214,17 @@ export default function Header() {
               <span className="text-xs">{TX_ICONS[latestTx.type] || '📝'}</span>
               <span className="text-[11px] text-cyan-400 font-medium">{latestTx.agentName}</span>
               <span className="text-[11px] text-gray-400">{latestTx.description}</span>
-              {latestTx.amount && (
+              {latestTx.type === 'token_buy' && latestTx.details && (
+                <span className="text-[11px] font-mono font-bold text-emerald-400">
+                  {parseFloat(latestTx.details.monSpent || latestTx.amount || '0').toFixed(4)} MON
+                </span>
+              )}
+              {latestTx.type === 'token_sell' && latestTx.details && (
+                <span className="text-[11px] font-mono font-bold text-red-400">
+                  {parseFloat(latestTx.details.monReceived || latestTx.amount || '0').toFixed(4)} MON
+                </span>
+              )}
+              {latestTx.type !== 'token_buy' && latestTx.type !== 'token_sell' && latestTx.amount && (
                 <span className={`text-[11px] font-mono font-bold ${latestTx.type === 'battle_settle' ? 'text-emerald-400' : 'text-yellow-400'}`}>
                   {latestTx.amount} MON
                 </span>

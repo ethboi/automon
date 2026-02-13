@@ -95,10 +95,12 @@ interface TxData {
   txHash: string;
   type: string;
   from: string;
+  agentName?: string;
   description: string;
   explorerUrl: string;
   timestamp: string;
   amount?: string | null;
+  details?: { tokensReceived?: string; monReceived?: string; tokensSold?: string; monSpent?: string };
 }
 
 type Tab = 'agents' | 'feed' | 'chat' | 'trades' | 'chain';
@@ -601,8 +603,12 @@ export function WorldUI({
                 ) : (
                   <div className="space-y-0.5">
                     {trades.slice(0, 30).map((tx, i) => {
-                      const agentName = onlineAgents.find(a => a.address?.toLowerCase() === tx.from?.toLowerCase())?.name || shortAddr(tx.from);
+                      const name = tx.agentName || onlineAgents.find(a => a.address?.toLowerCase() === tx.from?.toLowerCase())?.name || (tx.from ? shortAddr(tx.from) : 'Agent');
                       const isBuy = tx.type === 'token_buy';
+                      const tokens = isBuy ? tx.details?.tokensReceived : tx.details?.tokensSold;
+                      const mon = isBuy ? (tx.details?.monSpent || tx.amount) : (tx.details?.monReceived || tx.amount);
+                      const monStr = mon ? parseFloat(mon).toFixed(4) : '?';
+                      const tokenStr = tokens ? parseFloat(tokens).toFixed(0) : '?';
                       return (
                         <a key={i} href={tx.explorerUrl} target="_blank" rel="noopener noreferrer"
                           className={`flex items-center justify-between w-full rounded-lg px-2 py-1.5 transition-colors ${
@@ -612,13 +618,14 @@ export function WorldUI({
                             <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                               isBuy ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
                             }`}>{isBuy ? 'BUY' : 'SELL'}</span>
-                            <span className="text-xs text-cyan-400 font-semibold shrink-0">{agentName}</span>
-                            <span className="text-[10px] text-gray-400 truncate">{tx.description}</span>
+                            <span className="text-xs text-cyan-400 font-semibold shrink-0">{name}</span>
+                            <span className="text-[10px] text-gray-400 truncate">
+                              {isBuy ? `${monStr} MON → ${tokenStr} $AUTOMON` : `${tokenStr} $AUTOMON → ${monStr} MON`}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0 ml-1">
-                            {tx.amount && <span className={`text-[10px] font-mono font-bold ${isBuy ? 'text-emerald-400' : 'text-red-400'}`}>{tx.amount} MON</span>}
                             <span className="text-[10px] text-gray-700">{timeAgo(tx.timestamp)}</span>
-                            <span className="text-[10px] text-purple-400 underline">view ↗</span>
+                            <span className="text-[10px] text-purple-400 underline">tx ↗</span>
                           </div>
                         </a>
                       );
