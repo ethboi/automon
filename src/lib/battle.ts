@@ -1247,12 +1247,12 @@ export async function simulateAIBattle(
     battleId: battle.battleId,
     player1: {
       address: battle.player1.address,
-      cards: battle.player1.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element })),
+      cards: battle.player1.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element, rarity: (c as any).rarity || 'common', stats: c.stats ? { attack: c.stats.attack, defense: c.stats.defense, speed: c.stats.speed, hp: c.stats.hp } : undefined })),
       isAI: true,
     },
     player2: {
       address: battle.player2!.address,
-      cards: battle.player2!.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element })),
+      cards: battle.player2!.cards.map(c => ({ id: c.id || '', name: c.name, element: c.element, rarity: (c as any).rarity || 'common', stats: c.stats ? { attack: c.stats.attack, defense: c.stats.defense, speed: c.stats.speed, hp: c.stats.hp } : undefined })),
       isAI: true,
     },
     wager: battle.wager,
