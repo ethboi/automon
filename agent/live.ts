@@ -354,7 +354,7 @@ async function logAction(action: string, reason: string, location: string, aiRea
   } catch { /* silent */ }
 }
 
-async function logTransaction(txHash: string, type: string, description: string, amount?: string): Promise<void> {
+async function logTransaction(txHash: string, type: string, description: string, amount?: string, details?: Record<string, string>): Promise<void> {
   try {
     // Log to events feed
     await api('/api/agents/action', {
@@ -366,15 +366,16 @@ async function logTransaction(txHash: string, type: string, description: string,
         location: 'On-chain',
       }),
     });
-    // Log to transactions collection (shows in header ticker + transactions panel)
-    await api('/api/transactions/log', {
+    // Log to main transactions collection (trading page reads from here)
+    await api('/api/transactions', {
       method: 'POST',
       body: JSON.stringify({
+        address: ADDRESS,
+        agentName: AGENT_NAME,
         txHash,
         type,
-        from: ADDRESS,
         amount: amount || '0',
-        description,
+        details: details || {},
       }),
     });
   } catch { /* silent */ }
@@ -410,11 +411,11 @@ async function executeTrade(aiReason?: string): Promise<void> {
     console.log(`[${ts()}]   🧠 Trade decision: ${decision.action} ${decision.amount || ''} — ${decision.reasoning}`);
 
     if (decision.action === 'BUY' && decision.amount) {
-      const txHash = await buyToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!, decision.amount);
-      if (txHash) {
-        console.log(`[${ts()}]   💰 Bought $AUTOMON for ${decision.amount} MON | tx: ${txHash}`);
-        await logAction('trading_token', `Bought $AUTOMON for ${decision.amount} MON`, 'Trading Post', decision.reasoning);
-        await logTransaction(txHash, 'token_buy', `Bought $AUTOMON for ${decision.amount} MON`, decision.amount);
+      const buyResult = await buyToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!, decision.amount);
+      if (buyResult) {
+        console.log(`[${ts()}]   💰 Bought ${parseFloat(buyResult.tokensReceived).toFixed(0)} $AUTOMON for ${decision.amount} MON | tx: ${buyResult.txHash}`);
+        await logAction('trading_token', `Bought ${parseFloat(buyResult.tokensReceived).toFixed(0)} $AUTOMON for ${decision.amount} MON`, 'Trading Post', decision.reasoning);
+        await logTransaction(buyResult.txHash, 'token_buy', `Bought $AUTOMON for ${decision.amount} MON`, decision.amount, { tokensReceived: parseFloat(buyResult.tokensReceived).toFixed(0), monSpent: decision.amount });
       }
 
     } else if (decision.action === 'SELL' && decision.amount) {
@@ -424,11 +425,11 @@ async function executeTrade(aiReason?: string): Promise<void> {
         console.log(`[${ts()}]   ⚠ Skipping sell — must hold at least 100 $AUTOMON (have ${tokenBalNum.toFixed(0)})`);
         decision.action = 'HOLD';
       }
-      const txHash = decision.action === 'SELL' ? await sellToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!) : null;
-      if (txHash) {
-        console.log(`[${ts()}]   💸 Sold $AUTOMON | tx: ${txHash}`);
-        await logAction('trading_token', `Sold $AUTOMON`, 'Trading Post', decision.reasoning);
-        await logTransaction(txHash, 'token_sell', `Sold $AUTOMON tokens`, '0');
+      const sellResult = decision.action === 'SELL' ? await sellToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!) : null;
+      if (sellResult) {
+        console.log(`[${ts()}]   💸 Sold ${sellResult.tokensSold} $AUTOMON → ${sellResult.monReceived} MON | tx: ${sellResult.txHash}`);
+        await logAction('trading_token', `Sold ${parseFloat(sellResult.tokensSold).toFixed(0)} $AUTOMON for ${parseFloat(sellResult.monReceived).toFixed(4)} MON`, 'Trading Post', decision.reasoning);
+        await logTransaction(sellResult.txHash, 'token_sell', `Sold ${parseFloat(sellResult.tokensSold).toFixed(0)} $AUTOMON for ${parseFloat(sellResult.monReceived).toFixed(4)} MON`, sellResult.monReceived, { monReceived: parseFloat(sellResult.monReceived).toFixed(4), tokensSold: parseFloat(sellResult.tokensSold).toFixed(0) });
       }
 
     } else {
