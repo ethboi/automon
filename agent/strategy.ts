@@ -881,6 +881,82 @@ Respond JSON only:
   }
 
   {
-    return { action: 'HOLD', reasoning: 'Markets look uncertain, staying on the sideline for now.' };
+    const price = Math.max(parseFloat(tokenPrice) || 0, 0.000001);
+    const tokens = Math.max(parseFloat(tokenBalance) || 0, 0);
+    const mon = Math.max(parseFloat(monBalance) || 0, 0);
+    const personalityText = (personality || '').toLowerCase();
+    const recent = (recentActions || '').toLowerCase();
+
+    const aggressive = /(aggressive|degen|risk|bold|yolo|high[-\s]?risk)/.test(personalityText);
+    const conservative = /(conservative|cautious|safe|low[-\s]?risk|defensive)/.test(personalityText);
+
+    const buyChance = conservative ? 0.3 : aggressive ? 0.55 : 0.4;
+    const profitSellChance = conservative ? 0.2 : aggressive ? 0.4 : 0.3;
+    const buySizeMultiplier = conservative ? 0.85 : aggressive ? 1.2 : 1;
+    const sellSizeMultiplier = conservative ? 0.9 : aggressive ? 1.25 : 1;
+    const recentlyTraded = recent.includes('trading_token') || recent.includes('buy') || recent.includes('sell');
+
+    const fmt = (n: number, dp: number) => n.toFixed(dp);
+
+    // Rule 1: emergency top-up for gameplay buffer.
+    if (tokens < 100 && mon > 0.3) {
+      const targetTokens = conservative ? 180 : aggressive ? 220 : 200;
+      const desiredTokens = Math.max(0, targetTokens - tokens);
+      const spendCap = mon * 0.15;
+      const spendMon = Math.min(spendCap, desiredTokens * price);
+      if (spendMon >= 0.005) {
+        return {
+          action: 'BUY',
+          amount: fmt(spendMon, 4),
+          reasoning: `Token buffer low (${tokens.toFixed(0)}). Buying ${fmt(spendMon / price, 0)} tokens to rebuild inventory while capping spend at 15% of MON.`,
+        };
+      }
+    }
+
+    // Rule 2: refill MON when too low for gameplay.
+    if (mon < 0.15 && tokens > 200) {
+      const targetMon = conservative ? 0.24 : aggressive ? 0.18 : 0.2;
+      const monNeeded = Math.max(0, targetMon - mon);
+      const tokensToSellBase = monNeeded / price;
+      const maxSell = Math.max(0, tokens - 150);
+      const tokensToSell = Math.min(maxSell, Math.max(20, tokensToSellBase * sellSizeMultiplier));
+      if (tokensToSell >= 1) {
+        return {
+          action: 'SELL',
+          amount: fmt(tokensToSell, 0),
+          reasoning: `MON is low (${mon.toFixed(3)}). Selling ${fmt(tokensToSell, 0)} tokens to restore battle/pack liquidity.`,
+        };
+      }
+    }
+
+    // Rule 3: take profits from oversized token bag.
+    if (tokens > 500 && Math.random() < profitSellChance && (!recentlyTraded || aggressive)) {
+      const tokenExcess = tokens - 400;
+      const tokensToSell = Math.max(25, Math.min(tokenExcess * 0.3 * sellSizeMultiplier, tokens - 200));
+      return {
+        action: 'SELL',
+        amount: fmt(tokensToSell, 0),
+        reasoning: `Token balance is high (${tokens.toFixed(0)}). Taking partial profits and rotating back to MON.`,
+      };
+    }
+
+    // Rule 4: opportunistic accumulation when MON is healthy.
+    if (tokens < 200 && mon > 0.5 && Math.random() < buyChance && (!recentlyTraded || aggressive)) {
+      const spendCap = mon * 0.15 * buySizeMultiplier;
+      const desired = Math.max(0, 260 - tokens);
+      const spendMon = Math.min(spendCap, desired * price);
+      if (spendMon >= 0.005) {
+        return {
+          action: 'BUY',
+          amount: fmt(spendMon, 4),
+          reasoning: `MON reserves are strong (${mon.toFixed(3)}). Adding to token position with controlled size.`,
+        };
+      }
+    }
+
+    return {
+      action: 'HOLD',
+      reasoning: 'Balances are within target bands; no edge on this cycle, so holding.',
+    };
   }
 }
