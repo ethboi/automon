@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 export const dynamic = 'force-dynamic';
 
-const TOKEN_ADDRESS = (
-  process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS_MAINNET ||
-  process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS ||
-  '0xCdc26F8b74b9FE1A3B07C5e87C0EF4b3fD0E7777'
-).trim();
+// Hardcoded — env vars on Vercel were corrupted with newlines
+const TOKEN_ADDRESS = '0xCdc26F8b74b9FE1A3B07C5e87C0EF4b3fD0E7777';
 
 const RPC = (process.env.MONAD_RPC_URL_MAINNET || process.env.MONAD_RPC_URL || 'https://rpc.monad.xyz').trim();
 
