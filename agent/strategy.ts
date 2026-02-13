@@ -657,6 +657,12 @@ Respond with JSON only:
   "wager": "<MON amount if battling, e.g. '0.03'. Required when action is 'battling'>"
 }`;
 
+  // Force Trading Post when holding huge token bags — override Claude
+  const balNum = parseFloat(balance) || 0;
+  if (tokenBalance !== undefined && parseFloat(tokenBalance) > 5000 && balNum >= 1.0) {
+    return { location: 'Trading Post', action: 'trading_token', reasoning: `Sitting on ${parseFloat(tokenBalance).toFixed(0)} $AUTOMON — need to rebalance this massive bag!` };
+  }
+
   // In low-token mode, skip Claude entirely and use deterministic fallback
   if (!LOW_TOKEN_MODE) {
     try {
