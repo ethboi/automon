@@ -95,7 +95,7 @@ export default function AgentProfileModal({ address, onClose }: { address: strin
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-sm">{icon(a.action)}</span>
-              <span className="text-sm text-white font-medium capitalize">{a.action}</span>
+              <span className="text-sm text-white font-medium capitalize">{a.action === 'trading_token' ? 'Trading $AUTOMON' : a.action}</span>
               {a.healthDelta != null && a.healthDelta !== 0 && (
                 <span className={`text-xs font-mono ${a.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {a.healthDelta > 0 ? '+' : ''}{a.healthDelta} HP

@@ -489,7 +489,7 @@ export function WorldUI({
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-semibold text-cyan-400">{agentName}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${badge.cls}`}>{e.action}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${badge.cls}`}>{e.action === 'trading_token' ? 'trading $AUTOMON' : e.action}</span>
                                 {e.healthDelta != null && e.healthDelta !== 0 && (
                                   <span className={`text-[10px] font-mono ${e.healthDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                     {e.healthDelta > 0 ? '+' : ''}{e.healthDelta}HP
