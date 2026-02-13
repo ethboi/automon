@@ -572,6 +572,7 @@ async function syncCards(): Promise<void> {
     const validCards: Record<string, unknown>[] = [];
     const BATCH = 5;
     let skippedKnownBad = 0;
+    let newlyCachedBad = 0;
     for (let i = 0; i < tokenIds.length; i += BATCH) {
       const batch = tokenIds.slice(i, i + BATCH);
       const results = await Promise.all(batch.map(async (tid: bigint) => {
@@ -608,14 +609,17 @@ async function syncCards(): Promise<void> {
             },
             level: 1, xp: 0,
           };
-        } catch (e) {
+        } catch {
           const tokenId = Number(tid);
+          if (!knownBadTokenIds.has(tokenId)) newlyCachedBad++;
           knownBadTokenIds.add(tokenId);
-          console.log(`[${ts()}] ⚠️ Failed to read token ${tokenId}: ${(e as Error).message?.slice(0, 60)}`);
           return null;
         }
       }));
       validCards.push(...results.filter(Boolean) as Record<string, unknown>[]);
+    }
+    if (newlyCachedBad > 0) {
+      console.log(`[${ts()}] ℹ️ ${newlyCachedBad} token(s) unreadable (burned/transferred), cached for skip`);
     }
     if (skippedKnownBad > 0) {
       console.log(`[${ts()}] ℹ️ Skipped ${skippedKnownBad} known-bad token(s)`);
