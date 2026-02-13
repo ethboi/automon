@@ -508,25 +508,9 @@ async function attemptTameWild(aiReason?: string): Promise<void> {
   const reason = aiReason || `Tracking signs of a wild ${species} nearby`;
 
   try {
-    console.log(`[${ts()}] 🐾 Attempting tame: ${species} @ ${target.name}`);
-    await logAction('catching', `Attempting to tame wild ${species}`, target.name, reason);
-
-    const res = await api('/api/cards/tame', {
-      method: 'POST',
-      body: JSON.stringify({ address: ADDRESS, speciesName: species }),
-    });
-
-    if (!res.ok) {
-      const errTxt = await res.text().catch(() => '');
-      console.log(`[${ts()}]   ❌ Tame failed (${res.status}) ${errTxt.slice(0, 80)}`);
-      await logAction('catching', `Wild ${species} escaped`, target.name, reason);
-      return;
-    }
-
-    const data = await res.json().catch(() => ({}));
-    const cardName = data.card?.name || species;
-    console.log(`[${ts()}]   ✅ Tamed ${species} -> ${cardName}`);
-    await logAction('catching', `Tamed wild ${species} into ${cardName}`, target.name, reason);
+    // Taming disabled — cards must be on-chain NFTs only
+    console.log(`[${ts()}] 🐾 Spotted wild ${species} @ ${target.name}`);
+    await logAction('catching', `Spotted a wild ${species} in ${target.name}!`, target.name, reason);
   } catch (err) {
     console.log(`[${ts()}]   ⚠ Tame attempt error: ${(err as Error).message?.slice(0, 80)}`);
   }
