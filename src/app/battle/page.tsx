@@ -84,21 +84,16 @@ function TeamCardChip({ card }: { card: { name?: string; element?: string; rarit
   const rarity = (card?.rarity || 'common').toLowerCase();
 
   return (
-    <div className="w-16 sm:w-20 shrink-0">
-      <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-lg overflow-hidden border-2 shadow-md"
+    <div className="w-14 sm:w-16 shrink-0">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-lg overflow-hidden border-2 shadow-md relative"
         style={{ borderColor: ELEMENT_COLORS[element] || '#4b5563' }}>
         <img src={cardImage(name, rarity)} alt={name} title={`${name} • ${labelRarity(rarity)} • ${element || 'unknown'}`}
           className="w-full h-full object-cover" />
+        <span className="absolute top-0 right-0 text-[8px] leading-none px-0.5 py-px bg-black/60 rounded-bl">{ELEMENT_ICONS[element] || '◉'}</span>
       </div>
-      <div className="mt-1 text-[10px] sm:text-xs text-gray-200 text-center truncate" title={name}>{name}</div>
-      <div className="mt-1 flex items-center justify-center gap-1">
-        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-black/30 border border-white/10 text-gray-200">
-          <span aria-hidden>{ELEMENT_ICONS[element] || '◉'}</span>
-          <span>{elementLabel(element)}</span>
-        </span>
-        <span className={`px-1 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold ${rarityBadgeClass(rarity)}`}>
-          {labelRarity(rarity)}
-        </span>
+      <div className="mt-0.5 text-[9px] sm:text-[10px] text-gray-200 text-center truncate" title={name}>{name}</div>
+      <div className={`mt-0.5 mx-auto w-fit px-1 py-px rounded text-[8px] sm:text-[9px] font-semibold leading-tight ${rarityBadgeClass(rarity)}`}>
+        {labelRarity(rarity)}
       </div>
     </div>
   );
