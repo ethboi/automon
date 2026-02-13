@@ -210,7 +210,8 @@ export default function TradingPage() {
                 {trades.map((trade, i) => {
                   const isBuy = trade.type === 'token_buy';
                   const isHold = trade.type === 'token_hold';
-                  const agentName = trade.agentName || shortAddr(trade.address);
+                  const addr = trade.address || (trade as unknown as Record<string, unknown>).from as string || '';
+                  const agentName = trade.agentName || (addr ? shortAddr(addr) : 'Agent');
                   return (
                     <div key={i} className="px-3 sm:px-4 py-3 hover:bg-white/[0.02] transition">
                       <div className="flex items-center justify-between gap-2 mb-1">
@@ -231,9 +232,9 @@ export default function TradingPage() {
                         {isHold ? (
                           <span className="italic">{trade.description || 'Analyzed the market, holding position'}</span>
                         ) : isBuy ? (
-                          <span>Spent <span className="text-yellow-400 font-semibold">{trade.amount} MON</span> → <span className="text-emerald-400 font-semibold">{trade.details?.tokensReceived || '?'} $AUTOMON</span></span>
+                          <span>Spent <span className="text-yellow-400 font-semibold">{trade.details?.monSpent || trade.amount || '?'} MON</span> → <span className="text-emerald-400 font-semibold">{trade.details?.tokensReceived || '?'} $AUTOMON</span></span>
                         ) : (
-                          <span>Sold <span className="text-emerald-400 font-semibold">{trade.amount} $AUTOMON</span> → <span className="text-yellow-400 font-semibold">{trade.details?.monReceived || '?'} MON</span></span>
+                          <span>Sold <span className="text-emerald-400 font-semibold">{trade.details?.tokensSold || '?'} $AUTOMON</span> → <span className="text-yellow-400 font-semibold">{parseFloat(trade.details?.monReceived || trade.amount || '0').toFixed(4)} MON</span></span>
                         )}
                       </div>
                       {trade.txHash && !isHold && (
