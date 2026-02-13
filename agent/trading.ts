@@ -221,7 +221,7 @@ export async function getCurveInfo(privateKey: string, tokenAddress: string) {
   }
 }
 
-export async function buyToken(privateKey: string, tokenAddress: string, monAmount: string): Promise<string | null> {
+export async function buyToken(privateKey: string, tokenAddress: string, monAmount: string): Promise<{ txHash: string; tokensReceived: string; monSpent: string } | null> {
   const { publicClient, walletClient, account } = getClients(privateKey);
   const token = tokenAddress as Address;
   const value = parseEther(monAmount);
@@ -244,14 +244,14 @@ export async function buyToken(privateKey: string, tokenAddress: string, monAmou
     });
     console.log(`[trading] BUY tx: ${hash}`);
     await publicClient.waitForTransactionReceipt({ hash });
-    return hash;
+    return { txHash: hash, tokensReceived: formatEther(amountOut), monSpent: monAmount };
   } catch (e) {
     console.error('[trading] buyToken error:', e);
     return null;
   }
 }
 
-export async function sellToken(privateKey: string, tokenAddress: string, tokenAmount?: bigint): Promise<string | null> {
+export async function sellToken(privateKey: string, tokenAddress: string, tokenAmount?: bigint): Promise<{ txHash: string; monReceived: string; tokensSold: string } | null> {
   const { publicClient, walletClient, account } = getClients(privateKey);
   const token = tokenAddress as Address;
 
@@ -285,7 +285,7 @@ export async function sellToken(privateKey: string, tokenAddress: string, tokenA
     });
     console.log(`[trading] SELL tx: ${hash}`);
     await publicClient.waitForTransactionReceipt({ hash });
-    return hash;
+    return { txHash: hash, monReceived: formatEther(amountOut), tokensSold: formatEther(amountIn) };
   } catch (e) {
     console.error('[trading] sellToken error:', e);
     return null;

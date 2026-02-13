@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { address, type, amount, txHash, details } = body;
+    const { address, type, amount, txHash, details, agentName } = body;
 
     if (!address || !type) {
       return NextResponse.json({ error: 'address and type required' }, { status: 400 });
@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     const db = await getDb();
     await db.collection('transactions').insertOne({
       address: address.toLowerCase(),
+      agentName: agentName || null,
       type,
       amount: amount || '0',
       txHash: txHash || null,
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const query: Record<string, unknown> = {};
     if (address) query.address = address.toLowerCase();
-    if (type) query.type = type;
+    if (type) query.type = type.includes(',') ? { $in: type.split(',') } : type;
 
     const txs = await db.collection('transactions')
       .find(query)
