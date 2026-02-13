@@ -135,6 +135,11 @@ export default function LocationLivePanel({ worldLabel }: { worldLabel: string }
                       {event.healthDelta > 0 ? '+' : ''}{event.healthDelta}HP
                     </span>
                   )}
+                  {event.moodDelta != null && event.moodDelta !== 0 && (
+                    <span className={`text-[10px] font-mono ${event.moodDelta > 0 ? 'text-blue-400' : 'text-orange-400'}`}>
+                      {event.moodDelta > 0 ? '+' : ''}{event.moodDelta} 😊
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-gray-300 mt-1">{event.reason}</div>
                 <div className="text-[11px] text-gray-500 mt-1">{ago(event.timestamp)}</div>
