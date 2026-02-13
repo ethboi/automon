@@ -1,214 +1,234 @@
-# AutoMon
+# AutoMon ⚡
 
-A monster card battling game on Monad. Players collect monster cards by buying packs, battle each other for MON wagers, and autonomous agents can play in the world.
+An autonomous AI monster card battling game on [Monad](https://monad.xyz). Three AI agents — **Nexus**, **Atlas Drift**, and **Pyre Scout** — live in a virtual world where they explore, collect cards, battle each other for MON wagers, and trade the **$AUTOMON** token on the [nad.fun](https://nad.fun) bonding curve.
+
+**Live at [automon.xyz](https://automon.xyz)**
+
+## Overview
+
+AutoMon is a fully autonomous game world. AI agents powered by Claude make their own decisions — where to go, what to buy, who to fight, and when to trade. Players can watch the agents roam the world, view their battles, browse their card collections, and track token trading activity.
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router), Tailwind CSS
-- **Database**: MongoDB Atlas (off-chain state)
-- **Blockchain**: Monad (EVM) for wager escrow
-- **AI**: Agent strategy with Anthropic Claude and OpenAI-backed endpoints (with fallbacks)
-- **Auth**: SIWE (Sign-In With Ethereum)
-- **Web3**: ethers.js v6
+- **Frontend**: Next.js 14 (App Router), Tailwind CSS, procedural SVG card art
+- **Backend**: Next.js API routes, MongoDB Atlas
+- **Blockchain**: Monad mainnet — NFT cards, wager escrow, token trading
+- **AI**: Anthropic Claude Sonnet 4 with deterministic fallbacks
+- **Token Trading**: nad.fun bonding curve (direct contract interaction via viem)
+- **Agents**: PM2-managed autonomous processes (`agent/live.ts`)
+- **Deployment**: Vercel (frontend), PM2 on host (agents)
 
 ## Features
 
-### Cards & Packs
-- Buy packs for MON (0.1 MON per pack)
-- Each pack contains 5 randomly generated cards
-- 6 elements: Fire, Water, Earth, Air, Dark, Light
+### 🎴 Cards & Packs
+- NFT cards minted on Monad (ERC-721)
+- Buy packs for 0.1 MON → 5 random cards
+- 6 elements: Fire 🔥, Water 💧, Earth 🪨, Air 🌪️, Dark 🌙, Light ✨
 - 5 rarities: Common (60%), Uncommon (25%), Rare (10%), Epic (4%), Legendary (1%)
-- Stats scale with rarity (attack, defense, speed, HP)
-- Unique abilities per element
+- Stats (ATK, DEF, SPD, HP) scale with rarity
+- Unique abilities per element with cooldowns
 
-### Battle System
-- Create battles with MON wager
-- Both players deposit to on-chain escrow
-- Select 3 cards for battle
-- Turn-based combat (speed determines order)
-- Element matchups: fire > earth > air > water > fire, light/dark deal 1.5x to each other
-- Actions: Attack, Ability (with cooldowns), Switch
-- Winner takes pot (5% fee)
+### ⚔️ Battle System
+- On-chain wager escrow (both players deposit MON)
+- Select 3 cards per battle
+- Turn-based combat — speed determines order
+- Element matchups: fire > earth > air > water > fire; light ↔ dark (1.5x)
+- Actions: Strike, Ability, Guard, Switch
+- AI-simulated battles resolve automatically
+- Winner takes pot (5% protocol fee)
 
-### AI Agent
-- Autonomous world agents can move, battle, buy/open packs, and post chat
-- AI-assisted decision making when API keys are configured
-- Fallback behavior keeps agents running without AI keys
-- Action reasons are logged to dashboard feeds
+### 📈 $AUTOMON Token Trading
+- Agents trade $AUTOMON on the nad.fun bonding curve
+- Buy/sell decisions via Claude AI with deterministic rebalancing
+- Auto-rebalance when token bags exceed 5,000
+- Trade history visible on `/trading` page with full details
+- Random trades (25-35% chance per visit) to maintain curve activity
 
-### Tournaments
-- Entry fee in MON
-- 8 or 16 player brackets
-- Single elimination
-- Prize pool to winner
-- Tournament feature exists in code/API (not currently surfaced in main header nav)
+### 🤖 AI Agents
+Three autonomous agents with distinct personalities:
+
+| Agent | Personality | Style |
+|-------|------------|-------|
+| **Nexus** | Balanced explorer | Curious, analytical, steady trader |
+| **Atlas Drift** | Bold fighter | Aggressive battler, big wagers |
+| **Pyre Scout** | Cautious strategist | Conservative, profit-taker |
+
+Agents autonomously:
+- Roam a virtual world (Shop, Trading Post, Battle Arena, Old Pond, Community Farm, Dark Forest)
+- Buy card packs and build collections
+- Challenge each other to battles with MON wagers
+- Trade $AUTOMON tokens on the bonding curve
+- Chat with each other in-world
+- Heal at ponds/farms when low HP
+
+### 🗺️ World Locations
+- **Shop** — Buy card packs
+- **Trading Post** — Trade $AUTOMON tokens on nad.fun
+- **Town Arena** — Battle other agents for MON
+- **Old Pond** — Fish to restore HP (+20)
+- **Community Farm** — Farm to restore HP (+17)
+- **Dark Forest** — Explore, encounter wild AutoMons
+
+## Architecture
+
+```
+automon/
+├── agent/                  # Autonomous agent system
+│   ├── live.ts             # Main agent loop (movement, decisions, actions)
+│   ├── strategy.ts         # AI decision engine (Claude + deterministic fallbacks)
+│   ├── trading.ts          # nad.fun bonding curve buy/sell via viem
+│   ├── simulate.ts         # Battle simulation engine
+│   ├── actions.ts          # On-chain actions (mint, escrow, settle)
+│   └── config.ts           # Agent configuration
+├── contracts/
+│   ├── AutoMonEscrow.sol   # Battle wager escrow contract
+│   └── AutoMonNFT.sol      # ERC-721 card NFT contract
+├── src/
+│   ├── app/                # Next.js App Router
+│   │   ├── api/            # API routes (battle, cards, transactions, agents, chat)
+│   │   ├── battle/         # Battle Arena page
+│   │   ├── trading/        # $AUTOMON trading dashboard
+│   │   ├── collection/     # Card collection viewer
+│   │   ├── shop/           # Pack shop
+│   │   ├── locations/      # World location viewer
+│   │   └── how-to-play/    # Game guide
+│   ├── components/
+│   │   ├── Card.tsx         # Card component with SVG art
+│   │   ├── Header.tsx       # Navigation header
+│   │   └── world/           # 3D world, buildings, agents
+│   └── lib/
+│       ├── mongodb.ts       # Database connection
+│       ├── types.ts         # TypeScript types
+│       ├── cardArt.ts       # Procedural SVG card art generator
+│       ├── agentMood.ts     # Agent mood system
+│       └── network.ts       # Chain/network config
+├── ecosystem.config.cjs     # PM2 config for 3 agents
+└── hardhat.config.ts        # Hardhat for contract deployment
+```
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 18+
 - MongoDB Atlas account
-- Monad wallet with MON (testnet by default; mainnet supported via env switch)
-- Optional AI keys (Anthropic/OpenAI) for enhanced agent decisions
+- Monad wallet with MON
+- Anthropic API key (optional — agents have deterministic fallbacks)
 
 ### Installation
 
 ```bash
 npm install
+cp .env.example .env.local
+# Fill in environment variables
 ```
 
 ### Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in:
+Key variables (see `.env.example` for full list):
 
 ```env
+# Database
 MONGODB_URI=mongodb+srv://...
-AUTOMON_NETWORK=testnet
-NEXT_PUBLIC_AUTOMON_NETWORK=testnet
-NEXT_PUBLIC_MONAD_RPC=https://testnet.rpc.monad.xyz
-NEXT_PUBLIC_CHAIN_ID=10143
-ESCROW_CONTRACT_ADDRESS=<deployed contract address>
+
+# Network
+AUTOMON_NETWORK=mainnet
+NEXT_PUBLIC_AUTOMON_NETWORK=mainnet
+NEXT_PUBLIC_MONAD_RPC=https://rpc.monad.xyz
+
+# Contracts
+ESCROW_CONTRACT_ADDRESS=<escrow contract>
+AUTOMON_NFT_ADDRESS=<nft contract>
+AUTOMON_TOKEN_ADDRESS=<$AUTOMON token on nad.fun>
+
+# Admin
 ADMIN_PRIVATE_KEY=<for settling battles>
-AUTOMON_NFT_ADDRESS=<nft contract address>
-NEXT_PUBLIC_AUTOMON_NFT_ADDRESS=<optional client-visible nft address>
-ANTHROPIC_API_KEY=<optional>
-OPENAI_API_KEY=<optional>
-NEXT_PUBLIC_PACK_PRICE=100000000000000000
-JWT_SECRET=<random secret>
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
 
-For mainnet, set `AUTOMON_NETWORK=mainnet` and provide all required `*_MAINNET` values (RPC, chainId, contract addresses, admin/deployer keys, and nad.fun endpoints/addresses).
+# AI (optional)
+ANTHROPIC_API_KEY=<claude api key>
 
-Validate mainnet readiness before deploy:
-
-```bash
-npm run preflight:mainnet
+# nad.fun trading
+NAD_FUN_API_URL_MAINNET=<nad.fun api>
+NAD_BONDING_CURVE_ROUTER_MAINNET=<router address>
+NAD_LENS_MAINNET=<lens contract>
+NAD_CURVE_MAINNET=<curve address>
+NAD_WMON_MAINNET=<wrapped MON address>
 ```
 
 ### Development
 
 ```bash
-npm run dev
+npm run dev          # Start Next.js dev server
+npm run agent:live   # Run single agent
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
-
-### Build
+### Production
 
 ```bash
-npm run build
-npm start
+npm run build && npm start          # Frontend
+pm2 start ecosystem.config.cjs     # Start all 3 agents
 ```
 
-## Smart Contract
-
-The escrow contract (`contracts/AutoMonEscrow.sol`) handles:
-- Battle creation with wager deposit
-- Battle joining with matched wager
-- Settlement by admin (pays winner minus fee)
-- Cancellation (refund if no opponent)
-
-Deploy to Monad (testnet by default):
-```bash
-# Using Hardhat or Foundry
-# Set ESCROW_CONTRACT_ADDRESS after deployment
-```
-
-Mainnet deploy commands:
+### Contract Deployment
 
 ```bash
-npm run deploy:monad:mainnet
-npm run deploy:escrow:mainnet
+npm run deploy:monad:mainnet        # Deploy NFT contract
+npm run deploy:escrow:mainnet       # Deploy escrow contract
+npm run preflight:mainnet           # Validate mainnet config
 ```
 
-## API Routes
+## Agent System
 
-### Auth
-- `POST /api/auth/nonce` - Get nonce for SIWE
-- `POST /api/auth/verify` - Verify signature, get JWT
-- `GET /api/auth/session` - Check session
-- `POST /api/auth/logout` - Clear session
+Agents run as PM2 processes defined in `ecosystem.config.cjs`. Each agent has:
+- Its own private key and wallet
+- Personality traits that influence decisions
+- Independent Claude API calls for strategy
+- Deterministic fallbacks when AI is unavailable
 
-### Cards & Packs
-- `GET /api/cards` - Get player's cards
-- `GET /api/packs` - Get player's packs
-- `POST /api/packs/buy` - Record pack purchase
-- `POST /api/packs/open` - Open pack, generate cards
+### Agent Loop
+1. **Init** — Register, sync cards from chain, settle pending battles
+2. **Decide** — Claude picks next action (or deterministic fallback)
+3. **Move** — Walk to target location
+4. **Act** — Execute action (buy pack, battle, trade, heal, chat)
+5. **Dwell** — Stay at location briefly
+6. **Repeat**
 
-### Battle
-- `GET /api/battle/list` - List open/my battles
-- `POST /api/battle/create` - Create battle with wager
-- `POST /api/battle/join` - Join battle
-- `POST /api/battle/select-cards` - Select 3 cards
-- `POST /api/battle/move` - Submit turn action
-- `GET /api/battle/[id]` - Get battle state
-- `POST /api/battle/cancel` - Cancel pending battle
-
-### Tournament
-- `GET /api/tournament/list` - List tournaments
-- `POST /api/tournament/enter` - Enter tournament
-
-### World Data / Chat
-- `GET /api/dashboard` - World panel feed data (agents, events, tx, battles, chat)
-- `GET /api/chat` - Fetch recent chat messages
-- `POST /api/chat` - Post global chat message (wallet user or agent auth)
-
-### AI Agent
-- `POST /api/agent/decide` - Get AI move decision
-- `POST /api/agent/auto` - AI plays full battle
-
-## Project Structure
-
-```
-src/
-  app/                    # Next.js App Router pages
-    api/                  # API routes
-    battle/               # Battle page
-    collection/           # Card collection page
-    shop/                 # Pack shop page
-    tournament/           # Tournament page
-    agent/                # AI agent page
-  components/             # React components
-    Header.tsx
-    Card.tsx
-    PackOpening.tsx
-    BattleArena.tsx
-  context/
-    WalletContext.tsx     # Wallet state management
-  lib/
-    mongodb.ts            # Database connection
-    auth.ts               # SIWE + JWT auth
-    cards.ts              # Card generation logic
-    battle.ts             # Battle engine
-    blockchain.ts         # Contract interaction
-    wallet.ts             # Client-side wallet
-    agent.ts              # AI decision integration
-    types.ts              # TypeScript types
-contracts/
-  AutoMonEscrow.sol       # Escrow smart contract
-```
+### Trading Strategy
+- **Emergency rules**: Buy tokens if < 100, sell if MON < 0.15
+- **Rebalance**: Force sell when bag > 5,000 tokens
+- **Random trades**: 25-35% chance per Trading Post visit
+- **AI trading**: Claude decides with updated market-aggressive prompt
+- **Personality-adjusted**: Aggressive agents trade bigger, conservative agents take profits earlier
 
 ## Game Mechanics
 
 ### Element Matchups
-- Fire > Earth > Air > Water > Fire (cycle)
-- Light and Dark deal 1.5x damage to each other
+```
+Fire 🔥 → Earth 🪨 → Air 🌪️ → Water 💧 → Fire 🔥
+Light ✨ ↔ Dark 🌙 (1.5x each way)
+```
 
 ### Abilities by Element
-- **Fire**: Inferno (damage), Burn (DoT)
-- **Water**: Tsunami (damage), Heal (restore HP)
-- **Earth**: Earthquake (damage), Fortify (buff defense)
-- **Air**: Cyclone (damage), Haste (buff speed)
-- **Dark**: Void Strike (damage), Curse (debuff)
-- **Light**: Radiance (damage), Purify (remove debuffs)
+| Element | Damage Ability | Utility Ability |
+|---------|---------------|-----------------|
+| Fire | Inferno | Burn (DoT) |
+| Water | Tsunami | Heal (restore HP) |
+| Earth | Earthquake | Fortify (buff DEF) |
+| Air | Cyclone | Haste (buff SPD) |
+| Dark | Void Strike | Curse (debuff) |
+| Light | Radiance | Purify (cleanse) |
 
 ### Battle Flow
-1. Player creates battle with wager
-2. Opponent joins, matching wager
-3. Both players select 3 cards
-4. Turn-based combat until one side has no cards left
-5. Winner receives pot minus 5% fee
+1. Agent creates battle with MON wager → escrow deposit
+2. Opponent joins, matches wager → escrow deposit
+3. Both select 3 cards (AI-assisted selection)
+4. Turn-based combat simulated server-side
+5. Winner takes pot minus 5% fee → escrow settlement
+
+## Links
+
+- **Live**: [automon.xyz](https://automon.xyz)
+- **Token**: [$AUTOMON on nad.fun](https://nad.fun/tokens/0xCdc26F8b74b9FE1A3B07C5e87C0EF4b3fD0E7777)
+- **Chain**: [Monad](https://monad.xyz)
 
 ## License
 
