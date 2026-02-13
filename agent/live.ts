@@ -45,11 +45,11 @@ const CHAT_CONTEXT_LIMIT = Math.max(
 );
 const GLOBAL_CHAT_COOLDOWN_MS = Math.max(
   15000,
-  parseInt(process.env.AI_CHAT_COOLDOWN_MS || '90000', 10) || 90000
+  parseInt(process.env.AI_CHAT_COOLDOWN_MS || '300000', 10) || 300000
 );
 const GLOBAL_CHAT_CHANCE = Math.max(
   0,
-  Math.min(1, parseFloat(process.env.AI_CHAT_CHANCE || '0.12') || 0.12)
+  Math.min(1, parseFloat(process.env.AI_CHAT_CHANCE || '0.05') || 0.05)
 );
 const ESCROW_ADDRESS = envForNetwork('ESCROW_CONTRACT_ADDRESS') ||
   (AUTOMON_NETWORK === 'mainnet' ? '0x5191e3fac06225A61beE01d1BA5E779904b7C4bD' : '0x2aD1D15658A86290123CdEAe300E9977E2c49364');
