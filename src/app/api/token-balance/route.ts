@@ -8,14 +8,15 @@ const TOKEN_ADDRESS = (
   '0xCdc26F8b74b9FE1A3B07C5e87C0EF4b3fD0E7777'
 ).trim();
 
-const RPC = process.env.MONAD_RPC_URL_MAINNET || process.env.MONAD_RPC_URL || 'https://rpc.monad.xyz';
+const RPC = (process.env.MONAD_RPC_URL_MAINNET || process.env.MONAD_RPC_URL || 'https://rpc.monad.xyz').trim();
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get('address');
   if (!address) return NextResponse.json({ balance: '0' });
 
   try {
-    const provider = new ethers.JsonRpcProvider(RPC, { name: 'monad', chainId: 143 }, { staticNetwork: true });
+    const network = new ethers.Network('monad', 143);
+    const provider = new ethers.JsonRpcProvider(RPC, network, { staticNetwork: network });
     const token = new ethers.Contract(TOKEN_ADDRESS, [
       'function balanceOf(address) view returns (uint256)',
       'function decimals() view returns (uint8)',
