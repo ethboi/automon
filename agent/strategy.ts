@@ -658,8 +658,8 @@ Respond with JSON only:
 }`;
 
   // Force Trading Post when holding huge token bags — override Claude
-  const balNum = parseFloat(balance) || 0;
-  if (tokenBalance !== undefined && parseFloat(tokenBalance) > 5000 && balNum >= 1.0) {
+  const earlyBalNum = parseFloat(balance) || 0;
+  if (tokenBalance !== undefined && parseFloat(tokenBalance) > 5000 && earlyBalNum >= 1.0) {
     return { location: 'Trading Post', action: 'trading_token', reasoning: `Sitting on ${parseFloat(tokenBalance).toFixed(0)} $AUTOMON — need to rebalance this massive bag!` };
   }
 
