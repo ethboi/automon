@@ -27,7 +27,7 @@ const PUBLIC_TOKEN_ADDRESS = (
   // Fallback: mainnet $AUTOMON token
   '0xCdc26F8b74b9FE1A3B07C5e87C0EF4b3fD0E7777'
 ).trim();
-const ERC20_ABI = [
+const _ERC20_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
   'function decimals() view returns (uint8)',
 ];
@@ -95,18 +95,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const bal = await getBalance(normalized);
         setBalance(parseFloat(bal).toFixed(4));
 
-        if (PUBLIC_TOKEN_ADDRESS && window.ethereum) {
-          // Use BrowserProvider with explicit Monad network (same as getMonadProvider in wallet.ts)
-          const monadNet = new ethers.Network('monad', 143);
-          const monadProvider = new ethers.BrowserProvider(window.ethereum, monadNet);
-          const token = new ethers.Contract(PUBLIC_TOKEN_ADDRESS, ERC20_ABI, monadProvider);
-          const [raw, decimalsRaw] = await Promise.all([
-            token.balanceOf(normalized),
-            token.decimals().catch(() => 18),
-          ]);
-          const decimals = Number(decimalsRaw) || 18;
-          setTokenBalance(ethers.formatUnits(raw, decimals));
-        } else {
+        // Fetch token balance server-side to avoid browser RPC issues
+        try {
+          const tokenRes = await fetch(`/api/token-balance?address=${normalized}`);
+          if (tokenRes.ok) {
+            const { balance: tokenBal } = await tokenRes.json();
+            setTokenBalance(tokenBal || '0');
+          } else {
+            setTokenBalance('0');
+          }
+        } catch {
           setTokenBalance('0');
         }
       } catch (error) {
