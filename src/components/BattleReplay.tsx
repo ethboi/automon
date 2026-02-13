@@ -104,17 +104,21 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
     const normTri = typeof tri === 'string'
       ? { player1Result: 'neutral' as const, player2Result: 'neutral' as const }
       : tri;
+    const p1Card = rawTurn.player1.activeCard || rp1.card || '???';
+    const p2Card = rawTurn.player2.activeCard || rp2.card || '???';
+    const p1Mon = AUTOMONS.find(a => a.name === p1Card);
+    const p2Mon = AUTOMONS.find(a => a.name === p2Card);
     return {
       ...rawTurn,
       player1: {
         ...rawTurn.player1,
-        activeCard: rawTurn.player1.activeCard || rp1.card || '???',
-        cardHp: rawTurn.player1.cardHp ?? 100,
+        activeCard: p1Card,
+        cardHp: rawTurn.player1.cardHp ?? p1Mon?.baseHp ?? 100,
       },
       player2: {
         ...rawTurn.player2,
-        activeCard: rawTurn.player2.activeCard || rp2.card || '???',
-        cardHp: rawTurn.player2.cardHp ?? 100,
+        activeCard: p2Card,
+        cardHp: rawTurn.player2.cardHp ?? p2Mon?.baseHp ?? 100,
       },
       triangleResult: normTri,
     };
@@ -482,8 +486,9 @@ function CardPanel({ name, color, card, hp, max, action, result, reasoning, pred
 
   return (
     <div className="flex flex-col items-center">
-      {/* player name */}
-      <p className="font-extrabold text-[10px] sm:text-sm mb-1 sm:mb-2 truncate max-w-full" style={{ color }}>{name}</p>
+      {/* player name + card name */}
+      <p className="font-extrabold text-[10px] sm:text-sm truncate max-w-full" style={{ color }}>{name}</p>
+      <p className="text-[9px] sm:text-xs text-gray-400 mb-1 sm:mb-2 truncate max-w-full">🃏 {card}</p>
 
       {/* card art */}
       <div className="relative w-[72px] h-[72px] sm:w-32 sm:h-32 rounded-xl overflow-hidden"
