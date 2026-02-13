@@ -425,7 +425,8 @@ async function executeTrade(aiReason?: string): Promise<void> {
         console.log(`[${ts()}]   ⚠ Skipping sell — must hold at least 100 $AUTOMON (have ${tokenBalNum.toFixed(0)})`);
         decision.action = 'HOLD';
       }
-      const sellResult = decision.action === 'SELL' ? await sellToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!) : null;
+      const sellAmountWei = decision.action === 'SELL' && decision.amount ? BigInt(Math.floor(parseFloat(decision.amount) * 1e18)).toString() : undefined;
+      const sellResult = decision.action === 'SELL' ? await sellToken(PRIVATE_KEY, process.env.AUTOMON_TOKEN_ADDRESS!, sellAmountWei ? BigInt(sellAmountWei) : undefined) : null;
       if (sellResult) {
         console.log(`[${ts()}]   💸 Sold ${sellResult.tokensSold} $AUTOMON → ${sellResult.monReceived} MON | tx: ${sellResult.txHash}`);
         await logAction('trading_token', `Sold ${parseFloat(sellResult.tokensSold).toFixed(0)} $AUTOMON for ${parseFloat(sellResult.monReceived).toFixed(4)} MON`, 'Trading Post', decision.reasoning);

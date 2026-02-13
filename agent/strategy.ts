@@ -659,7 +659,7 @@ Respond with JSON only:
 
   // Force Trading Post when holding huge token bags — override Claude
   const earlyBalNum = parseFloat(balance) || 0;
-  if (tokenBalance !== undefined && parseFloat(tokenBalance) > 5000 && earlyBalNum >= 1.0) {
+  if (tokenBalance !== undefined && parseFloat(tokenBalance) > 10000 && earlyBalNum >= 1.0) {
     return { location: 'Trading Post', action: 'trading_token', reasoning: `Sitting on ${parseFloat(tokenBalance).toFixed(0)} $AUTOMON — need to rebalance this massive bag!` };
   }
 
@@ -713,7 +713,7 @@ Respond with JSON only:
       return { location: 'Trading Post', action: 'trading_token', reasoning: `Only ${parseFloat(tokenBalance).toFixed(0)} $AUTOMON tokens — need to buy more to maintain 100+ balance!` };
     }
     // Force visit Trading Post when holding huge token bags
-    if (tokenBalance !== undefined && parseFloat(tokenBalance) > 5000 && balNum >= 1.0) {
+    if (tokenBalance !== undefined && parseFloat(tokenBalance) > 10000 && balNum >= 1.0) {
       return { location: 'Trading Post', action: 'trading_token', reasoning: `Sitting on ${parseFloat(tokenBalance).toFixed(0)} $AUTOMON — need to rebalance this massive bag!` };
     }
     // Periodic token trading — agents should regularly visit Trading Post
@@ -841,6 +841,37 @@ export async function decideTradeAction(
   const parsedTokens = Math.max(parseFloat(tokenBalance) || 0, 0);
   const parsedMon = Math.max(parseFloat(monBalance) || 0, 0);
   const forceDeterministicRebalance = parsedTokens > 5000 && parsedMon > 1.0;
+
+  // Pre-Claude deterministic rules for critical situations
+  const price = Math.max(parseFloat(tokenPrice) || 0, 0.000001);
+  const personalityLower = (personality || '').toLowerCase();
+  const isConservative = /(conservative|cautious|safe|defensive)/.test(personalityLower);
+  const isAggressive = /(aggressive|bold|degen|yolo)/.test(personalityLower);
+
+  // Critical: emergency buy when tokens dangerously low (don't let Claude overspend)
+  if (parsedTokens < 100 && parsedMon > 0.3) {
+    const targetTokens = isConservative ? 180 : isAggressive ? 220 : 200;
+    const desiredTokens = Math.max(0, targetTokens - parsedTokens);
+    const spendMon = Math.min(parsedMon * 0.02, desiredTokens * price); // cap at 2% of MON, not 15%
+    if (spendMon >= 0.005) {
+      return {
+        action: 'BUY',
+        amount: spendMon.toFixed(4),
+        reasoning: `Token buffer critically low (${parsedTokens.toFixed(0)}). Small top-up to ${targetTokens} tokens.`,
+      };
+    }
+  }
+
+  // Critical: force sell when bag oversized (don't let Claude hold)
+  if (parsedTokens > 5000 && parsedMon > 1.0) {
+    const targetTokens = isConservative ? 1500 : isAggressive ? 4000 : 2500;
+    const tokensToSell = Math.max(50, parsedTokens - targetTokens);
+    return {
+      action: 'SELL',
+      amount: tokensToSell.toFixed(0),
+      reasoning: `Token bag oversized (${parsedTokens.toFixed(0)}). Rebalancing to ${targetTokens} tokens.`,
+    };
+  }
 
   const prompt = `You are an autonomous AI agent at the Trading Post in AutoMon. You can trade $AUTOMON tokens.
 
