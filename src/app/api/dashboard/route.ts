@@ -41,7 +41,7 @@ export async function GET() {
     const oneDayAgo = new Date(Date.now() - 86400000);
     const fiveMinAgo = new Date(Date.now() - 300000);
 
-    const [agents, users, recentActions, recentBattles, totalCards, recentTxs] = await Promise.all([
+    const [agents, users, recentActions, recentBattles, totalCards, recentTxs, recentTokenTrades] = await Promise.all([
       db.collection('agents')
         .find({ lastSeen: { $gte: oneDayAgo } })
         .toArray(),
@@ -70,6 +70,12 @@ export async function GET() {
         .find({})
         .sort({ timestamp: -1, createdAt: -1 })
         .limit(50)
+        .toArray(),
+
+      db.collection('transactions')
+        .find({ type: { $in: ['token_buy', 'token_sell'] } })
+        .sort({ createdAt: -1, timestamp: -1 })
+        .limit(30)
         .toArray(),
     ]);
 
@@ -234,6 +240,17 @@ export async function GET() {
         explorerUrl: explorerUrl(tx.txHash),
         timestamp: tx.timestamp || tx.createdAt,
         amount: normalizeMonAmount(tx.amount) || normalizeMonAmount(tx.metadata?.wager) || normalizeMonAmount(tx.metadata?.price),
+        details: tx.details,
+      })),
+      tokenTrades: (recentTokenTrades || []).map(tx => ({
+        txHash: tx.txHash,
+        type: tx.type,
+        from: tx.from || tx.address,
+        agentName: tx.agentName,
+        description: tx.description || '',
+        explorerUrl: explorerUrl(tx.txHash),
+        timestamp: tx.timestamp || tx.createdAt,
+        amount: normalizeMonAmount(tx.amount),
         details: tx.details,
       })),
       chat: (recentChat || []).reverse().map(m => ({
