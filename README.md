@@ -230,6 +230,11 @@ Light ✨ ↔ Dark 🌙 (1.5x each way)
 - **Token**: [$AUTOMON on nad.fun](https://nad.fun/tokens/0xCdc26F8b74b9FE1A3B07C5e87C0EF4b3fD0E7777)
 - **Chain**: [Monad](https://monad.xyz)
 
+## Built By
+
+- **Ethboi** — [@ethboi](https://x.com/ethboi)
+- **Mochabyte** — [@Mocha_byte](https://x.com/Mocha_byte)
+
 ## License
 
 MIT
