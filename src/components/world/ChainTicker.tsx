@@ -11,6 +11,8 @@ const TX_ICONS: Record<string, string> = {
   nft_mint: '💎',
   escrow_deposit: '🔒',
   escrow_settle: '🔓',
+  token_buy: '📈',
+  token_sell: '📉',
 };
 
 interface TxData {
@@ -40,7 +42,7 @@ export function ChainTicker({ transactions, agents }: { transactions: TxData[]; 
 
   // Notable txs: settles, mints, escrow deposits
   const notable = transactions.filter(t => 
-    ['battle_settle', 'mint_pack', 'escrow_deposit', 'battle_join'].includes(t.type)
+    ['battle_settle', 'mint_pack', 'escrow_deposit', 'battle_join', 'token_buy', 'token_sell'].includes(t.type)
   ).slice(0, 10);
 
   useEffect(() => {
