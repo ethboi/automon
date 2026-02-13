@@ -242,6 +242,7 @@ const DWELL_MIN = 10; // ~40s minimum dwell
 const DWELL_MAX = 18; // ~72s maximum dwell
 let lastGlobalChatAt = 0;
 const CHAT_OTHER_NAMES = ['Nexus', 'Atlas', 'Pyre', 'Rune', 'Shade', 'Coral', 'Spark'];
+const knownBadTokenIds = new Set<number>();
 
 function isBoringChat(msg: string): boolean {
   const m = (msg || '').trim().toLowerCase();
@@ -570,11 +571,16 @@ async function syncCards(): Promise<void> {
     // Read on-chain data locally — batch 5 at a time to avoid RPC overload
     const validCards: Record<string, unknown>[] = [];
     const BATCH = 5;
+    let skippedKnownBad = 0;
     for (let i = 0; i < tokenIds.length; i += BATCH) {
       const batch = tokenIds.slice(i, i + BATCH);
       const results = await Promise.all(batch.map(async (tid: bigint) => {
         try {
           const tokenId = Number(tid);
+          if (knownBadTokenIds.has(tokenId)) {
+            skippedKnownBad++;
+            return null;
+          }
           const [automonId, rarityIndex] = await contract.getCard(tokenId);
           const aId = Number(automonId);
           const automon = AUTOMON_DATA[aId];
@@ -603,11 +609,16 @@ async function syncCards(): Promise<void> {
             level: 1, xp: 0,
           };
         } catch (e) {
-          console.log(`[${ts()}] ⚠️ Failed to read token ${Number(tid)}: ${(e as Error).message?.slice(0, 60)}`);
+          const tokenId = Number(tid);
+          knownBadTokenIds.add(tokenId);
+          console.log(`[${ts()}] ⚠️ Failed to read token ${tokenId}: ${(e as Error).message?.slice(0, 60)}`);
           return null;
         }
       }));
       validCards.push(...results.filter(Boolean) as Record<string, unknown>[]);
+    }
+    if (skippedKnownBad > 0) {
+      console.log(`[${ts()}] ℹ️ Skipped ${skippedKnownBad} known-bad token(s)`);
     }
 
     // Send to server for upsert into MongoDB
@@ -698,14 +709,24 @@ async function tryJoinBattle(aiReason?: string): Promise<boolean> {
         const battleIdBytes = ethers.id(openBattle.battleId);
         const escrowRead = new ethers.Contract(ESCROW_ADDRESS, [...ESCROW_ABI, 'function battles(bytes32) view returns (address,address,uint256,bool)'], provider);
         const onChain = await escrowRead.battles(battleIdBytes);
-        const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
+        const player1 = String(onChain[0] || '').toLowerCase();
+        const player2 = String(onChain[1] || '').toLowerCase();
         const wagerWei = onChain[2];
-        if (wagerWei.toString() === '0') { console.log(`[${ts()}]   ⚠️ Battle not on-chain, skipping`); return false; }
-        console.log(`[${ts()}]   💰 Joining escrow with ${ethers.formatEther(wagerWei)} MON...`);
-        const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei });
-        const receipt = await tx.wait();
-        txHash = receipt.hash;
-        console.log(`[${ts()}]   ✅ Escrow joined: ${txHash.slice(0, 12)}...`);
+        const existsOnChain = player1 !== ethers.ZeroAddress.toLowerCase() && wagerWei.toString() !== '0';
+        const alreadyJoined = player2 !== ethers.ZeroAddress.toLowerCase();
+
+        if (!existsOnChain) {
+          console.log(`[${ts()}]   ℹ️ Escrow battle missing on-chain, joining via API only`);
+        } else if (alreadyJoined) {
+          console.log(`[${ts()}]   ℹ️ Escrow already joined on-chain, joining via API only`);
+        } else {
+          const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, wallet);
+          console.log(`[${ts()}]   💰 Joining escrow with ${ethers.formatEther(wagerWei)} MON...`);
+          const tx = await escrow.joinBattle(battleIdBytes, { value: wagerWei });
+          const receipt = await tx.wait();
+          txHash = receipt.hash;
+          console.log(`[${ts()}]   ✅ Escrow joined: ${txHash.slice(0, 12)}...`);
+        }
       } catch (err) {
         console.log(`[${ts()}]   ❌ Escrow join failed: ${(err as Error).message?.slice(0, 80)}`);
         return false;

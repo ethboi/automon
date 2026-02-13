@@ -402,7 +402,12 @@ Respond with JSON only:
       reasoning: result.reasoning,
     };
   } catch (error) {
-    console.error('Card selection error:', error);
+    const errorMessage = (error as Error)?.message || String(error || '');
+    if (errorMessage === 'Low token mode — skip Claude') {
+      console.log('Card selection fallback:', errorMessage);
+    } else {
+      console.error('Card selection error:', error);
+    }
 
     const sorted = cards
       .map((c, i) => ({ card: c, index: i }))
