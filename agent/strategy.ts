@@ -895,8 +895,6 @@ Respond JSON only:
     const aggressive = /(aggressive|degen|risk|bold|yolo|high[-\s]?risk)/.test(personalityText);
     const conservative = /(conservative|cautious|safe|low[-\s]?risk|defensive)/.test(personalityText);
 
-    const buyChance = conservative ? 0.3 : aggressive ? 0.55 : 0.4;
-    const profitSellChance = conservative ? 0.2 : aggressive ? 0.4 : 0.3;
     const buySizeMultiplier = conservative ? 0.85 : aggressive ? 1.2 : 1;
     const sellSizeMultiplier = conservative ? 0.9 : aggressive ? 1.25 : 1;
     const recentlyTraded = recent.includes('trading_token') || recent.includes('buy') || recent.includes('sell');
@@ -919,7 +917,7 @@ Respond JSON only:
     }
 
     // Rule 2: refill MON when too low for gameplay.
-    if (mon < 0.15 && tokens > 200) {
+    if (mon < 0.15 && tokens > 120) {
       const targetMon = conservative ? 0.24 : aggressive ? 0.18 : 0.2;
       const monNeeded = Math.max(0, targetMon - mon);
       const tokensToSellBase = monNeeded / price;
@@ -934,19 +932,37 @@ Respond JSON only:
       }
     }
 
-    // Rule 3: take profits from oversized token bag.
-    if (tokens > 500 && Math.random() < profitSellChance && (!recentlyTraded || aggressive)) {
-      const tokenExcess = tokens - 400;
-      const tokensToSell = Math.max(25, Math.min(tokenExcess * 0.3 * sellSizeMultiplier, tokens - 200));
+    // Rule 5: hard rebalance for huge bags when MON reserve is already healthy.
+    if (tokens > 5000 && mon > 1.0) {
+      const targetTokens = conservative ? 1500 : aggressive ? 4000 : 2500;
+      const excessToTarget = Math.max(0, tokens - targetTokens);
+      const tokensToSell = Math.max(50, Math.min(excessToTarget, tokens - 100));
+      if (tokensToSell >= 1) {
+        return {
+          action: 'SELL',
+          amount: fmt(tokensToSell, 0),
+          reasoning: `Token bag is oversized (${tokens.toFixed(0)}) with healthy MON (${mon.toFixed(3)}). Rebalancing toward ${targetTokens} tokens.`,
+        };
+      }
+    }
+
+    // Rule 3: always take profits from oversized token bag.
+    if (tokens > 500) {
+      const tokenExcess = Math.max(0, tokens - 300);
+      const basePct = tokens > 5000
+        ? (conservative ? 0.3 : aggressive ? 0.22 : 0.27)
+        : (conservative ? 0.2 : aggressive ? 0.12 : 0.15);
+      const sellPct = Math.min(0.3, Math.max(0.1, basePct * sellSizeMultiplier));
+      const tokensToSell = Math.max(10, Math.min(tokenExcess * sellPct, tokens - 100));
       return {
         action: 'SELL',
         amount: fmt(tokensToSell, 0),
-        reasoning: `Token balance is high (${tokens.toFixed(0)}). Taking partial profits and rotating back to MON.`,
+        reasoning: `Token balance is high (${tokens.toFixed(0)}). Selling ${fmt(sellPct * 100, 0)}% of excess above 300 to take profits and rotate into MON.`,
       };
     }
 
     // Rule 4: opportunistic accumulation when MON is healthy.
-    if (tokens < 200 && mon > 0.5 && Math.random() < buyChance && (!recentlyTraded || aggressive)) {
+    if (tokens < 200 && mon > 0.3) {
       const spendCap = mon * 0.15 * buySizeMultiplier;
       const desired = Math.max(0, 260 - tokens);
       const spendMon = Math.min(spendCap, desired * price);
@@ -959,9 +975,41 @@ Respond JSON only:
       }
     }
 
+    // Deterministic fallback bias: keep trading unless portfolio is balanced.
+    if (tokens > 500 || mon > 0.5) {
+      const tokensToSell = Math.max(5, Math.min((tokens - 350) * 0.12 * sellSizeMultiplier, tokens - 100));
+      if (tokensToSell >= 1) {
+        return {
+          action: 'SELL',
+          amount: fmt(tokensToSell, 0),
+          reasoning: recentlyTraded
+            ? 'Continuing rebalance sequence: trimming token position while preserving gameplay buffer.'
+            : 'Portfolio is MON-heavy or token-heavy outside target bands; trimming tokens for balance.',
+        };
+      }
+    }
+    if (tokens < 200 && mon >= 0.15) {
+      const spendMon = Math.min(mon * 0.12 * buySizeMultiplier, Math.max(0, 220 - tokens) * price);
+      if (spendMon >= 0.005) {
+        return {
+          action: 'BUY',
+          amount: fmt(spendMon, 4),
+          reasoning: 'Token inventory is below target range; accumulating with controlled MON sizing.',
+        };
+      }
+    }
+
+    if (tokens >= 200 && tokens <= 500 && mon >= 0.15 && mon <= 0.5) {
+      return {
+        action: 'HOLD',
+        reasoning: 'Portfolio is balanced (200-500 tokens, 0.15-0.5 MON); no rebalance needed this visit.',
+      };
+    }
+
     return {
-      action: 'HOLD',
-      reasoning: 'Balances are within target bands; no edge on this cycle, so holding.',
+      action: 'SELL',
+      amount: fmt(Math.max(1, Math.min(tokens - 100, 10)), 0),
+      reasoning: 'Outside balance window; making a small deterministic rebalance trade instead of idling.',
     };
   }
 }
