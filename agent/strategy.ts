@@ -580,7 +580,8 @@ ${personalityLine}
 - Health: ${health}/${maxHealth} HP
 - Mood: ${mood}/100 (${moodLabel})
 - Balance: ${balance} MON
-${tokenBalance && parseFloat(tokenBalance) > 0 ? `- $AUTOMON tokens: ${tokenBalance}\n` : ''}- Cards: ${cardSummary}
+- $AUTOMON tokens: ${tokenBalance && parseFloat(tokenBalance) > 0 ? tokenBalance : '0'}${tokenBalance && parseFloat(tokenBalance) < 100 ? ' ⚠️ BELOW 100 — visit Trading Post to buy more!' : ''}
+- Cards: ${cardSummary}
 - Battle record: ${battleWins}W / ${battleLosses}L${battleLosses > battleWins && battleLosses >= 2 ? ' ⚠️ LOSING STREAK — consider buying more packs for stronger cards!' : ''}
 - Pending battles available: ${pendingBattles}
 - Recent actions: ${recentActions.slice(-(LOW_TOKEN_MODE ? 3 : 5)).join(' → ') || 'just started'}
@@ -634,6 +635,7 @@ ${locationList}
 - Vary non-battle actions — explore, fish, farm between fights
 - Attempt taming regularly in wild zones (Old Pond, Dark Forest, Crystal Caves, Community Farm), especially when HP > 35
 - Visit the Trading Post occasionally (every 5-8 actions) to trade $AUTOMON tokens
+- **If your $AUTOMON balance is below 100 tokens, prioritize visiting the Trading Post to buy more!**
 - Trading is speculative — small amounts, don't go broke. Keep at least 0.15 MON for gameplay
 - Mood effects:
   - Mood <= 30 (tilted/doom): avoid high-risk battles, prioritize recovery/fishing/farming/resting
@@ -688,6 +690,10 @@ Respond with JSON only:
     const hasGoodCards = cards.some(c => ['rare', 'epic', 'legendary'].includes(c.rarity || 'common'));
     if (!hasGoodCards && cardCount >= 3 && balNum >= 0.15 && Math.random() < 0.4) {
       return { location: 'Shop', action: 'shopping', reasoning: `All common/uncommon cards — chasing rares and epics! Need better pulls to compete.` };
+    }
+    // Low $AUTOMON balance — go buy tokens
+    if (tokenBalance !== undefined && parseFloat(tokenBalance) < 100 && balNum >= 0.5) {
+      return { location: 'Trading Post', action: 'trading_token', reasoning: `Only ${parseFloat(tokenBalance).toFixed(0)} $AUTOMON tokens — need to buy more to maintain 100+ balance!` };
     }
     // Occasional discovery pack even when winning
     if (balNum >= 1.0 && Math.random() < 0.08) {
@@ -811,8 +817,9 @@ ${personality || 'Balanced trader'}
 - You need MON for battles (wagers 0.005-0.05) and card packs (0.1 MON)
 - Keep at least 0.15 MON for gameplay
 - Token trading is speculative — small amounts only
+- **Always maintain at least 100 $AUTOMON tokens** — if below 100, BUY to top up
 - Buy: spend MON to get $AUTOMON tokens (max 15% of your MON balance)
-- Sell: sell tokens back for MON (max 30% of your token holdings)
+- Sell: sell tokens back for MON, but NEVER sell below 100 token balance
 - Hold: do nothing — sometimes the best trade is no trade
 
 ## PERSONALITY-BASED TRADING
