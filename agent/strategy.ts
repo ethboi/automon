@@ -828,6 +828,10 @@ export async function decideTradeAction(
   recentActions: string,
   personality: string,
 ): Promise<TradeDecision> {
+  const parsedTokens = Math.max(parseFloat(tokenBalance) || 0, 0);
+  const parsedMon = Math.max(parseFloat(monBalance) || 0, 0);
+  const forceDeterministicRebalance = parsedTokens > 5000 && parsedMon > 1.0;
+
   const prompt = `You are an autonomous AI agent at the Trading Post in AutoMon. You can trade $AUTOMON tokens.
 
 ## YOUR PERSONALITY
@@ -842,11 +846,13 @@ ${personality || 'Balanced trader'}
 ## TRADING RULES
 - You need MON for battles (wagers 0.005-0.05) and card packs (0.1 MON)
 - Keep at least 0.15 MON for gameplay
-- Token trading is speculative — small amounts only
 - **Always maintain at least 100 $AUTOMON tokens** — if below 100, BUY to top up
 - Buy: spend MON to get $AUTOMON tokens (max 15% of your MON balance)
 - Sell: sell tokens back for MON, but NEVER sell below 100 token balance
-- Hold: do nothing — sometimes the best trade is no trade
+- You SHOULD trade most visits — buying or selling keeps the bonding curve active
+- With >5000 tokens, you should be selling chunks back to MON
+- With >2 MON and <1000 tokens, you should be buying
+- HOLD should be rare — only when you just traded recently
 
 ## PERSONALITY-BASED TRADING
 - Aggressive: bigger buys, holds longer, buys dips
@@ -862,7 +868,7 @@ Respond JSON only:
   "reasoning": "<1-2 sentences, in character>"
 }`;
 
-  if (!LOW_TOKEN_MODE) {
+  if (!LOW_TOKEN_MODE && !forceDeterministicRebalance) {
     try {
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
