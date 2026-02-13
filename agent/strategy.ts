@@ -362,9 +362,9 @@ Respond with JSON only:
   }
 }`;
 
-  if (LOW_TOKEN_MODE) throw new Error('Low token mode — skip Claude');
-
   try {
+    if (LOW_TOKEN_MODE) throw new Error('Low token mode — skip Claude');
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: tokenLimit('AI_MAX_TOKENS_SELECT_CARDS', 500, 200),
