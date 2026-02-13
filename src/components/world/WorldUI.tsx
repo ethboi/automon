@@ -14,6 +14,7 @@ interface WorldUIProps {
   onlinePlayers?: OnlinePlayer[];
   events?: EventData[];
   transactions?: TxData[];
+  tokenTrades?: TxData[];
   totalBattles?: number;
   totalCards?: number;
   battles?: BattleData[];
@@ -162,7 +163,7 @@ export function WorldUI({
   walletAddress = null,
   playerName = null,
   ensureWalletSession = null,
-  onlineAgents = [], onlinePlayers = [], events = [], transactions = [], battles = [], chat = [],
+  onlineAgents = [], onlinePlayers = [], events = [], transactions = [], tokenTrades = [], battles = [], chat = [],
   totalBattles: _totalBattles = 0, totalCards: _totalCards = 0,
 }: WorldUIProps) {
   const [tab, setTab] = useState<Tab>('agents');
@@ -273,7 +274,7 @@ export function WorldUI({
                 { id: 'agents' as Tab, label: '🤖', count: onlineCount },
                 { id: 'feed' as Tab, label: '📡', count: events.length + battles.length },
                 { id: 'chat' as Tab, label: '💬', count: chat.length },
-                { id: 'trades' as Tab, label: '📈', count: transactions.filter(t => t.type === 'token_buy' || t.type === 'token_sell').length },
+                { id: 'trades' as Tab, label: '📈', count: tokenTrades.length },
                 { id: 'chain' as Tab, label: '⛓️', count: transactions.length },
               ]).map(t => (
                 <button
@@ -597,7 +598,7 @@ export function WorldUI({
               {/* Chain Tab */}
               {/* Trades Tab */}
               {tab === 'trades' && (() => {
-                const trades = transactions.filter(t => t.type === 'token_buy' || t.type === 'token_sell');
+                const trades = tokenTrades;
                 return trades.length === 0 ? (
                   <Empty text="No token trades yet" />
                 ) : (

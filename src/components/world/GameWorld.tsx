@@ -969,6 +969,7 @@ export function GameWorld() {
   }[]>([]);
   const [totalCards, setTotalCards] = useState(0);
   const [transactions, setTransactions] = useState<{ txHash: string; type: string; from: string; description: string; explorerUrl: string; timestamp: string }[]>([]);
+  const [tokenTrades, setTokenTrades] = useState<{ txHash: string; type: string; from: string; agentName?: string; description: string; explorerUrl: string; timestamp: string; amount?: string | null; details?: { tokensReceived?: string; monReceived?: string; tokensSold?: string; monSpent?: string } }[]>([]);
   const [chatMessages, setChatMessages] = useState<{ from: string; fromName: string; to?: string; toName?: string; message: string; location?: string; timestamp: string }[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>('isometric');
@@ -986,6 +987,7 @@ export function GameWorld() {
           setBattles(data.battles || []);
           setTotalCards(data.totalCards || 0);
           setTransactions(data.transactions || []);
+          setTokenTrades(data.tokenTrades || []);
           setChatMessages(data.chat || []);
         }
       } catch (error) {
@@ -1121,6 +1123,7 @@ export function GameWorld() {
         battles={battles}
         totalCards={totalCards}
         transactions={transactions}
+        tokenTrades={tokenTrades}
         chat={chatMessages}
         onSelectAgent={handleSelectAgent}
         onFlyToAgent={(address: string) => {
