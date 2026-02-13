@@ -132,7 +132,7 @@ const LOCATION_ACTIONS: Record<string, { action: string; reasons: string[] }[]> 
     { action: 'training', reasons: ['Sparring at the arena', 'Practicing type matchups', 'Grinding XP'] },
   ],
   'Shop': [
-    { action: 'trading', reasons: ['Looking for good deals', 'Checking the marketplace', 'Swapping duplicates'] },
+    { action: 'shopping', reasons: ['Looking for good deals', 'Checking the marketplace', 'Browsing the card shop'] },
     { action: 'shopping', reasons: ['Buying potions', 'Browsing rare cards', 'Stocking up supplies'] },
   ],
   'Community Farm': [
@@ -270,7 +270,7 @@ function normalizeAction(action: string): string {
   if (a.includes('train')) return 'training';
   if (a.includes('shop')) return 'shopping';
   if (a.includes('trade token') || a.includes('token')) return 'trading_token';
-  if (a.includes('trade')) return 'trading';
+  if (a.includes('trade')) return 'shopping';
   return a;
 }
 
@@ -1038,7 +1038,7 @@ async function tick(): Promise<void> {
     console.log(`[${ts()}] 📍 ${target.name}: ${pendingAction.action} — "${pendingAction.reason}"`);
 
     // If shopping at market, buy a pack
-    if ((pendingAction.action === 'shopping' || pendingAction.action === 'trading') && target.name === 'Shop') {
+    if (pendingAction.action === 'shopping' && target.name === 'Shop') {
       const shopReason = pendingAction.reason;
       await logAction(pendingAction.action, pendingAction.reason, target.name, pendingAction.reason);
       recentActions.push(`${pendingAction.action}@${target.name}`);
