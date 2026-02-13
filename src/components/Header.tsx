@@ -10,6 +10,13 @@ const TX_ICONS: Record<string, string> = {
   escrow_deposit: '🔒', nft_mint: '💎',
 };
 
+function formatTokenBalance(raw: string): string {
+  const n = parseFloat(raw || '0');
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toFixed(2);
+}
+
 function shortAddr(addr?: string) {
   if (!addr) return '???';
   return addr.slice(0, 6) + '…' + addr.slice(-4);
@@ -218,7 +225,7 @@ export default function Header() {
                   <span className="text-white font-semibold">{parseFloat(balance || '0').toFixed(2)}</span>
                   <span className="text-purple-300 text-sm">MON</span>
                   <span className="text-gray-600">|</span>
-                  <span className="text-emerald-300 font-semibold">{parseFloat(tokenBalance || '0').toFixed(2)}</span>
+                  <span className="text-emerald-300 font-semibold">{formatTokenBalance(tokenBalance || '0')}</span>
                   <span className="text-emerald-500 text-sm">$AUTOMON</span>
                 </div>
 
@@ -333,7 +340,7 @@ export default function Header() {
 	                      {playerName && <span className="text-cyan-300 text-sm font-semibold">{playerName}</span>}
 	                      <span className="text-purple-300 font-mono text-sm">{formatAddress(address)}</span>
 	                      <span className="text-yellow-400 text-sm font-semibold">{parseFloat(balance || '0').toFixed(2)} MON</span>
-	                      <span className="text-emerald-400 text-sm font-semibold">{parseFloat(tokenBalance || '0').toFixed(2)} $AUTOMON</span>
+	                      <span className="text-emerald-400 text-sm font-semibold">{formatTokenBalance(tokenBalance || '0')} $AUTOMON</span>
 	                    </div>
 	                    <div className="flex items-center gap-1 shrink-0">
 	                      {!isEditingName && (
@@ -400,7 +407,7 @@ export default function Header() {
                   <div className="flex items-center justify-between px-4 py-3 mt-2 glass rounded-xl">
                     <span className="text-gray-400 text-sm">Balance</span>
                     <span className="text-white font-semibold">
-                      {parseFloat(balance || '0').toFixed(2)} MON • {parseFloat(tokenBalance || '0').toFixed(2)} $AUTOMON
+                      {parseFloat(balance || '0').toFixed(2)} MON • {formatTokenBalance(tokenBalance || '0')} $AUTOMON
                     </span>
                   </div>
 
