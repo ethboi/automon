@@ -95,10 +95,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const bal = await getBalance(normalized);
         setBalance(parseFloat(bal).toFixed(4));
 
-        if (PUBLIC_TOKEN_ADDRESS) {
-          // Use dedicated Monad RPC — BrowserProvider may be on wrong chain
-          const monadRpc = process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://rpc.monad.xyz';
-          const monadProvider = new ethers.JsonRpcProvider(monadRpc, { name: 'monad', chainId: 143 }, { staticNetwork: true });
+        if (PUBLIC_TOKEN_ADDRESS && window.ethereum) {
+          // Use BrowserProvider with explicit Monad network (same as getMonadProvider in wallet.ts)
+          const monadNet = new ethers.Network('monad', 143);
+          const monadProvider = new ethers.BrowserProvider(window.ethereum, monadNet);
           const token = new ethers.Contract(PUBLIC_TOKEN_ADDRESS, ERC20_ABI, monadProvider);
           const [raw, decimalsRaw] = await Promise.all([
             token.balanceOf(normalized),
