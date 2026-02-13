@@ -66,10 +66,10 @@ interface Round {
 
 interface TurnLog {
   turn: number;
-  player1: { card: string; action: string; reasoning?: string };
-  player2: { card: string; action: string; reasoning?: string };
+  player1: { card: string; activeCard: string; cardHp: number; action: string; reasoning?: string; prediction?: string };
+  player2: { card: string; activeCard: string; cardHp: number; action: string; reasoning?: string; prediction?: string };
   events: BattleEvent[];
-  triangleResult?: string;
+  triangleResult?: string | { player1Result: string; player2Result: string };
 }
 
 interface BattleLog {
@@ -259,12 +259,19 @@ function resolveTurn(battle: Battle, move1: BattleMove, move2: BattleMove): { ev
   if (battle.player1.cards.every(c => c.fainted)) winner = battle.player2.address;
   if (battle.player2.cards.every(c => c.fainted)) winner = battle.player1.address;
 
+  // Get current active cards (may have changed due to faints/switches)
+  const final1 = getActiveCard(battle.player1);
+  const final2 = getActiveCard(battle.player2);
+
   const turnLog: TurnLog = {
     turn: battle.currentTurn,
-    player1: { card: active1.name, action: move1.action, reasoning: move1.reasoning },
-    player2: { card: active2.name, action: move2.action, reasoning: move2.reasoning },
+    player1: { card: active1.name, activeCard: final1.name, cardHp: Math.max(0, final1.hp), action: move1.action, reasoning: move1.reasoning },
+    player2: { card: active2.name, activeCard: final2.name, cardHp: Math.max(0, final2.hp), action: move2.action, reasoning: move2.reasoning },
     events,
-    triangleResult: tri.label,
+    triangleResult: {
+      player1Result: tri.winner === 'p1' ? 'win' : tri.winner === 'p2' ? 'lose' : 'neutral',
+      player2Result: tri.winner === 'p2' ? 'win' : tri.winner === 'p1' ? 'lose' : 'neutral',
+    },
   };
 
   return { events, winner, turnLog };
