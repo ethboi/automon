@@ -730,7 +730,6 @@ Respond with JSON only:
     ];
     return exploreOptions[Math.floor(Math.random() * exploreOptions.length)];
   }
-}
 
 // ─── Agent-to-Agent Chat ────────────────────────────────────────────────────────
 
