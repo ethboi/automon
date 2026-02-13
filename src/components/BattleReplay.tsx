@@ -92,7 +92,34 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
   const [speed, setSpeed]           = useState<Speed>(1);
 
   const turns    = battleLog.turns;
-  const turn     = turnIdx >= 0 && turnIdx < turns.length ? turns[turnIdx] : null;
+  const rawTurn  = turnIdx >= 0 && turnIdx < turns.length ? turns[turnIdx] : null;
+
+  // Normalize turn data — support both old (card) and new (activeCard/cardHp) formats
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const turn = useMemo(() => {
+    if (!rawTurn) return null;
+    const rp1 = rawTurn.player1 as any;
+    const rp2 = rawTurn.player2 as any;
+    const tri = rawTurn.triangleResult;
+    const normTri = typeof tri === 'string'
+      ? { player1Result: 'neutral' as const, player2Result: 'neutral' as const }
+      : tri;
+    return {
+      ...rawTurn,
+      player1: {
+        ...rawTurn.player1,
+        activeCard: rawTurn.player1.activeCard || rp1.card || '???',
+        cardHp: rawTurn.player1.cardHp ?? 100,
+      },
+      player2: {
+        ...rawTurn.player2,
+        activeCard: rawTurn.player2.activeCard || rp2.card || '???',
+        cardHp: rawTurn.player2.cardHp ?? 100,
+      },
+      triangleResult: normTri,
+    };
+  }, [rawTurn]);
+
   const events   = turn?.events.slice(0, eventIdx + 1) ?? [];
   const isLast   = turnIdx === turns.length - 1;
   const phase    = turnIdx === -1 ? 'intro' : (isLast && !playing) ? 'victory' : 'battle';
@@ -101,8 +128,13 @@ export default function BattleReplay({ battleLog, onClose }: BattleReplayProps) 
   const maxHp = useMemo(() => {
     const m: Record<string, number> = {};
     for (const t of turns) {
-      m[t.player1.activeCard] = Math.max(m[t.player1.activeCard] || 0, t.player1.cardHp);
-      m[t.player2.activeCard] = Math.max(m[t.player2.activeCard] || 0, t.player2.cardHp);
+      // Support both formats: activeCard (new) and card (old agent sim)
+      const p1Card = t.player1.activeCard || (t.player1 as any).card;
+      const p2Card = t.player2.activeCard || (t.player2 as any).card;
+      const p1Hp = t.player1.cardHp ?? 0;
+      const p2Hp = t.player2.cardHp ?? 0;
+      if (p1Card) m[p1Card] = Math.max(m[p1Card] || 0, p1Hp);
+      if (p2Card) m[p2Card] = Math.max(m[p2Card] || 0, p2Hp);
     }
     for (const [n, hp] of Object.entries(m)) {
       const mon = AUTOMONS.find(a => a.name === n);
