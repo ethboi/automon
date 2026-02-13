@@ -26,9 +26,11 @@ export async function GET(request: NextRequest) {
       token.decimals().catch(() => 18),
     ]);
     const decimals = Number(decimalsRaw) || 18;
-    return NextResponse.json({ balance: ethers.formatUnits(raw, decimals) });
+    const formatted = ethers.formatUnits(raw, decimals);
+    return NextResponse.json({ balance: formatted, debug: { token: TOKEN_ADDRESS, rpc: RPC, raw: raw.toString(), decimals } });
   } catch (error) {
-    console.error('Token balance error:', error);
-    return NextResponse.json({ balance: '0' });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Token balance error:', msg);
+    return NextResponse.json({ balance: '0', error: msg, debug: { token: TOKEN_ADDRESS, rpc: RPC } });
   }
 }
