@@ -33,15 +33,15 @@ function requireAddress(name: string): Address {
 
 const CONFIG = {
   chainId: Number(envForNetwork('NEXT_PUBLIC_CHAIN_ID') || (NETWORK === 'mainnet' ? '143' : '10143')),
-  rpcUrl: envForNetwork('MONAD_RPC_URL') || (NETWORK === 'testnet' ? 'https://monad-testnet.drpc.org' : ''),
-  apiUrl: envForNetwork('NAD_FUN_API_URL') || (NETWORK === 'testnet' ? 'https://dev-api.nad.fun' : ''),
+  rpcUrl: envForNetwork('MONAD_RPC_URL') || (NETWORK === 'mainnet' ? 'https://rpc.monad.xyz' : 'https://monad-testnet.drpc.org'),
+  apiUrl: envForNetwork('NAD_FUN_API_URL') || (NETWORK === 'mainnet' ? 'https://api.nad.fun' : 'https://dev-api.nad.fun'),
   BONDING_CURVE_ROUTER: requireAddress('NAD_BONDING_CURVE_ROUTER'),
   LENS: requireAddress('NAD_LENS'),
   CURVE: requireAddress('NAD_CURVE'),
   WMON: requireAddress('NAD_WMON'),
 };
 
-if (!CONFIG.rpcUrl) throw new Error('MONAD_RPC_URL_MAINNET is required when AUTOMON_NETWORK=mainnet');
+if (!CONFIG.rpcUrl) console.warn('⚠ MONAD_RPC_URL not configured for trading');
 
 const chain = defineChain({
   id: CONFIG.chainId,
