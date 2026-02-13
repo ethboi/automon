@@ -140,9 +140,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     await pingPresence();
   }, [ensureSiweSession, pingPresence, refreshProfile]);
 
-  // Restore wallet on page load from MetaMask
+  // Restore wallet on page load from MetaMask (skip if user explicitly disconnected)
   useEffect(() => {
     if (typeof window !== 'undefined' && window.ethereum) {
+      if (localStorage.getItem('automon_disconnected')) return;
       window.ethereum.request({ method: 'eth_accounts' }).then((accounts: string[]) => {
         if (accounts.length > 0) {
           const saved = localStorage.getItem('automon_wallet');
@@ -209,6 +210,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const connect = async () => {
     setIsConnecting(true);
+    localStorage.removeItem('automon_disconnected');
     try {
       await connectWallet();
       try {
@@ -240,6 +242,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setTokenBalance(null);
     setPlayerName(null);
     localStorage.removeItem('automon_wallet');
+    localStorage.setItem('automon_disconnected', '1');
     void fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
   };
 
