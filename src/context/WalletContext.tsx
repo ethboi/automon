@@ -24,7 +24,8 @@ const PUBLIC_TOKEN_ADDRESS = (
     ? process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS_MAINNET
     : process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS_TESTNET) ||
   process.env.NEXT_PUBLIC_AUTOMON_TOKEN_ADDRESS ||
-  ''
+  // Fallback: mainnet $AUTOMON token
+  '0xCdc26F8b74b9FE1A3B07C5e87C0EF4b3fD0E7777'
 ).trim();
 const ERC20_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
@@ -109,7 +110,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           setTokenBalance('0');
         }
       } catch (error) {
-        console.error('Failed to get balance:', error);
+        console.error('Failed to get balance:', error, 'Token addr:', PUBLIC_TOKEN_ADDRESS);
         setTokenBalance('0');
       }
     }
