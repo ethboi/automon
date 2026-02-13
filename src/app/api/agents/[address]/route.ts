@@ -85,9 +85,26 @@ export async function GET(
 
     // Get cards
     const cardsData = await db.collection('cards')
-      .find({ owner: address.toLowerCase() })
-      .sort({ rarity: -1, createdAt: -1 })
-      .limit(50)
+      .aggregate([
+        { $match: { owner: address.toLowerCase() } },
+        {
+          $addFields: {
+            rarityOrder: {
+              $switch: {
+                branches: [
+                  { case: { $eq: [{ $toLower: '$rarity' }, 'legendary'] }, then: 5 },
+                  { case: { $eq: [{ $toLower: '$rarity' }, 'epic'] }, then: 4 },
+                  { case: { $eq: [{ $toLower: '$rarity' }, 'rare'] }, then: 3 },
+                  { case: { $eq: [{ $toLower: '$rarity' }, 'uncommon'] }, then: 2 },
+                  { case: { $eq: [{ $toLower: '$rarity' }, 'common'] }, then: 1 },
+                ],
+                default: 0,
+              },
+            },
+          },
+        },
+        { $sort: { rarityOrder: -1, createdAt: -1 } },
+      ])
       .toArray();
 
     // Get transactions
