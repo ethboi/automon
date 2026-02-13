@@ -362,6 +362,8 @@ Respond with JSON only:
   }
 }`;
 
+  if (LOW_TOKEN_MODE) throw new Error('Low token mode — skip Claude');
+
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -650,22 +652,26 @@ Respond with JSON only:
   "wager": "<MON amount if battling, e.g. '0.03'. Required when action is 'battling'>"
 }`;
 
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: tokenLimit('AI_MAX_TOKENS_NEXT_ACTION', 300, 140),
-      messages: [{ role: 'user', content: prompt }],
-    });
+  // In low-token mode, skip Claude entirely and use deterministic fallback
+  if (!LOW_TOKEN_MODE) {
+    try {
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: tokenLimit('AI_MAX_TOKENS_NEXT_ACTION', 300, 140),
+        messages: [{ role: 'user', content: prompt }],
+      });
 
-    const content = response.content[0];
-    if (content.type !== 'text') throw new Error('Invalid response');
+      const content = response.content[0];
+      if (content.type !== 'text') throw new Error('Invalid response');
 
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON found');
+      const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found');
 
-    return JSON.parse(jsonMatch[0]) as LocationDecision;
-  } catch (error) {
-    console.error('Next action decision error:', error);
+      return JSON.parse(jsonMatch[0]) as LocationDecision;
+    } catch (error) {
+      console.error('Next action decision error:', error);
+    }
+  }
 
     // Smart fallback: cycle through activities based on state
     const hpPct = health / maxHealth;
@@ -787,6 +793,8 @@ RULES:
 
 Reply with ONLY your chat message.`;
 
+  if (LOW_TOKEN_MODE) return null; // Skip chat in low-token mode
+
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -850,25 +858,30 @@ Respond JSON only:
   "reasoning": "<1-2 sentences, in character>"
 }`;
 
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: tokenLimit('AI_MAX_TOKENS_TRADE', 200, 90),
-      messages: [{ role: 'user', content: prompt }],
-    });
+  if (!LOW_TOKEN_MODE) {
+    try {
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: tokenLimit('AI_MAX_TOKENS_TRADE', 200, 90),
+        messages: [{ role: 'user', content: prompt }],
+      });
 
-    const content = response.content[0];
-    if (content.type !== 'text') throw new Error('Invalid response');
+      const content = response.content[0];
+      if (content.type !== 'text') throw new Error('Invalid response');
 
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON');
+      const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON');
 
-    const result = JSON.parse(jsonMatch[0]) as TradeDecision;
-    if (!['BUY', 'SELL', 'HOLD'].includes(result.action)) throw new Error('Invalid action');
+      const result = JSON.parse(jsonMatch[0]) as TradeDecision;
+      if (!['BUY', 'SELL', 'HOLD'].includes(result.action)) throw new Error('Invalid action');
 
-    return result;
-  } catch (err) {
-    console.error('Trade decision error:', err);
+      return result;
+    } catch (err) {
+      console.error('Trade decision error:', err);
+    }
+  }
+
+  {
     return { action: 'HOLD', reasoning: 'Markets look uncertain, staying on the sideline for now.' };
   }
 }
