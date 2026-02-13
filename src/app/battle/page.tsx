@@ -497,20 +497,20 @@ export default function BattlePage() {
         <Section title="Open Battles" count={openBattles.length} pulse>
           <div className="grid gap-2">
             {openBattles.map((b, i) => (
-              <div key={b.battleId} className="bg-gray-900/60 border border-emerald-500/20 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3 animate-fade-in-up opacity-0" style={{ animationDelay: `${i * 0.05}s` }}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center text-lg shrink-0">⚔️</div>
+              <div key={b.battleId} className="bg-gray-900/60 border border-emerald-500/20 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-3 animate-fade-in-up opacity-0" style={{ animationDelay: `${i * 0.05}s` }}>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center text-base sm:text-lg shrink-0">⚔️</div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white truncate">{playerName(b.player1)}</div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                    <div className="text-xs sm:text-sm font-semibold text-white truncate">{playerName(b.player1)}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 flex items-center gap-1.5">
                       <span className="text-yellow-400">💰 {b.wager} MON</span>
                       {b.createdAt && <span>• {timeAgo(b.createdAt as unknown as string)}</span>}
                     </div>
                   </div>
                 </div>
                 <button onClick={() => joinBattle(b.battleId)} disabled={myCards.length < 3}
-                  className="shrink-0 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
-                  {myCards.length < 3 ? 'Need 3 cards' : 'Join ⚔️'}
+                  className="shrink-0 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition">
+                  {myCards.length < 3 ? 'Need 3+' : 'Join ⚔️'}
                 </button>
               </div>
             ))}
@@ -542,17 +542,17 @@ export default function BattlePage() {
                 const isMyBattle = battle.player1.address.toLowerCase() === address?.toLowerCase();
                 const isWinner = battle.winner?.toLowerCase() === address?.toLowerCase();
                 return (
-                  <div key={battle.battleId} className="bg-gray-900/60 border border-white/5 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3 animate-fade-in-up opacity-0" style={{ animationDelay: `${i * 0.05}s` }}>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 ${battle.status === 'complete' ? (isWinner ? 'bg-emerald-500/20' : 'bg-red-500/20') : 'bg-yellow-500/20'}`}>
+                  <div key={battle.battleId} className="bg-gray-900/60 border border-white/5 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-3 animate-fade-in-up opacity-0" style={{ animationDelay: `${i * 0.05}s` }}>
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg shrink-0 ${battle.status === 'complete' ? (isWinner ? 'bg-emerald-500/20' : 'bg-red-500/20') : 'bg-yellow-500/20'}`}>
                         {battle.status === 'complete' ? (isWinner ? '🏆' : '💀') : '⏳'}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                           <StatusBadge status={battle.status} isWinner={isWinner} />
-                          <span className="text-sm text-gray-300">vs {playerName(isMyBattle ? battle.player2 : battle.player1)}</span>
+                          <span className="text-xs sm:text-sm text-gray-300 truncate">vs {playerName(isMyBattle ? battle.player2 : battle.player1)}</span>
                         </div>
-                        <div className="text-xs text-gray-500 mt-0.5">💰 {battle.wager} MON</div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">💰 {battle.wager} MON</div>
                       </div>
                     </div>
                     <div className="shrink-0">
@@ -598,12 +598,12 @@ function BattleCard({ battle, index, onReplay, onOpen, onResume }: { battle: any
       style={{ animationDelay: `${index * 0.04}s` }}
       onClick={isActive && onOpen ? onOpen : undefined}
     >
-      {/* Players + cards — centered layout */}
-      <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3">
+      {/* Players + cards — vertical on mobile, horizontal on desktop */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-3">
         {/* Player 1 side */}
-        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-          <span className={`text-sm font-bold truncate max-w-full ${winner?.toLowerCase() === p1?.address?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
-          <div className="flex gap-1.5 sm:gap-2">
+        <div className="flex flex-row sm:flex-col items-center gap-2 sm:gap-1.5 flex-1 min-w-0 w-full sm:w-auto">
+          <span className={`text-sm font-bold truncate max-w-[120px] sm:max-w-full ${winner?.toLowerCase() === p1?.address?.toLowerCase() ? 'text-yellow-300' : 'text-cyan-400'}`}>{p1Name}</span>
+          <div className="flex gap-1 sm:gap-2">
             {p1Cards.slice(0, 3).filter(Boolean).map((c: { name?: string; element?: string; rarity?: string }, i: number) => (
               <TeamCardChip key={i} card={c} />
             ))}
@@ -611,14 +611,14 @@ function BattleCard({ battle, index, onReplay, onOpen, onResume }: { battle: any
         </div>
 
         {/* VS badge */}
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shrink-0 shadow-lg">
-          <span className="text-[10px] font-black text-white">VS</span>
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shrink-0 shadow-lg">
+          <span className="text-[9px] sm:text-[10px] font-black text-white">VS</span>
         </div>
 
         {/* Player 2 side */}
-        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-          <span className={`text-sm font-bold truncate max-w-full ${winner?.toLowerCase() === p2?.address?.toLowerCase() ? 'text-yellow-300' : 'text-purple-400'}`}>{p2Name || '…'}</span>
-          <div className="flex gap-1.5 sm:gap-2">
+        <div className="flex flex-row sm:flex-col items-center gap-2 sm:gap-1.5 flex-1 min-w-0 w-full sm:w-auto">
+          <span className={`text-sm font-bold truncate max-w-[120px] sm:max-w-full ${winner?.toLowerCase() === p2?.address?.toLowerCase() ? 'text-yellow-300' : 'text-purple-400'}`}>{p2Name || '…'}</span>
+          <div className="flex gap-1 sm:gap-2">
             {p2Cards.slice(0, 3).filter(Boolean).map((c: { name?: string; element?: string; rarity?: string }, i: number) => (
               <TeamCardChip key={i} card={c} />
             ))}
@@ -626,8 +626,8 @@ function BattleCard({ battle, index, onReplay, onOpen, onResume }: { battle: any
         </div>
       </div>
 
-      {/* Info row — compact single line */}
-      <div className="flex items-center justify-center gap-2 text-xs flex-wrap">
+      {/* Info row — compact, wraps on mobile */}
+      <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs flex-wrap">
         <span className="text-yellow-400 font-semibold">💰 {battle.wager} MON</span>
         {winner && <span className="text-emerald-400">🏆 {winnerName} +{payout}</span>}
         {isActive && <span className="bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-semibold animate-pulse text-[10px]">LIVE</span>}
@@ -689,7 +689,7 @@ function StatCard({ label, value, color, icon }: { label: string; value: number;
   return (
     <div className="bg-gray-900/60 border border-white/5 rounded-xl p-3 text-center">
       <div className="text-lg mb-1">{icon}</div>
-      <div className={`text-xl sm:text-2xl font-bold ${color}`}>{value}</div>
+      <div className={`text-lg sm:text-2xl font-bold ${color}`}>{value}</div>
       <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">{label}</div>
     </div>
   );
