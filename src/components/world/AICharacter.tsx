@@ -31,8 +31,11 @@ function getActivityIndicator(activity?: string | null): { label: string; color:
   if (value.includes('train')) {
     return { label: 'training', color: 'text-orange-300 border-orange-500/60' };
   }
+  if (value.includes('trading_token') || value.includes('automon') || value.includes('bonding')) {
+    return { label: 'trading $AUTOMON', color: 'text-emerald-300 border-emerald-500/60' };
+  }
   if (value.includes('trade') || value.includes('shop') || value.includes('market') || value.includes('buy') || value.includes('sell')) {
-    return { label: 'trading', color: 'text-yellow-300 border-yellow-500/60' };
+    return { label: 'shopping', color: 'text-yellow-300 border-yellow-500/60' };
   }
   if (value.includes('rest') || value.includes('heal') || value.includes('sleep')) {
     return { label: 'resting', color: 'text-lime-300 border-lime-500/60' };
