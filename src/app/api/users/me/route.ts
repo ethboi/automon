@@ -41,11 +41,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    const body = await request.json().catch(() => ({}));
-    const address = session?.address?.toLowerCase() || normalizeAddress(body?.address);
-    if (!address) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 });
+    if (!session?.address) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const body = await request.json().catch(() => ({}));
+    const address = session.address.toLowerCase();
     const name = sanitizeName(body?.name);
     if (name.length < 2) {
       return NextResponse.json({ error: 'Name must be at least 2 characters' }, { status: 400 });

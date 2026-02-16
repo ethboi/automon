@@ -6,6 +6,8 @@ import { getEscrowContractAddress } from '@/lib/network';
 import { Battle } from '@/lib/types';
 import { logTransaction } from '@/lib/transactions';
 import { applyBattleMoodResult } from '@/lib/agentMood';
+import { getAgentAuth } from '@/lib/agentAuth';
+import { getSession } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 function hasEscrowConfig(): boolean {
@@ -19,9 +21,18 @@ function hasEscrowConfig(): boolean {
 export async function POST(request: NextRequest) {
   try {
     const { battleId, move, address } = await request.json();
+    const normalizedBodyAddress = typeof address === 'string' ? address.toLowerCase() : '';
+    const session = await getSession();
+    const agentAuth = await getAgentAuth(request);
+    const authAddress = session?.address || agentAuth?.address;
+    const effectiveAddress = authAddress || normalizedBodyAddress;
 
-    if (!address) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+    if (!authAddress) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (normalizedBodyAddress && normalizedBodyAddress !== authAddress) {
+      return NextResponse.json({ error: 'Address does not match authenticated user' }, { status: 403 });
     }
 
     if (!battleId || !move) {
@@ -39,15 +50,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Battle not active' }, { status: 400 });
     }
 
-    const isPlayer1 = battle.player1.address.toLowerCase() === address.toLowerCase();
-    const isPlayer2 = battle.player2?.address.toLowerCase() === address.toLowerCase();
+    const isPlayer1 = battle.player1.address.toLowerCase() === effectiveAddress.toLowerCase();
+    const isPlayer2 = battle.player2?.address.toLowerCase() === effectiveAddress.toLowerCase();
 
     if (!isPlayer1 && !isPlayer2) {
       return NextResponse.json({ error: 'Not a participant in this battle' }, { status: 403 });
     }
 
     // Validate the move
-    const validation = validateMove(battle, address, move);
+    const validation = validateMove(battle, effectiveAddress, move);
     if (!validation.valid) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }

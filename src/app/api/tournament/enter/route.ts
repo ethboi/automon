@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+import { getAgentAuth } from '@/lib/agentAuth';
+import { getSession } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 
 export async function POST(request: NextRequest) {
   try {
     const { tournamentId, address } = await request.json();
+    const normalizedBodyAddress = typeof address === 'string' ? address.toLowerCase() : '';
+    const session = await getSession();
+    const agentAuth = await getAgentAuth(request);
+    const authAddress = session?.address || agentAuth?.address;
+    const effectiveAddress = authAddress || normalizedBodyAddress;
 
+    if (!authAddress) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    
+    if (normalizedBodyAddress && normalizedBodyAddress !== authAddress) {
+      return NextResponse.json({ error: 'Address does not match authenticated user' }, { status: 403 });
+    }
 
     if (!tournamentId) {
       return NextResponse.json({ error: 'Tournament ID required' }, { status: 400 });
@@ -29,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Tournament full' }, { status: 400 });
     }
 
-    if (tournament.participants.includes(address.toLowerCase())) {
+    if (tournament.participants.includes(effectiveAddress.toLowerCase())) {
       return NextResponse.json({ error: 'Already registered' }, { status: 400 });
     }
 
@@ -46,7 +58,7 @@ export async function POST(request: NextRequest) {
       },
       {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        $push: { participants: address.toLowerCase() } as any,
+        $push: { participants: effectiveAddress.toLowerCase() } as any,
         $set: {
           prizePool: newPool.toString(),
         },

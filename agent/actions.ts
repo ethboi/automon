@@ -154,12 +154,6 @@ export async function authenticate(): Promise<boolean> {
         authToken = match[1];
       }
     }
-    // Also use token from body if available
-    if (verifyData.token) {
-      authToken = verifyData.token;
-      authCookie = verifyData.token;
-    }
-
     console.log(`[AUTH] ✅ Authenticated as ${address}`);
     return true;
   } catch (error) {
@@ -188,6 +182,9 @@ async function fetchApi(
   const jwtSecret = process.env.JWT_SECRET;
   if (jwtSecret) {
     headers['x-agent-secret'] = jwtSecret;
+    if (config.agentWalletAddress) {
+      headers['x-agent-address'] = config.agentWalletAddress.toLowerCase();
+    }
   }
 
   return fetch(url, { ...options, headers, redirect: 'follow' });

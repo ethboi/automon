@@ -2,7 +2,7 @@ import { createWalletClient, createPublicClient, http, parseEther, formatEther }
 import { privateKeyToAccount } from 'viem/accounts';
 import { monad } from 'viem/chains';
 
-const ADMIN_KEY = '***REMOVED***' as const;
+const ADMIN_KEY = process.env.ADMIN_PRIVATE_KEY as `0x${string}` | undefined;
 const ESCROW = '0x5191e3fac06225A61beE01d1BA5E779904b7C4bD' as const;
 const NFT = '0x46A77fF689773B637A4af9D131e7E9f99eDc9B58' as const;
 
@@ -15,6 +15,10 @@ const AGENTS = [
 const withdrawAbi = [{ type: 'function', name: 'withdraw', inputs: [], outputs: [], stateMutability: 'nonpayable' }] as const;
 
 async function main() {
+  if (!ADMIN_KEY) {
+    throw new Error('ADMIN_PRIVATE_KEY is required');
+  }
+
   const account = privateKeyToAccount(ADMIN_KEY);
   const transport = http('https://rpc.monad.xyz');
 

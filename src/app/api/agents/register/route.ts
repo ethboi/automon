@@ -16,6 +16,9 @@ export async function POST(request: NextRequest) {
     if (!address) {
       return NextResponse.json({ error: 'Address required' }, { status: 400 });
     }
+    if (address.toLowerCase() !== session.address.toLowerCase()) {
+      return NextResponse.json({ error: 'Address does not match authenticated agent' }, { status: 403 });
+    }
 
     const db = await getDb();
 

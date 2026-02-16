@@ -7,18 +7,25 @@ import { Battle } from '@/lib/types';
 import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
 import { ethers } from 'ethers';
 import { getProvider } from '@/lib/blockchain';
+import { getSession } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const { wager, txHash, address: bodyAddress, battleId: requestedBattleId } = await request.json();
 
-    // Accept address from body (wallet-connected) or agent secret auth
+    const session = await getSession();
     const agentAuth = await getAgentAuth(request);
-    const address = bodyAddress || agentAuth?.address;
+    const authAddress = session?.address || agentAuth?.address;
+    const normalizedBodyAddress = typeof bodyAddress === 'string' ? bodyAddress.toLowerCase() : '';
+    const address = authAddress || normalizedBodyAddress;
 
-    if (!address) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+    if (!authAddress) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (normalizedBodyAddress && normalizedBodyAddress !== authAddress) {
+      return NextResponse.json({ error: 'Address does not match authenticated user' }, { status: 403 });
     }
 
     if (!wager) {

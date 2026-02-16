@@ -23,13 +23,19 @@ export async function POST(request: NextRequest) {
     const db = await getDb();
     let synced = 0;
 
-    const ops = cards.map((card: { tokenId: number; owner: string }) => ({
+    const requester = session.address.toLowerCase();
+    const ops = cards.map((card: { tokenId: number; owner: string }) => {
+      if (!card.owner || card.owner.toLowerCase() !== requester) {
+        throw new Error('Card owner does not match authenticated agent');
+      }
+      return ({
       updateOne: {
         filter: { tokenId: card.tokenId },
         update: { $setOnInsert: { ...card, createdAt: new Date() } },
         upsert: true,
       },
-    }));
+      }
+    )});
 
     const result = await db.collection('cards').bulkWrite(ops);
     synced = result.upsertedCount;

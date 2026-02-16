@@ -6,10 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 function getJwtSecret(): Uint8Array {
   const jwtSecretValue = process.env.JWT_SECRET;
-  if (!jwtSecretValue && process.env.NODE_ENV === 'production') {
+  if (!jwtSecretValue) {
     throw new Error('JWT_SECRET must be configured');
   }
-  return new TextEncoder().encode(jwtSecretValue || 'fallback-secret-change-me');
+  return new TextEncoder().encode(jwtSecretValue);
 }
 
 export async function generateNonce(address: string): Promise<string> {

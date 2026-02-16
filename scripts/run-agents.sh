@@ -13,8 +13,13 @@ PID1=$!
 sleep 5
 
 # Agent 2: Kira 🌙 (Collector)
-AGENT_PRIVATE_KEY="***REMOVED***" \
-AGENT_ADDRESS="0xEf86E433E13C3D898b2e730F87667f81e0619AeC" \
+if [ -z "$AGENT2_PRIVATE_KEY" ] || [ -z "$AGENT2_ADDRESS" ]; then
+  echo "Missing AGENT2_PRIVATE_KEY or AGENT2_ADDRESS"
+  exit 1
+fi
+
+AGENT_PRIVATE_KEY="$AGENT2_PRIVATE_KEY" \
+AGENT_ADDRESS="$AGENT2_ADDRESS" \
 AGENT_NAME="Kira 🌙" \
 AI_PERSONALITY="Careful collector. Hoards rare cards, avoids risky battles, explores for rare spawns. Patient and strategic." \
 npm run agent:auto &
@@ -23,8 +28,13 @@ PID2=$!
 sleep 5
 
 # Agent 3: Sage 🌿 (Farmer/Survivor)
-AGENT_PRIVATE_KEY="***REMOVED***" \
-AGENT_ADDRESS="0x8BEb4B395D5F1F53Bb51964228E3D4cBF8b3ac22" \
+if [ -z "$AGENT3_PRIVATE_KEY" ] || [ -z "$AGENT3_ADDRESS" ]; then
+  echo "Missing AGENT3_PRIVATE_KEY or AGENT3_ADDRESS"
+  exit 1
+fi
+
+AGENT_PRIVATE_KEY="$AGENT3_PRIVATE_KEY" \
+AGENT_ADDRESS="$AGENT3_ADDRESS" \
 AGENT_NAME="Sage 🌿" \
 AI_PERSONALITY="Nature-loving farmer. Focuses on health and sustainability. Farms, fishes, forages. Only fights when fully prepared." \
 npm run agent:auto &

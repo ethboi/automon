@@ -2,9 +2,15 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getAgentAuth } from '@/lib/agentAuth';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await getAgentAuth(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { battleId, settleTxHash, winner, wager } = await request.json();
     if (!battleId || !settleTxHash) {
       return NextResponse.json({ error: 'Missing battleId or settleTxHash' }, { status: 400 });

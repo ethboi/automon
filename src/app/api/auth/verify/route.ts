@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
-    return NextResponse.json({ address, token });
+    return NextResponse.json({ address });
   } catch (error) {
     console.error('Verification error:', error);
     return NextResponse.json({ error: 'Verification failed' }, { status: 500 });

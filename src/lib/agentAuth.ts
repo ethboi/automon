@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server';
 import { getSession } from './auth';
 
+function normalizeAddress(input: string | null): string | null {
+  if (!input) return null;
+  const value = input.trim().toLowerCase();
+  return /^0x[a-f0-9]{40}$/.test(value) ? value : null;
+}
+
 /**
  * Check auth for agent routes — accepts either:
  * 1. Regular session cookie (SIWE)
@@ -19,15 +25,10 @@ export async function getAgentAuth(request: NextRequest): Promise<{ address: str
   const agentSecret = request.headers.get('x-agent-secret');
   const jwtSecret = process.env.JWT_SECRET;
   if (agentSecret && jwtSecret && agentSecret === jwtSecret) {
-    // Trust the address from the request body
-    try {
-      const body = await request.clone().json();
-      const claimedAddress = body.address || body.from;
-      if (claimedAddress) {
-        return { address: String(claimedAddress).toLowerCase() };
-      }
-    } catch {
-      // Can't parse body
+    // For secret-based auth, require explicit agent address header.
+    const agentAddress = normalizeAddress(request.headers.get('x-agent-address'));
+    if (agentAddress) {
+      return { address: agentAddress };
     }
   }
 

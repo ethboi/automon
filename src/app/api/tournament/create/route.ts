@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+import { getAgentAuth } from '@/lib/agentAuth';
+import { getSession } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 import { v4 as uuidv4 } from 'uuid';
@@ -7,8 +9,11 @@ import { Tournament } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
-    
-
+    const session = await getSession();
+    const agentAuth = await getAgentAuth(request);
+    if (!session && !agentAuth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { name, entryFee, maxParticipants, startAt } = await request.json();
 

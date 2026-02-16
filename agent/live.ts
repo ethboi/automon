@@ -194,7 +194,10 @@ async function api(path: string, opts: RequestInit = {}): Promise<Response> {
     'Content-Type': 'application/json',
     ...(opts.headers as Record<string, string> || {}),
   };
-  if (JWT_SECRET) headers['x-agent-secret'] = JWT_SECRET;
+  if (JWT_SECRET) {
+    headers['x-agent-secret'] = JWT_SECRET;
+    headers['x-agent-address'] = ADDRESS.toLowerCase();
+  }
 
   // Default 5s timeout
   if (!opts.signal) {
@@ -209,7 +212,10 @@ function apiLong(path: string, opts: RequestInit = {}, timeoutMs = 60000): Promi
   const controller = new AbortController();
   setTimeout(() => controller.abort(), timeoutMs);
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(opts.headers as Record<string, string>) };
-  if (JWT_SECRET) headers['x-agent-secret'] = JWT_SECRET;
+  if (JWT_SECRET) {
+    headers['x-agent-secret'] = JWT_SECRET;
+    headers['x-agent-address'] = ADDRESS.toLowerCase();
+  }
   return fetch(`${API_URL}${path}`, { ...opts, headers, signal: controller.signal, redirect: 'follow' });
 }
 

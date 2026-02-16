@@ -4,14 +4,25 @@ import { logTransaction } from '@/lib/transactions';
 import { clampMood, DEFAULT_MOOD, getMoodTier } from '@/lib/agentMood';
 import { ethers } from 'ethers';
 import { getProvider } from '@/lib/blockchain';
+import { getAgentAuth } from '@/lib/agentAuth';
+import { getSession } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const { battleId, address, txHash } = await request.json();
+    const normalizedBodyAddress = typeof address === 'string' ? address.toLowerCase() : '';
+    const session = await getSession();
+    const agentAuth = await getAgentAuth(request);
+    const authAddress = session?.address || agentAuth?.address;
+    const effectiveAddress = authAddress || normalizedBodyAddress;
 
-    if (!address) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+    if (!authAddress) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (normalizedBodyAddress && normalizedBodyAddress !== authAddress) {
+      return NextResponse.json({ error: 'Address does not match authenticated user' }, { status: 403 });
     }
 
     if (!battleId) {
@@ -29,7 +40,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Battle not available' }, { status: 400 });
     }
 
-    if (battle.player1.address.toLowerCase() === address.toLowerCase()) {
+    if (battle.player1.address.toLowerCase() === effectiveAddress.toLowerCase()) {
       return NextResponse.json({ error: 'Cannot join your own battle' }, { status: 400 });
     }
 
@@ -44,13 +55,13 @@ export async function POST(request: NextRequest) {
 
     // Enforce on-chain affordability so 0 MON agents cannot join battles.
     const provider = getProvider();
-    const balanceWei = await provider.getBalance(address);
+    const balanceWei = await provider.getBalance(effectiveAddress);
     const wagerWei = ethers.parseEther(String(battle.wager));
     if (balanceWei < wagerWei) {
       return NextResponse.json({ error: 'Insufficient MON balance for wager' }, { status: 400 });
     }
 
-    const playerAgent = await db.collection('agents').findOne({ address: address.toLowerCase() });
+    const playerAgent = await db.collection('agents').findOne({ address: effectiveAddress.toLowerCase() });
     const p2Mood = clampMood(typeof playerAgent?.mood === 'number' ? playerAgent.mood : DEFAULT_MOOD);
 
     const result = await db.collection('battles').updateOne(
@@ -58,7 +69,7 @@ export async function POST(request: NextRequest) {
       {
         $set: {
           player2: {
-            address: address.toLowerCase(),
+            address: effectiveAddress.toLowerCase(),
             cards: [],
             activeCardIndex: 0,
             ready: false,
@@ -81,7 +92,7 @@ export async function POST(request: NextRequest) {
       await logTransaction({
         txHash,
         type: 'battle_join',
-        from: address,
+        from: effectiveAddress,
         description: `Joined battle with ${updatedBattle?.wager || '0'} MON wager`,
         metadata: { battleId, wager: updatedBattle?.wager || '0' },
       });
